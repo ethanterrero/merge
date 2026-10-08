@@ -28,7 +28,7 @@ A Commute Crew can be paused, resumed, or ended by either member at any time, wi
 
 Accepted residual inference: if A answers `yes` and B answers `individual`, the pair gets Ride Again without the Crew option, so A may infer B did not choose full `yes`. The UI never promises Crew after a `yes`, so nothing is presented as a rejection.
 
-## Data model — `supabase/migrations/0002_first_ride.sql`
+## Data model — `supabase/migrations/0003_first_ride.sql`
 
 ### `invitations` (altered)
 
@@ -138,7 +138,7 @@ Mock data only, as today. No Supabase calls.
 ## Testing
 
 - `npm run typecheck` passes (the app's CI check).
-- `supabase/tests/first_ride_test.sql`: plain SQL with `DO` blocks that `raise exception` on failure. It runs against a throwaway `postgis/postgis` Docker container with a minimal `auth` schema shim (`auth.users`, `auth.uid()` reading `request.jwt.claim.sub`, `authenticated` role), and later runs unchanged under `supabase test db`. It asserts:
+- `supabase/tests/first_ride_test.sql`: plain SQL with `DO` blocks that `raise exception` on failure, run by `scripts/db-test.sh` (defined in the Supabase connection spec, `2026-10-08-supabase-auth-design.md`). It asserts:
   1. Only the author can read their `ride_feedback`. The other rider gets zero rows.
   2. Feedback can't be submitted for a ride that isn't completed or that the author wasn't on.
   3. Yes + No → no connection. Yes + (no answer) → no connection. Both look identical to the client.
@@ -151,7 +151,7 @@ Mock data only, as today. No Supabase calls.
 
 ## Out of scope
 
-- Connecting the app to Supabase (auth, sessions, real matching): roadmap step 2.
+- Wiring First Ride screens to Supabase. Sign-in and profiles are covered by the Supabase connection spec. Rides, feedback, and Crews stay on mock data in the app.
 - Automatically generated Crew rides.
 - The safety report flow beyond its entry point.
 - Notifications.
