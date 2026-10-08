@@ -18,7 +18,8 @@ export type Route =
   | { name: 'booked'; matchId: string }
   | { name: 'driverRequests'; tab?: 'new' | 'upcoming' }
   | { name: 'driverRequest'; requestId: string }
-  | { name: 'driverConfirm'; requestId: string };
+  | { name: 'driverConfirm'; requestId: string }
+;
 
 export type RouteName = Route['name'];
 

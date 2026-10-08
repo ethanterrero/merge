@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { BackHandler } from 'react-native';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { NavigationProvider, Route, useNav } from './src/navigation';
 import { CommuteProvider } from './src/state/commute';
 import { AuthProvider, useAuth } from './src/state/auth';
@@ -21,11 +22,13 @@ import { DriverConfirmScreen } from './src/screens/DriverConfirmScreen';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <CommuteProvider>
-        <AuthGate />
-      </CommuteProvider>
-    </AuthProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <AuthProvider>
+        <CommuteProvider>
+          <AuthGate />
+        </CommuteProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Platform, Pressable, SafeAreaView, StatusBar as RNStatusBar, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius, space, type } from '../theme';
 import { useNav } from '../navigation';
 import { Role, useCommute } from '../state/commute';
@@ -26,6 +27,7 @@ export function WelcomeScreen() {
   const nav = useNav();
   const { commute, update } = useCommute();
   const { status } = useAuth();
+  const insets = useSafeAreaInsets();
 
   return (
     <Screen
@@ -35,28 +37,26 @@ export function WelcomeScreen() {
       footer={<Button label="Continue" onPress={() => nav.push({ name: welcomeNext(status) })} />}
     >
       <View style={styles.hero}>
-        <SafeAreaView>
-          <View style={{ paddingTop: (Platform.OS === 'android' ? RNStatusBar.currentHeight ?? 0 : 0) + space.lg, gap: 18 }}>
-            <View style={styles.brandRow}>
-              <View style={styles.logo}>
-                <Icon name="git-merge" size={20} color={colors.maroon} />
-              </View>
-              <Text style={styles.wordmark}>merge</Text>
+        <View style={{ paddingTop: insets.top + space.lg, gap: 18 }}>
+          <View style={styles.brandRow}>
+            <View style={styles.logo}>
+              <Icon name="git-merge" size={20} color={colors.maroon} />
             </View>
-            <Text style={[type.display, { color: colors.onDark }]} accessibilityRole="header">
-              Share the commute you're already making.
-            </Text>
-            <View style={styles.route} accessibilityLabel="Alameda to San Francisco over the Bay Bridge">
-              <View style={[styles.dot, { backgroundColor: colors.onDark }]} />
-              <View style={styles.dash} />
-              <View style={styles.bridgePill}>
-                <Text style={styles.bridgeText}>Bay Bridge</Text>
-              </View>
-              <View style={styles.dash} />
-              <View style={[styles.dot, { backgroundColor: colors.peach }]} />
-            </View>
+            <Text style={styles.wordmark}>merge</Text>
           </View>
-        </SafeAreaView>
+          <Text style={[type.display, { color: colors.onDark }]} accessibilityRole="header">
+            Share the commute you're already making.
+          </Text>
+          <View style={styles.route} accessibilityLabel="Alameda to San Francisco over the Bay Bridge">
+            <View style={[styles.dot, { backgroundColor: colors.onDark }]} />
+            <View style={styles.dash} />
+            <View style={styles.bridgePill}>
+              <Text style={styles.bridgeText}>Bay Bridge</Text>
+            </View>
+            <View style={styles.dash} />
+            <View style={[styles.dot, { backgroundColor: colors.peach }]} />
+          </View>
+        </View>
       </View>
 
       <View style={{ padding: space.xxl, paddingBottom: space.sm, gap: 14 }}>

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme';
 import { Route, useNav } from '../navigation';
 import { Icon, IconName } from './Icon';
@@ -14,36 +15,35 @@ const TABS: Tab[] = [
 
 export function TabBar({ active }: { active: Tab['key'] }) {
   const nav = useNav();
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.bar}>
-      <SafeAreaView>
-        <View style={styles.row} accessibilityRole="tablist">
-          {TABS.map((t) => {
-            const on = t.key === active;
-            const color = on ? colors.ember : colors.textMuted;
-            return (
-              <Pressable
-                key={t.key}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: on }}
-                accessibilityLabel={t.badge ? `${t.label}, ${t.badge} new` : t.label}
-                onPress={() => (on ? undefined : nav.reset(t.route))}
-                style={styles.tab}
-              >
-                <View>
-                  <Icon name={t.icon} size={24} color={color} />
-                  {t.badge ? (
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>{t.badge}</Text>
-                    </View>
-                  ) : null}
-                </View>
-                <Text style={[styles.label, { color }]}>{t.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </SafeAreaView>
+    <View style={[styles.bar, { paddingBottom: insets.bottom }]}>
+      <View style={styles.row} accessibilityRole="tablist">
+        {TABS.map((t) => {
+          const on = t.key === active;
+          const color = on ? colors.ember : colors.textMuted;
+          return (
+            <Pressable
+              key={t.key}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={t.badge ? `${t.label}, ${t.badge} new` : t.label}
+              onPress={() => (on ? undefined : nav.reset(t.route))}
+              style={styles.tab}
+            >
+              <View>
+                <Icon name={t.icon} size={24} color={color} />
+                {t.badge ? (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{t.badge}</Text>
+                  </View>
+                ) : null}
+              </View>
+              <Text style={[styles.label, { color }]}>{t.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }

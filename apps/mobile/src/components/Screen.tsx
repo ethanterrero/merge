@@ -1,11 +1,10 @@
-import React from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StatusBar as RNStatusBar, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { colors, radius, space, TOUCH, type } from '../theme';
 import { useNav } from '../navigation';
 import { Icon, IconName } from './Icon';
-
-const androidTop = Platform.OS === 'android' ? RNStatusBar.currentHeight ?? 0 : 0;
 
 /**
  * Standard screen frame: optional header, scrollable body and a pinned footer
@@ -28,8 +27,17 @@ export function Screen({
   contentStyle?: ViewStyle;
   statusBar?: 'dark' | 'light';
 }) {
+  const keyboardUp = useKeyboardVisible();
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: background }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    // 'padding' on both platforms: the view measures how far the keyboard overlaps it, so it
+    // pads by the keyboard height when Android draws edge-to-edge and by 0 if the window was
+    // resized instead. On Android it's switched off once the keyboard hides, because RN's
+    // keyboardDidHide event reports a position that would leave the system-bar height as padding.
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: background }}
+      behavior="padding"
+      enabled={Platform.OS !== 'android' || keyboardUp}
+    >
       <StatusBar style={statusBar} />
       {header}
       {scroll ? (
@@ -39,15 +47,37 @@ export function Screen({
       ) : (
         <View style={[{ flex: 1 }, contentStyle]}>{children}</View>
       )}
-      {footer ? (
-        <View style={styles.footer}>
-          <SafeAreaView>
-            <View style={styles.footerInner}>{footer}</View>
-          </SafeAreaView>
-        </View>
-      ) : null}
+      {footer ? <Footer keyboardUp={keyboardUp}>{footer}</Footer> : null}
     </KeyboardAvoidingView>
   );
+}
+
+/**
+ * Pinned footer. Pads the bottom inset (home indicator or Android navigation bar),
+ * except while the keyboard is up: the keyboard already covers that inset, so keeping
+ * it would float the footer above the keyboard.
+ */
+function Footer({ keyboardUp, children }: { keyboardUp: boolean; children: React.ReactNode }) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={styles.footer}>
+      <View style={[styles.footerInner, { paddingBottom: space.lg + (keyboardUp ? 0 : insets.bottom) }]}>{children}</View>
+    </View>
+  );
+}
+
+/** iOS reports the keyboard as it starts to animate, Android only once it's shown or hidden. */
+function useKeyboardVisible() {
+  const [visible, setVisible] = useState(() => Keyboard.isVisible());
+  useEffect(() => {
+    const ios = Platform.OS === 'ios';
+    const subs = [
+      Keyboard.addListener(ios ? 'keyboardWillShow' : 'keyboardDidShow', () => setVisible(true)),
+      Keyboard.addListener(ios ? 'keyboardWillHide' : 'keyboardDidHide', () => setVisible(false)),
+    ];
+    return () => subs.forEach((s) => s.remove());
+  }, []);
+  return visible;
 }
 
 export function IconButton({
@@ -79,21 +109,20 @@ export function IconButton({
 /** White top bar with back button and a title. */
 export function TopBar({ title, right, onBack }: { title?: string; right?: React.ReactNode; onBack?: () => void }) {
   const nav = useNav();
+  const insets = useSafeAreaInsets();
   return (
     <View style={styles.topBarWrap}>
-      <SafeAreaView>
-        <View style={[styles.topBar, { paddingTop: androidTop + space.sm }]}>
-          {nav.canGoBack || onBack ? <IconButton icon="chevron-back" label="Back" onPress={onBack ?? nav.back} /> : null}
-          {title ? (
-            <Text style={[type.heading, { flex: 1 }]} numberOfLines={1} accessibilityRole="header">
-              {title}
-            </Text>
-          ) : (
-            <View style={{ flex: 1 }} />
-          )}
-          {right}
-        </View>
-      </SafeAreaView>
+      <View style={[styles.topBar, { paddingTop: insets.top + space.sm }]}>
+        {nav.canGoBack || onBack ? <IconButton icon="chevron-back" label="Back" onPress={onBack ?? nav.back} /> : null}
+        {title ? (
+          <Text style={[type.heading, { flex: 1 }]} numberOfLines={1} accessibilityRole="header">
+            {title}
+          </Text>
+        ) : (
+          <View style={{ flex: 1 }} />
+        )}
+        {right}
+      </View>
     </View>
   );
 }
@@ -101,24 +130,23 @@ export function TopBar({ title, right, onBack }: { title?: string; right?: React
 /** Onboarding progress bar, e.g. "Step 1 of 2 · Essentials". */
 export function StepProgress({ step, total, label, right }: { step: number; total: number; label: string; right?: React.ReactNode }) {
   const nav = useNav();
+  const insets = useSafeAreaInsets();
   return (
     <View style={styles.topBarWrap}>
-      <SafeAreaView>
-        <View style={[styles.topBar, { paddingTop: androidTop + space.sm }]}>
-          {nav.canGoBack ? <IconButton icon="chevron-back" label="Back" onPress={nav.back} /> : null}
-          <View style={{ flex: 1, gap: 6 }}>
-            <Text style={[type.eyebrow, { color: colors.textMuted }]}>
-              Step {step} of {total} · {label}
-            </Text>
-            <View style={{ flexDirection: 'row', gap: 4 }} accessibilityLabel={`Step ${step} of ${total}`}>
-              {Array.from({ length: total }, (_, i) => (
-                <View key={i} style={[styles.progress, { backgroundColor: i < step ? colors.chili : colors.borderStrong }]} />
-              ))}
-            </View>
+      <View style={[styles.topBar, { paddingTop: insets.top + space.sm }]}>
+        {nav.canGoBack ? <IconButton icon="chevron-back" label="Back" onPress={nav.back} /> : null}
+        <View style={{ flex: 1, gap: 6 }}>
+          <Text style={[type.eyebrow, { color: colors.textMuted }]}>
+            Step {step} of {total} · {label}
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 4 }} accessibilityLabel={`Step ${step} of ${total}`}>
+            {Array.from({ length: total }, (_, i) => (
+              <View key={i} style={[styles.progress, { backgroundColor: i < step ? colors.chili : colors.borderStrong }]} />
+            ))}
           </View>
-          {right}
         </View>
-      </SafeAreaView>
+        {right}
+      </View>
     </View>
   );
 }

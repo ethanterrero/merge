@@ -1,5 +1,6 @@
 import React from 'react';
-import { Modal, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, radius, space, type } from '../theme';
 import { useAuth } from '../state/auth';
 import { Button } from './Button';
@@ -12,7 +13,7 @@ export function AccountSheet({ visible, onClose }: { visible: boolean; onClose: 
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.scrim} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close account" />
       <View style={styles.sheet}>
-        <SafeAreaView>
+        <SafeAreaView edges={['bottom']}>
           <View style={{ padding: space.xl, gap: space.md }}>
             <Text style={type.heading} accessibilityRole="header">
               {profile?.display_name ?? 'Account'}
