@@ -8,6 +8,7 @@ import { Screen, StepProgress } from '../components/Screen';
 import { Button } from '../components/Button';
 import { BayMap, Zone } from '../components/BayMap';
 import { Card, InfoNote, Row } from '../components/primitives';
+import { TimeField } from '../components/TimeField';
 
 const FLEX_OPTIONS = [5, 10, 15] as const;
 
@@ -36,8 +37,8 @@ export function CommuteScreen() {
           <Text style={[styles.mapTag, { left: 272, top: 116 }]}>Pickup</Text>
           <Text style={[styles.mapTag, { left: 30, top: 98 }]}>Drop-off</Text>
         </BayMap>
-        <AreaRow color={colors.chili} round label="Pickup area · about 0.5 mi wide" value={commute.pickupArea} />
-        <AreaRow color={colors.maroon} label="Drop-off area" value={commute.dropoffArea} divider />
+        <AreaRow color={colors.primary} round label="Pickup area · about 0.5 mi wide" value={commute.pickupArea} />
+        <AreaRow color={colors.deep} label="Drop-off area" value={commute.dropoffArea} divider />
         <Row style={{ backgroundColor: colors.background }}>
           <InfoNote icon="lock-closed" text="Others only see these areas. Your address stays private." />
         </Row>
@@ -64,10 +65,7 @@ export function CommuteScreen() {
       </View>
 
       <View style={{ flexDirection: 'row', gap: 10 }}>
-        <Pressable accessibilityRole="button" accessibilityHint="Opens a time picker" style={[styles.tile, shadow.sm]}>
-          <Text style={[type.caption, { color: colors.textMuted }]}>Leave around</Text>
-          <Text style={type.stat}>{commute.departure}</Text>
-        </Pressable>
+        <TimeField label="Leave around" value={commute.departure} onChange={(departure) => update({ departure })} style={[styles.tile, shadow.sm]} />
         <Pressable accessibilityRole="button" accessibilityHint="Changes how flexible your departure is" onPress={cycleFlex} style={[styles.tile, shadow.sm]}>
           <Text style={[type.caption, { color: colors.textMuted }]}>Flexible by</Text>
           <Text style={type.stat}>±{commute.flexMinutes} min</Text>
@@ -103,7 +101,7 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   day: { flex: 1, height: 44, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
-  dayOn: { backgroundColor: colors.chili },
+  dayOn: { backgroundColor: colors.primary },
   dayOff: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderStrong },
   dayText: { fontSize: 14, fontWeight: '700' },
   tile: { flex: 1, backgroundColor: colors.surface, borderRadius: radius.lg, paddingVertical: space.md, paddingHorizontal: 14, gap: 2 },
