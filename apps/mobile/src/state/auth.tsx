@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
@@ -36,12 +36,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
+  // Mirrors `session` for signOut, which resolves after SIGNED_OUT has been delivered.
+  const sessionRef = useRef<Session | null>(null);
 
   useEffect(() => {
     const client = supabase;
     if (!client) return;
     // Fires INITIAL_SESSION right away with any session restored from storage.
     const { data } = client.auth.onAuthStateChange((_event, next) => {
+      sessionRef.current = next;
       setSession(next);
       setSessionLoaded(true);
     });
@@ -140,9 +143,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
       signOut: async () => {
         if (!client) return null;
-        // signOut can fail and leave the session in place (offline with an expired token).
         const { error } = await client.auth.signOut();
-        return error ? SIGN_OUT_ERROR : null;
+        // An error is only a failed sign-out if the session is still there (offline with
+        // an expired token). When the logout request fails some other way, auth-js has
+        // already cleared the session and delivered SIGNED_OUT before this resolves, so
+        // sessionRef is null and the person is signed out: don't tell them to try again.
+        // getSession() can't answer this: with an expired token it retries the refresh,
+        // and offline it returns no session while the stored one is still in place.
+        return error && sessionRef.current ? SIGN_OUT_ERROR : null;
       },
     };
   }, [session, sessionLoaded, profile, profileLoaded]);
