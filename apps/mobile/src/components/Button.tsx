@@ -5,11 +5,11 @@ import { colors, radius } from '../theme';
 type Variant = 'primary' | 'secondary' | 'dark' | 'destructive' | 'tinted';
 
 const variants: Record<Variant, { bg: string; fg: string; border?: string; pressed: string }> = {
-  primary: { bg: colors.chili, fg: colors.onDark, pressed: colors.ember },
-  dark: { bg: colors.maroon, fg: colors.onDark, pressed: '#24000A' },
+  primary: { bg: colors.primary, fg: colors.onDark, pressed: colors.accent },
+  dark: { bg: colors.deep, fg: colors.onDark, pressed: colors.deepPressed },
   secondary: { bg: colors.surface, fg: colors.textPrimary, border: colors.borderStrong, pressed: colors.background },
-  destructive: { bg: colors.surface, fg: colors.ember, border: colors.ember, pressed: colors.blush },
-  tinted: { bg: colors.blush, fg: colors.maroon, pressed: '#FFD9CF' },
+  destructive: { bg: colors.surface, fg: colors.accent, border: colors.accent, pressed: colors.tint },
+  tinted: { bg: colors.tint, fg: colors.deep, pressed: colors.tintPressed },
 };
 
 type Props = {

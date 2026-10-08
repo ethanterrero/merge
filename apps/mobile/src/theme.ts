@@ -1,39 +1,70 @@
-// Merge design tokens — "Chili spice" palette.
+// Merge design tokens — "Forest" palette (owner-approved).
 // Keep every color, radius and spacing value here so screens never hard-code hexes.
+
+const brand = {
+  primary: '#2E6B3E', // primary actions, selected states, map pins
+  deep: '#14301C', // headers, dark segmented controls, logo glyph
+  accent: '#24532F', // links, icons and destructive outlines on light surfaces
+  accentLight: '#A9D4B4', // logo tile, celebratory accents
+  tint: '#E3F0E6', // selected backgrounds, info callouts, badges
+  deepPressed: '#0B1F12', // pressed state for `deep` surfaces
+  tintPressed: '#CFE5D6', // pressed state for `tint` surfaces
+} as const;
 
 export const colors = {
   // Brand
-  chili: '#CD1C18', // primary actions, selected states, map pins
-  peach: '#FFA896', // logo tile, celebratory accents
-  ember: '#9B1313', // links, icons and destructive outlines on light surfaces
-  maroon: '#38000A', // headers, dark segmented controls
+  ...brand,
 
-  // Tints
-  blush: '#FFE8E2', // selected backgrounds, info callouts, badges
+  // Deprecated aliases from the "Chili spice" palette, kept so existing screens
+  // keep working. deprecated: use primary/deep/accent/accentLight/tint instead.
+  chili: brand.primary, // deprecated: use primary
+  maroon: brand.deep, // deprecated: use deep
+  ember: brand.accent, // deprecated: use accent
+  peach: brand.accentLight, // deprecated: use accentLight
+  blush: brand.tint, // deprecated: use tint
 
-  // Neutrals (warm)
-  background: '#F8F4F3',
+  // Neutrals (cool green-grey)
+  background: '#F5F7F5',
   surface: '#FFFFFF',
-  border: '#EEE5E3',
-  borderStrong: '#D6C9C6',
-  textPrimary: '#241417',
-  textSecondary: '#4A3A3C',
-  textMuted: '#6B5A5C',
-  textFaint: '#968A8B',
+  border: '#E3E8E4',
+  borderStrong: '#CBD2CD',
+  textPrimary: '#1C221E',
+  textSecondary: '#3B433E',
+  textMuted: '#59625C',
+  textFaint: '#8A938D',
   onDark: '#FFFFFF',
-  onDarkMuted: '#FFE8E2',
+  onDarkMuted: '#E3F0E6',
 
-  // Status
-  success: '#1F9D55',
-  successText: '#1A7F45',
-  successBg: '#CDEFD9',
+  // Status (teal, so success never blends with the green brand)
+  success: '#14918A',
+  successText: '#0F766E',
+  successBg: '#CCEDE8',
 
   // Map
   water: '#D5DEE2',
-  land: '#EEE5E3',
-  road: '#968A8B',
-  chiliZone: 'rgba(205,28,24,0.18)',
-  maroonZone: 'rgba(56,0,10,0.10)',
+  land: '#E3E8E4',
+  road: '#8A938D',
+  chiliZone: 'rgba(46,107,62,0.18)',
+  maroonZone: 'rgba(20,48,28,0.10)',
+
+  // Welcome map
+  mapBg: '#E9EBEF',
+  street: '#FFFFFF',
+  avenue: '#C5CDE6',
+  avenueInner: '#D7DDEE',
+  park: '#D3E9CC',
+  mapWater: '#CFE0EE',
+
+  // Welcome cars (drawn top-down)
+  carLeadBody: '#2E6B3E',
+  carLeadSide: '#1C4527',
+  carLeadHighlight: '#5E9A6C',
+  carSandBody: '#E6DCB6',
+  carSandSide: '#BBAE80',
+  carSandHighlight: '#F3EDD3',
+  carCabin: '#18281E',
+  carShine: 'rgba(255,255,255,0.28)',
+  carShadow: 'rgba(15,30,20,0.35)',
 } as const;
 
 export const radius = { sm: 4, md: 8, lg: 12, xl: 16, xxl: 24, pill: 999 } as const;
@@ -54,14 +85,14 @@ export const type = {
 
 export const shadow = {
   sm: {
-    shadowColor: '#38000A',
+    shadowColor: colors.deep,
     shadowOpacity: 0.06,
     shadowRadius: 3,
     shadowOffset: { width: 0, height: 1 },
     elevation: 1,
   },
   md: {
-    shadowColor: '#38000A',
+    shadowColor: colors.deep,
     shadowOpacity: 0.1,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
