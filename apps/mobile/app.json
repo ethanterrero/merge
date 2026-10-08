@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "Merge",
+    "slug": "merge",
+    "scheme": "merge",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "app.merge.mobile"
+    },
+    "plugins": [
+      "expo-sqlite"
+    ]
+  }
+}
