@@ -1,7 +1,8 @@
 import 'react-native-url-polyfill/auto';
+// Installs a SQLite-backed `localStorage` global on iOS/Android (no-op on web,
+// where the browser provides one). Supabase persists the auth session there.
+import 'expo-sqlite/localStorage/install';
 import { createClient } from '@supabase/supabase-js';
-import { Platform } from 'react-native';
-import * as SQLite from 'expo-sqlite';
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -10,7 +11,7 @@ const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 export const supabase = url && anonKey
   ? createClient(url, anonKey, {
       auth: {
-        storage: Platform.OS === 'web' ? undefined : SQLite.localStorage,
+        storage: localStorage,
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,
