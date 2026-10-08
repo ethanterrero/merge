@@ -40,6 +40,12 @@ test('displayNameError enforces 2 to 40 characters after normalizing', () => {
   assert.equal(displayNameError('x'.repeat(41)), 'Use 40 characters or fewer.');
 });
 
+test('displayNameError counts characters, not UTF-16 code units, like the database check', () => {
+  assert.equal(displayNameError('🚗'), 'Enter at least 2 characters.');
+  assert.equal(displayNameError('🚗'.repeat(40)), null);
+  assert.equal(displayNameError('🚗'.repeat(41)), 'Use 40 characters or fewer.');
+});
+
 test('digitsOnly strips non-digits and caps at 6', () => {
   assert.equal(digitsOnly('12 34-56'), '123456');
   assert.equal(digitsOnly('1234567'), '123456');
@@ -56,6 +62,15 @@ test('sendCodeErrorMessage distinguishes rate limits from other failures', () =>
   assert.equal(sendCodeErrorMessage({ status: 429 }), 'Too many codes requested. Try again in a few minutes.');
   assert.equal(sendCodeErrorMessage({ status: 500 }), "Couldn't send the code. Check your connection and try again.");
   assert.equal(sendCodeErrorMessage({}), "Couldn't send the code. Check your connection and try again.");
+});
+
+test('sendCodeErrorMessage reports addresses the server rejects as invalid emails', () => {
+  assert.equal(sendCodeErrorMessage({ status: 400, code: 'email_address_invalid' }), 'Enter a valid email address.');
+  assert.equal(sendCodeErrorMessage({ status: 422, code: 'validation_failed' }), 'Enter a valid email address.');
+  assert.equal(
+    sendCodeErrorMessage({ status: 429, code: 'over_email_send_rate_limit' }),
+    'Too many codes requested. Try again in a few minutes.',
+  );
 });
 
 test('deriveStatus', () => {

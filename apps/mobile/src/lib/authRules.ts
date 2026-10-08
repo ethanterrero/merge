@@ -20,11 +20,15 @@ export function normalizeDisplayName(raw: string): string {
   return raw.trim().replace(/\s+/g, ' ');
 }
 
-/** Mirrors the `profiles_display_name_length` check in 0002_profiles_rls.sql. */
+/**
+ * Mirrors the `profiles_display_name_length` check in 0002_profiles_rls.sql.
+ * Postgres `char_length` counts characters (code points), so this does too:
+ * `String.length` would count an emoji as two UTF-16 code units.
+ */
 export function displayNameError(raw: string): string | null {
-  const name = normalizeDisplayName(raw);
-  if (name.length < 2) return 'Enter at least 2 characters.';
-  if (name.length > 40) return 'Use 40 characters or fewer.';
+  const length = [...normalizeDisplayName(raw)].length;
+  if (length < 2) return 'Enter at least 2 characters.';
+  if (length > 40) return 'Use 40 characters or fewer.';
   return null;
 }
 
@@ -36,7 +40,13 @@ export function isCompleteCode(raw: string): boolean {
   return new RegExp(`^\\d{${CODE_LENGTH}}$`).test(raw);
 }
 
-export function sendCodeErrorMessage(error: { status?: number }): string {
+// `isValidEmail` is looser than Supabase Auth's own validation, so the server can
+// still reject an address the client accepted.
+const SERVER_REJECTED_EMAIL_CODES = ['email_address_invalid', 'validation_failed'];
+
+/** Accepts a supabase-js `AuthError` directly. */
+export function sendCodeErrorMessage(error: { status?: number; code?: string }): string {
+  if (error.code !== undefined && SERVER_REJECTED_EMAIL_CODES.includes(error.code)) return INVALID_EMAIL_ERROR;
   if (error.status === 429) return 'Too many codes requested. Try again in a few minutes.';
   return "Couldn't send the code. Check your connection and try again.";
 }
