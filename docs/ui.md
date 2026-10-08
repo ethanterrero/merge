@@ -6,9 +6,11 @@ The mobile app in `apps/mobile` is a clickable UI prototype of the v0.1 flows. W
 
 **Sign-in (when Supabase is configured):** Welcome + role → Sign in (email) → Enter code (6 digits, resend after 60 s) → Your name (new accounts only) → Where and when. Returning users open straight to Discover. The account button on Discover shows the signed-in email and Sign out. Without Supabase values in `.env`, sign-in is skipped and the prototype starts at Welcome as before.
 
-**Passenger:** Welcome + role → Where and when → Preferences (optional) → Discover → Match detail → Request a ride → Booked.
+**Passenger:** Welcome + role → Where and when → Preferences (optional) → Discover → Match detail → Request First Ride → Booked → Post-ride → Ride Again → Crew.
 
-**Driver:** Trips tab → incoming request → accept, suggest a change or decline → confirm seat and cargo → upcoming trips.
+**Driver:** Trips tab → incoming request for one date ("Mon, Oct 12 · First Ride") → accept or decline → confirm seat and cargo, and set the exact pickup spot → upcoming trips.
+
+The one-date request, Post-ride, Ride Again and Crew screens are still being built. Until they land, the prototype still shows the older recurring request, a "Suggest a change" button, a Women-only chip and discovery switched on by default. The pilot drops all four, per the rules below.
 
 Sending a request in the prototype jumps straight to the booked state, so that screen can be reviewed without a real driver.
 
@@ -17,8 +19,15 @@ Sending a request in the prototype jumps straight to the booked state, so that s
 - Pickup and drop-off are approximate areas (about 0.5 mi). Exact pickup instructions unlock only after both sides confirm.
 - Discover shows generalized circles on the map and explains why each match fits (detour, departure window, shared days, cargo).
 - Requesting is not booking. The driver accepts, then confirms seat and cargo in one step.
+- Every request is a First Ride for one date, with no recurring commitment. A Commute Crew never creates rides on its own; each Crew ride is confirmed or skipped individually.
+- There's no "Suggest a change" or "Move". The driver sets the exact pickup spot when confirming, inside the passenger's pickup area.
+- The UI never reveals who said no, or whether a missing connection means "no" or "not answered". A declined request looks the same as an expired one.
+- Post-ride feedback is private. "Decide later" records nothing, and "Report a safety concern" is separate from feedback.
+- "Show me in discovery" is off until the person turns it on. Quiet and smoke-free preferences rank matches but never hide one, and there's no women-only option.
+- Contact sharing is mutual: neither person sees the other's details until both have offered.
 - Trust signals sit at the top of match detail: rides, on-time rate, member since, and ID / work email / vehicle verification.
-- There's no live tracking, payments, or carpool lane guarantee in the pilot.
+- There's no live tracking: others never see your location, during a ride or otherwise. In ride mode, location is used on the device only, during a ride the driver starts, and the server receives only "arrived" and a timestamp.
+- There are no payments or carpool lane guarantee in the pilot.
 
 Values in `[brackets]` are open product decisions, such as reply and cancellation cutoffs, reliability metrics, and cargo size limits.
 
