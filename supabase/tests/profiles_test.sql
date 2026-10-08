@@ -88,12 +88,28 @@ begin
 end
 $$;
 
--- 3b. Change her own row's id to Cal's (UPDATE policy WITH CHECK). Cal exists in
--- auth.users, so the foreign key would not stop this; only the policy does.
+-- 3b. Change her own row's id to Cal's, with a WHERE clause. Cal exists in
+-- auth.users, so the foreign key would not stop this. The WHERE clause reads the
+-- id column, so Postgres also applies the SELECT policy to the new row: either
+-- that or the UPDATE policy's WITH CHECK may be what rejects it. 3c isolates
+-- the UPDATE WITH CHECK.
 do $$
 begin
   update public.profiles set id = '00000000-0000-0000-0000-00000000000c' where id = auth.uid();
   raise exception 'Ada''s update of her own id to Cal''s was not rejected';
+exception when insufficient_privilege then
+  null;
+end
+$$;
+
+-- 3c. The same change with no WHERE clause and a constant SET value. The
+-- statement reads no columns, so it needs no SELECT rights and the SELECT policy
+-- is not applied: the UPDATE policy's USING clause alone picks Ada's row, and
+-- only its WITH CHECK clause can reject the new id.
+do $$
+begin
+  update public.profiles set id = '00000000-0000-0000-0000-00000000000c';
+  raise exception 'Ada''s unfiltered update of her own id to Cal''s was not rejected';
 exception when insufficient_privilege then
   null;
 end
