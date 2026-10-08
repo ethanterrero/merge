@@ -12,7 +12,8 @@
     "db:test": "scripts/db-test.sh",
     "db:link": "supabase link --project-ref aeycmdjoplppvizvwhgs",
     "db:push": "supabase db push",
-    "db:types": "supabase gen types typescript --linked --schema public > apps/mobile/src/lib/database.types.ts"
+    "db:types": "supabase gen types typescript --linked --schema public > apps/mobile/src/lib/database.types.ts",
+    "web": "npm --workspace apps/mobile run web --"
   },
   "workspaces": [
     "apps/*",
