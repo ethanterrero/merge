@@ -6,7 +6,7 @@
 
 **Architecture:** A new migration adds owner-only RLS to `profiles`, verified by plain-SQL tests that run in a throwaway PostGIS container with a minimal Supabase auth shim. In the app, an `AuthProvider` wraps everything and exposes one `status` (`loading | signedOut | needsProfile | ready | prototype`). Pure decision logic lives in `lib/authRules.ts` with unit tests. Three new screens (Sign in, Enter code, Your name) plug into the existing minimal stack navigator.
 
-**Tech Stack:** Expo SDK 54, React Native 0.81, TypeScript 5.9 (strict), `@supabase/supabase-js` 2.x, Supabase CLI (npm dev dependency), PostgreSQL 17 + PostGIS 3.5 (Docker, tests only), Node 22 `node:test` via `tsx`.
+**Tech Stack:** Expo SDK 54, React Native 0.81, TypeScript 5.9 (strict), `@supabase/supabase-js` 2.x, Supabase CLI (npm dev dependency), PostgreSQL 17 + PostGIS 3.5 (Docker in CI, tests only), Node 22 `node:test` via `tsx`.
 
 **Spec:** `docs/superpowers/specs/2026-10-08-supabase-auth-design.md`
 
@@ -82,7 +82,7 @@
 - Consumes: `supabase/migrations/0001_initial.sql` (existing `public.profiles` with RLS enabled, no policies).
 - Produces: `npm run db:test`, which exits 0 only when every `supabase/tests/*_test.sql` passes. Test helpers `tests.as_user(uuid)`, `tests.as_anon()`, `tests.as_admin()` for later test files (First Ride reuses them).
 
-**Prerequisite:** Docker Desktop is running (`docker info` succeeds). If it isn't, ask the owner to start it.
+**Local runs:** this machine has no container runtime, so `npm run db:test` is not run locally. The SQL is verified by the `database` CI job (GitHub Actions, amd64, Docker built in) when the branch is pushed, and the hosted schema is checked with the security advisors in Task 2. Write the files exactly as given and check them by reading.
 
 - [ ] **Step 1: Write the auth shim**
 
@@ -305,10 +305,9 @@ $$;
 rollback;
 ```
 
-- [ ] **Step 4: Run the test to verify it fails**
+- [ ] **Step 4: Check the test by reading it (CI runs it)**
 
-Run: `npm run db:test`
-Expected: `migrate 0001_initial.sql`, then psql reports `ERROR:  new row violates row-level security policy for table "profiles"`, then `FAIL profiles_test.sql`, exit code 1.
+Do not run `npm run db:test` locally (no container runtime). Re-read `profiles_test.sql` against `0001_initial.sql` and confirm: before the migration, the first `insert` as Ada would fail with `new row violates row-level security policy for table "profiles"`, because RLS is enabled with no policies. That's the expected RED in CI.
 
 - [ ] **Step 5: Write the migration**
 
@@ -339,10 +338,9 @@ create policy "Update own profile"
   with check (id = (select auth.uid()));
 ```
 
-- [ ] **Step 6: Run the test to verify it passes**
+- [ ] **Step 6: Check the migration against the test by reading**
 
-Run: `npm run db:test`
-Expected: `migrate 0001_initial.sql`, `migrate 0002_profiles_rls.sql`, `PASS profiles_test.sql`, exit code 0.
+Do not run `npm run db:test` locally. Walk through each of the 5 assertions and confirm the policies make it pass. CI's `database` job is expected to print `migrate 0001_initial.sql`, `migrate 0002_profiles_rls.sql`, `PASS profiles_test.sql`. Run `bash -n scripts/db-test.sh` to syntax-check the runner (expected: no output, exit 0).
 
 - [ ] **Step 7: Run DB tests in CI**
 
@@ -1751,8 +1749,8 @@ Stop the server.
 
 - [ ] **Step 5: Final checks**
 
-Run: `npm run typecheck && npm test && npm run db:test`
-Expected: all exit 0. `PASS profiles_test.sql`.
+Run: `npm run typecheck && npm test`
+Expected: both exit 0. (`db:test` runs in CI's `database` job.)
 
 - [ ] **Step 6: Commit**
 
