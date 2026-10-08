@@ -39,7 +39,7 @@ insert into public.profiles (id, display_name, role) values
   ('00000000-0000-0000-0000-000000000014', 'Kim K.', 'passenger'),
   ('00000000-0000-0000-0000-000000000015', 'Lu L.', 'driver');
 
-insert into public.commutes (id, owner_id, role, origin, destination, departure_time, weekdays)
+insert into public.commutes (id, owner_id, role, origin, destination, departure_time, weekdays, seats_offered)
 values (
   '30000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-00000000000b',
@@ -47,7 +47,8 @@ values (
   'SRID=4326;POINT(-122.2830 37.7650)',
   'SRID=4326;POINT(-122.3990 37.7890)',
   '07:30',
-  '{1,2,3,4}'
+  '{1,2,3,4}',
+  1
 );
 
 insert into public.invitations (id, sender_id, recipient_id, commute_id, status, ride_date) values
