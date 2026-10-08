@@ -1,14 +1,54 @@
-name: Checks
+name: CI
+
 on:
-  push:
   pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  typecheck:
+  quality:
+    name: Lint, types, tests, Expo dependencies
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm install
-      - run: npm run typecheck
+      # Temporary bootstrap: commit package-lock.json and switch to npm ci next.
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit and schema guard tests
+        run: npm run test
+      - name: Verify Expo dependency versions
+        run: npm exec --workspace apps/mobile -- expo install --check
+        env:
+          CI: '1'
+
+  hygiene:
+    name: Repository hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject committed environment files
+        run: |
+          if git ls-files | grep -E '(^|/)\.env($|\.)' | grep -vE '\.env\.example$'; then
+            echo 'Tracked environment files detected.' >&2
+            exit 1
+          fi
+          echo 'No tracked environment files.'
