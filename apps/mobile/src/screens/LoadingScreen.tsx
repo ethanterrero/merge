@@ -1,7 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { colors, space } from '../theme';
+import { colors, radius, space } from '../theme';
 import { Icon } from '../components/Icon';
 
 /** Shown at launch while the stored session and profile load. */
@@ -19,5 +19,5 @@ export function LoadingScreen() {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.maroon, alignItems: 'center', justifyContent: 'center', gap: space.xl },
-  logo: { width: 56, height: 56, borderRadius: 16, backgroundColor: colors.peach, alignItems: 'center', justifyContent: 'center' },
+  logo: { width: 56, height: 56, borderRadius: radius.xl, backgroundColor: colors.peach, alignItems: 'center', justifyContent: 'center' },
 });
