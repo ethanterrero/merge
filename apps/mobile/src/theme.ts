@@ -39,6 +39,9 @@ export const colors = {
   success: '#14918A',
   successText: '#0F766E',
   successBg: '#CCEDE8',
+  // Errors and failures: a deep red, so they never read as the green brand
+  danger: '#B42318',
+  dangerBg: '#FDECEA',
 
   // Map
   water: '#D5DEE2',
