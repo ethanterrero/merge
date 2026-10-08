@@ -25,11 +25,11 @@ Sending a request in the prototype jumps straight to the booked state, so that s
 - Post-ride feedback is private. "Decide later" records nothing, and "Report a safety concern" is separate from feedback.
 - "Show me in discovery" is off until the person turns it on. Quiet and smoke-free preferences rank matches but never hide one, and there's no women-only option.
 - Contact sharing is mutual: neither person sees the other's details until both have offered.
-- Trust signals sit at the top of match detail: rides, on-time rate, member since, and ID / work email / vehicle verification.
+- Trust signals sit at the top of match detail: rides, member since, and one badge for vetted drivers, "License & insurance checked by Merge". There are no ID, work-email or vehicle verification rows. An on-time rate is pending an open decision (D-03) and doesn't ship yet.
 - There's no live tracking: others never see your location, during a ride or otherwise. In ride mode, location is used on the device only, during a ride the driver starts, and the server receives only "arrived" and a timestamp.
 - There are no payments or carpool lane guarantee in the pilot.
 
-Values in `[brackets]` are open product decisions, such as reply and cancellation cutoffs, reliability metrics, and cargo size limits.
+Values in `[brackets]` are open product decisions, such as reliability metrics. The reply and cancellation cutoffs and the cargo limits are decided (see `docs/mvp-backlog.md`, D-02 and D-04), so their brackets are being replaced with the decided values.
 
 ## Design tokens
 
@@ -48,7 +48,7 @@ Icons come from Ionicons, using filled variants through `src/components/Icon.tsx
 
 ## Not built yet
 
-- The real map (react-native-maps or Mapbox) replacing the stylized `BayMap`
+- The real map (MapLibre with Stadia Maps tiles) replacing the stylized `BayMap`
 - React Navigation or Expo Router replacing the minimal stack in `src/navigation.tsx`
 - The custom font (Plus Jakarta Sans via `expo-font`); the system font is used for now
 - Time and area pickers, messaging, block and report flows, and verification

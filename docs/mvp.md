@@ -36,7 +36,7 @@ Either member can pause, resume, or end a Commute Crew at any time, without pena
 - Display both drivers and passengers by default.
 - Hard filters: available seats, blocks, visibility, and cargo compatibility.
 - Ride preferences (quiet, smoke-free) are preferred, never mandatory. Shared preferences raise a match's rank and show on its card, but never hide a match.
-- Cargo example: **medium, foldable scooter**. Request dimensions and weight; verify available secure storage and obtain driver approval.
+- Cargo: one **foldable scooter** per passenger, folded within 120 × 50 × 60 cm and 20 kg (44 lb). The driver declares whether the trunk fits one, and approves each request at confirmation.
 - Prefer recurring schedule fit and carpools that reach HOV occupancy, but never guarantee eligibility or travel-time savings.
 
 ## Privacy and safety

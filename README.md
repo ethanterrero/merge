@@ -23,7 +23,7 @@ Merge is an open-source commuter carpooling app, initially focused on East Bay â
 
 - Expo + React Native + TypeScript
 - Supabase Auth with email codes, PostgreSQL, PostGIS, Row Level Security
-- Routing API (to be selected)
+- MapLibre with Stadia Maps tiles. There's no geocoding or routing provider in the pilot; detour is estimated in PostGIS. See the [map provider research](docs/research/2026-10-08-m01-map-provider.md).
 
 ## Getting started
 
