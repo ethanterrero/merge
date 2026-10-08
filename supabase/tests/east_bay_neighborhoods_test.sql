@@ -1,7 +1,8 @@
 -- East Bay neighborhoods (0009): hand-drawn Alameda, Oakland and Berkeley
 -- neighborhoods label commute areas, stay inside their city, never overlap,
--- and saved labels are refreshed when the boundaries change.
--- Spec: docs/superpowers/specs/2026-10-08-commute-privacy-design.md, "Boundary data".
+-- saved labels are refreshed when the boundaries change, and clients can no
+-- longer call the area helpers.
+-- Spec: docs/superpowers/specs/2026-10-08-commute-privacy-design.md, section 3 (area labels).
 begin;
 
 select tests.as_admin();
@@ -114,19 +115,60 @@ begin
 end
 $$;
 
--- 6. relabel_commute_areas() refreshes stale saved labels from each area's
--- center, leaves areas alone, re-enables the area trigger, and is idempotent.
+-- 6. A signed-in person's commute still gets its areas and labels: the area
+-- trigger runs as its owner (security definer) now that the helpers are
+-- owner-only. It refuses a row owned by someone else.
 insert into auth.users (id, email) values
-  ('00000000-0000-0000-0000-0000000000e1', 'eve@example.test');
+  ('00000000-0000-0000-0000-0000000000e1', 'eve@example.test'),
+  ('00000000-0000-0000-0000-0000000000f1', 'fay@example.test');
 insert into public.profiles (id, display_name) values
-  ('00000000-0000-0000-0000-0000000000e1', 'Eve E.');
+  ('00000000-0000-0000-0000-0000000000e1', 'Eve E.'),
+  ('00000000-0000-0000-0000-0000000000f1', 'Fay F.');
 
 select tests.as_user('00000000-0000-0000-0000-0000000000e1');
 insert into public.commutes (id, owner_id, role, origin, destination, departure_time, weekdays)
 values ('00000000-0000-0000-0000-0000000000e2', '00000000-0000-0000-0000-0000000000e1', 'passenger',
         'SRID=4326;POINT(-122.2446 37.7638)', 'SRID=4326;POINT(-122.2717 37.8033)', '07:30', '{1,2}');
 
+do $$
+begin
+  insert into public.commutes (owner_id, role, origin, destination, departure_time, weekdays)
+  values ('00000000-0000-0000-0000-0000000000f1', 'passenger',
+          'SRID=4326;POINT(-122.2446 37.7638)', 'SRID=4326;POINT(-122.2717 37.8033)', '07:30', '{1}');
+  raise exception 'Eve saved a commute owned by Fay';
+exception when insufficient_privilege then
+  null;
+end
+$$;
+
 select tests.as_admin();
+do $$
+declare
+  c public.commutes;
+begin
+  select * into c from public.commutes where id = '00000000-0000-0000-0000-0000000000e2';
+  if c.origin_area is null or c.destination_area is null
+     or extensions.st_distance(c.origin, c.origin_area) > public.area_radius_m()
+     or extensions.st_distance(c.destination, c.destination_area) > public.area_radius_m() then
+    raise exception 'Eve''s commute should get areas within % m of her points', public.area_radius_m();
+  end if;
+  if c.origin_area_label is distinct from public.area_label(c.origin_area)
+     or c.destination_area_label is distinct from public.area_label(c.destination_area)
+     or c.origin_area_label not like '% area, Alameda'
+     or c.destination_area_label not like '% area, Oakland' then
+    raise exception 'Eve''s labels should come from her area centers, got %, %', c.origin_area_label, c.destination_area_label;
+  end if;
+  if not (select prosecdef from pg_proc where oid = 'public.commutes_set_areas()'::regprocedure) then
+    raise exception 'commutes_set_areas should be security definer';
+  end if;
+  if exists (select 1 from public.commutes where owner_id = '00000000-0000-0000-0000-0000000000f1') then
+    raise exception 'A commute for Fay was saved';
+  end if;
+end
+$$;
+
+-- 7. relabel_commute_areas() refreshes stale saved labels from each area's
+-- center, leaves areas alone, re-enables the area trigger, and is idempotent.
 do $$
 declare
   before public.commutes;
@@ -166,13 +208,35 @@ begin
 end
 $$;
 
--- 7. Clients can't call relabel_commute_areas.
+-- 8. Clients (authenticated, anon) can't call any area helper, the area
+-- trigger or relabel_commute_areas, so /rest/v1/rpc can't reverse-geocode.
+do $$
+declare
+  f text;
+begin
+  foreach f in array array[
+    'public.area_label(extensions.geography)',
+    'public.area_radius_m()',
+    'public.within_area(extensions.geography, extensions.geography)',
+    'public.random_area_center(extensions.geography)',
+    'public.commute_area_for(uuid, uuid, extensions.geography, extensions.geography)',
+    'public.commutes_set_areas()',
+    'public.relabel_commute_areas()'
+  ] loop
+    if has_function_privilege('authenticated', f, 'execute') or has_function_privilege('anon', f, 'execute') then
+      raise exception '% is executable by a client role', f;
+    end if;
+  end loop;
+end
+$$;
+
+select tests.as_user('00000000-0000-0000-0000-0000000000e1');
 do $$
 begin
-  if has_function_privilege('authenticated', 'public.relabel_commute_areas()', 'execute')
-     or has_function_privilege('anon', 'public.relabel_commute_areas()', 'execute') then
-    raise exception 'relabel_commute_areas is executable by a client role';
-  end if;
+  perform public.area_label('SRID=4326;POINT(-122.2446 37.7638)');
+  raise exception 'A signed-in person can call area_label';
+exception when insufficient_privilege then
+  null;
 end
 $$;
 
