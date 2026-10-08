@@ -7,6 +7,7 @@ export const RESEND_AFTER_SECONDS = 60;
 export const INVALID_EMAIL_ERROR = 'Enter a valid email address.';
 export const VERIFY_CODE_ERROR = "That code didn't work. Check it or request a new one.";
 export const SAVE_PROFILE_ERROR = "Couldn't save your name. Check your connection and try again.";
+export const SIGN_OUT_ERROR = "Couldn't sign out. Check your connection and try again.";
 
 export function normalizeEmail(raw: string): string {
   return raw.trim().toLowerCase();

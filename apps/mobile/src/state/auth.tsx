@@ -11,6 +11,7 @@ import {
   profileRetryDelayMs,
   SAVE_PROFILE_ERROR,
   sendCodeErrorMessage,
+  SIGN_OUT_ERROR,
   VERIFY_CODE_ERROR,
 } from '../lib/authRules';
 import type { Role } from './commute';
@@ -25,7 +26,7 @@ type Auth = {
   sendCode: (email: string) => Promise<string | null>;
   verifyCode: (email: string, code: string) => Promise<string | null>;
   saveProfile: (input: { displayName: string; role: Role }) => Promise<string | null>;
-  signOut: () => Promise<void>;
+  signOut: () => Promise<string | null>;
 };
 
 const AuthContext = createContext<Auth | null>(null);
@@ -138,7 +139,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return null;
       },
       signOut: async () => {
-        if (client) await client.auth.signOut();
+        if (!client) return null;
+        // signOut can fail and leave the session in place (offline with an expired token).
+        const { error } = await client.auth.signOut();
+        return error ? SIGN_OUT_ERROR : null;
       },
     };
   }, [session, sessionLoaded, profile, profileLoaded]);
