@@ -12,8 +12,10 @@ drop extension if exists postgis_tiger_geocoder, postgis_topology, fuzzystrmatch
 create schema extensions;
 create schema auth;
 
--- Supabase puts extensions (PostGIS) on the default search path.
-alter database postgres set search_path = "$user", public, extensions;
+-- Don't add extensions to the search path. The Supabase CLI applies migrations
+-- as a login role whose search_path is only "$user", public, so migrations must
+-- schema-qualify extension objects (extensions.geography, extensions.st_*).
+-- Leaving the default here makes CI fail the same way the hosted push would.
 
 create table auth.users (
   id uuid primary key,
