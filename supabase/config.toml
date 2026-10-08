@@ -244,6 +244,18 @@ otp_expiry = 600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# Sign-in emails carry a 6-digit code ({{ .Token }}), never a link. With "Confirm email"
+# on, a new user's first code uses the confirmation (Confirm signup) template and later
+# codes use magic_link, so both need the code. These only apply to a local stack: paste
+# both into the hosted dashboard by hand (docs/pilot/sign-in.md).
+[auth.email.template.confirmation]
+subject = "Your Merge code"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.magic_link]
+subject = "Your Merge code"
+content_path = "./supabase/templates/magic_link.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"

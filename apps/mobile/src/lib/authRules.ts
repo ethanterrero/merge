@@ -45,9 +45,19 @@ export function isCompleteCode(raw: string): boolean {
 const SERVER_REJECTED_EMAIL_CODES = ['email_address_invalid', 'validation_failed'];
 
 /** Accepts a supabase-js `AuthError` directly. */
-export function sendCodeErrorMessage(error: { status?: number; code?: string }): string {
+export function sendCodeErrorMessage(error: { status?: number; code?: string; message?: string }): string {
   if (error.code !== undefined && SERVER_REJECTED_EMAIL_CODES.includes(error.code)) return INVALID_EMAIL_ERROR;
   if (error.status === 429) return 'Too many codes requested. Try again in a few minutes.';
+  // Closed pilot (D-11): with sign-ups off, Supabase Auth refuses an email that isn't
+  // a confirmed user with HTTP 422. `signup_disabled` ("Signups not allowed for this
+  // instance") when shouldCreateUser is true, `otp_disabled` ("Signups not allowed
+  // for otp") when it is false. Match the code; fall back to the message only when
+  // the error carries no code.
+  const signupsOff =
+    error.code === 'signup_disabled' ||
+    error.code === 'otp_disabled' ||
+    (error.code === undefined && /signups not allowed/i.test(error.message ?? ''));
+  if (signupsOff) return "This email isn't on the Merge pilot list yet. Ask your pilot contact to add you.";
   return "Couldn't send the code. Check your connection and try again.";
 }
 
