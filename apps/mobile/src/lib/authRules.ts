@@ -72,14 +72,14 @@ export function launchRoute(status: Exclude<AuthStatus, 'loading'>): 'welcome' |
   return status === 'ready' ? 'discover' : 'welcome';
 }
 
-/** Where Welcome's Continue button goes. */
+/** Where Welcome's Log in (after its animation) and the Role step's Continue go. */
 export function welcomeNext(status: AuthStatus): 'signIn' | 'profileName' | 'commute' {
   if (status === 'signedOut') return 'signIn';
   if (status === 'needsProfile') return 'profileName';
   return 'commute';
 }
 
-const SIGNED_OUT_ROUTES = ['welcome', 'signIn', 'verifyCode'];
+const SIGNED_OUT_ROUTES = ['welcome', 'signIn', 'verifyCode', 'role'];
 
 /** True when someone signed out (or their session ended) on a signed-in screen. */
 export function mustLeaveRoute(status: AuthStatus, routeName: string): boolean {
