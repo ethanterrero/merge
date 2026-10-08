@@ -15,6 +15,7 @@ export function VerifyCodeScreen({ email }: { email: string }) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(RESEND_AFTER_SECONDS);
 
   useEffect(() => {
@@ -35,21 +36,31 @@ export function VerifyCodeScreen({ email }: { email: string }) {
     setNotice(null);
     setVerifying(true);
     const err = await verifyCode(email, code);
-    setVerifying(false);
-    if (err) setError(err);
+    // On success, stay in the checking state: the auth status effect above leaves this screen.
+    if (err) {
+      setVerifying(false);
+      setError(err);
+    }
   };
 
   const resend = async () => {
+    if (resending) return;
     setError(null);
     setNotice(null);
-    const err = await sendCode(email);
-    if (err) {
-      setError(err);
-      return;
+    setResending(true);
+    try {
+      const err = await sendCode(email);
+      if (err) {
+        setError(err);
+        return;
+      }
+      setError(null);
+      setCode('');
+      setNotice('New code sent.');
+      setSecondsLeft(RESEND_AFTER_SECONDS);
+    } finally {
+      setResending(false);
     }
-    setCode('');
-    setNotice('New code sent.');
-    setSecondsLeft(RESEND_AFTER_SECONDS);
   };
 
   return (
@@ -73,20 +84,19 @@ export function VerifyCodeScreen({ email }: { email: string }) {
         keyboardType="number-pad"
         textContentType="oneTimeCode"
         autoComplete="one-time-code"
-        maxLength={6}
         returnKeyType="done"
         onSubmitEditing={submit}
       />
       <View style={{ flexDirection: 'row', gap: space.sm }}>
         <Button
-          label={secondsLeft > 0 ? `Resend code in ${secondsLeft}s` : 'Resend code'}
+          label={resending ? 'Sending…' : secondsLeft > 0 ? `Resend code in ${secondsLeft}s` : 'Resend code'}
           variant="tinted"
           size="sm"
-          disabled={secondsLeft > 0}
+          disabled={secondsLeft > 0 || resending}
           onPress={resend}
           style={{ flex: 1 }}
         />
-        <Button label="Use a different email" variant="secondary" size="sm" onPress={nav.back} style={{ flex: 1 }} />
+        <Button label="Use a different email" variant="secondary" size="sm" disabled={verifying} onPress={nav.back} style={{ flex: 1 }} />
       </View>
     </Screen>
   );
