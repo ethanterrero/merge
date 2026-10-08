@@ -8,6 +8,7 @@ export const INVALID_EMAIL_ERROR = 'Enter a valid email address.';
 export const VERIFY_CODE_ERROR = "That code didn't work. Check it or request a new one.";
 export const SAVE_PROFILE_ERROR = "Couldn't save your name. Check your connection and try again.";
 export const SIGN_OUT_ERROR = "Couldn't sign out. Check your connection and try again.";
+export const SERVER_ERROR = 'Something went wrong on our side. Try again in a few minutes.';
 
 export function normalizeEmail(raw: string): string {
   return raw.trim().toLowerCase();
@@ -49,6 +50,7 @@ const SERVER_REJECTED_EMAIL_CODES = ['email_address_invalid', 'validation_failed
 export function sendCodeErrorMessage(error: { status?: number; code?: string }): string {
   if (error.code !== undefined && SERVER_REJECTED_EMAIL_CODES.includes(error.code)) return INVALID_EMAIL_ERROR;
   if (error.status === 429) return 'Too many codes requested. Try again in a few minutes.';
+  if (error.status !== undefined && error.status >= 500) return SERVER_ERROR;
   return "Couldn't send the code. Check your connection and try again.";
 }
 
