@@ -3,6 +3,9 @@ import { BackHandler } from 'react-native';
 import { NavigationProvider, Route, useNav } from './src/navigation';
 import { CommuteProvider } from './src/state/commute';
 import { WelcomeScreen } from './src/screens/WelcomeScreen';
+import { SignInScreen } from './src/screens/SignInScreen';
+import { VerifyCodeScreen } from './src/screens/VerifyCodeScreen';
+import { ProfileNameScreen } from './src/screens/ProfileNameScreen';
 import { CommuteScreen } from './src/screens/CommuteScreen';
 import { PreferencesScreen } from './src/screens/PreferencesScreen';
 import { DiscoverScreen } from './src/screens/DiscoverScreen';
@@ -43,6 +46,12 @@ function renderRoute(route: Route): React.ReactElement {
   switch (route.name) {
     case 'welcome':
       return <WelcomeScreen />;
+    case 'signIn':
+      return <SignInScreen />;
+    case 'verifyCode':
+      return <VerifyCodeScreen email={route.email} />;
+    case 'profileName':
+      return <ProfileNameScreen />;
     case 'commute':
       return <CommuteScreen />;
     case 'preferences':

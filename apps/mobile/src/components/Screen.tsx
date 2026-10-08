@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, Pressable, SafeAreaView, ScrollView, StatusBar as RNStatusBar, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StatusBar as RNStatusBar, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { colors, radius, space, TOUCH, type } from '../theme';
 import { useNav } from '../navigation';
@@ -29,7 +29,7 @@ export function Screen({
   statusBar?: 'dark' | 'light';
 }) {
   return (
-    <View style={{ flex: 1, backgroundColor: background }}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: background }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <StatusBar style={statusBar} />
       {header}
       {scroll ? (
@@ -46,7 +46,7 @@ export function Screen({
           </SafeAreaView>
         </View>
       ) : null}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
