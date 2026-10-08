@@ -214,7 +214,30 @@ end
 $$;
 
 -- 8. Ada can delete her own rows, and an unfiltered DELETE touches only hers.
+-- 8a. Deleting the vehicle her commute uses succeeds and detaches it from the
+-- commute (vehicle_id becomes null; the commute stays hers).
 select tests.as_user('00000000-0000-0000-0000-00000000000a');
+do $$
+declare
+  n integer;
+begin
+  delete from public.vehicles;
+  get diagnostics n = row_count;
+  if n <> 1 then
+    raise exception 'An unfiltered vehicle delete by Ada should remove only her own row, but removed % rows', n;
+  end if;
+  if not exists (
+    select 1 from public.commutes
+    where id = '00000000-0000-0000-0000-0000000000a2'
+      and owner_id = '00000000-0000-0000-0000-00000000000a'
+      and vehicle_id is null
+  ) then
+    raise exception 'Deleting Ada''s vehicle should leave her commute in place with no vehicle';
+  end if;
+end
+$$;
+
+-- 8b. Deleting her commute.
 do $$
 declare
   n integer;
@@ -223,11 +246,6 @@ begin
   get diagnostics n = row_count;
   if n <> 1 then
     raise exception 'An unfiltered commute delete by Ada should remove only her own row, but removed % rows', n;
-  end if;
-  delete from public.vehicles;
-  get diagnostics n = row_count;
-  if n <> 1 then
-    raise exception 'An unfiltered vehicle delete by Ada should remove only her own row, but removed % rows', n;
   end if;
 end
 $$;
@@ -255,6 +273,17 @@ begin
   end if;
   if (select count(*) from public.vehicles) <> 1 or (select count(*) from public.commutes) <> 1 then
     raise exception 'Ada''s rows should be gone and only Bea''s should remain';
+  end if;
+end
+$$;
+
+-- 10. Deleting an account still cascades to a commute that uses its vehicle
+-- (the vehicle's set-null action and the commute's cascade don't conflict).
+delete from auth.users where id = '00000000-0000-0000-0000-00000000000b';
+do $$
+begin
+  if exists (select 1 from public.vehicles) or exists (select 1 from public.commutes) then
+    raise exception 'Deleting Bea''s account should remove her vehicle and commute';
   end if;
 end
 $$;
