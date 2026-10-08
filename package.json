@@ -3,11 +3,17 @@
   "private": true,
   "version": "0.1.0",
   "packageManager": "npm@10.9.2",
+  "engines": {
+    "node": ">=22 <25"
+  },
   "scripts": {
     "start": "npm --workspace apps/mobile run start",
     "android": "npm --workspace apps/mobile run android",
     "ios": "npm --workspace apps/mobile run ios",
-    "typecheck": "npm --workspace apps/mobile run typecheck"
+    "lint": "npm --workspace apps/mobile run lint",
+    "typecheck": "npm --workspace apps/mobile run typecheck",
+    "test": "node --test tests/*.test.mjs",
+    "check": "npm run lint && npm run typecheck && npm run test"
   },
   "workspaces": [
     "apps/*",
