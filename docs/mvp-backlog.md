@@ -1426,6 +1426,7 @@ When done, open a PR to main and stop.
 - **Touches:** `docs/superpowers/specs/YYYY-MM-DD-account-deletion-design.md`, `supabase/migrations/0006_account_deletion.sql`, `supabase/tests/account_deletion_test.sql`
 - **Source:** auth spec lines 134 and 142 (a pilot blocker, out of auth scope); plan line 1667 (App Store guideline 5.1.1(v)); `0001_initial.sql:41-43` (`invitations` foreign keys with no `on delete`); `0002_profiles_rls.sql:2` (deletion via the `auth.users` cascade)
 - **Done when:** the spec, with a "Deletion policy" section every later table must follow, is approved. CI proves that deleting a user who has a profile, vehicle, commute, invitations both ways, a ride, feedback, a connection, an open Crew, blocks both ways and a safety report succeeds from `auth.users`, leaves the other person's history as D-15 says, and leaves connections consistent with the remaining feedback. Later tasks can follow the policy without reading this task's code.
+- **Advisor findings (hosted, after 0008):** add indexes on the foreign keys that deletion cascades scan: `commute_crews.proposed_by`, `safety_reports.ride_id`, and any invitation columns M-27 hasn't indexed yet.
 
 **Agent prompt**
 
@@ -2551,6 +2552,7 @@ When done, open a PR to main and stop.
 - **Touches:** `docs/superpowers/specs/YYYY-MM-DD-booking-design.md` (covers this task and M-32), `supabase/migrations/0011_invitations.sql`, `supabase/tests/invitations_test.sql`, `supabase/tests/account_deletion_invitations_test.sql`
 - **Source:** `docs/mvp.md:10-11` (request, mutually accept, confirm transactionally), `:24` (rate-limited invitations), `:25`; `docs/ui.md` ("Requesting is not booking"); First Ride spec lines 18 (Ride Again means both are open to future invitations), 35–36, 51; `0001_initial.sql:39-47`; `RequestRideScreen.tsx:63-70` (copy that names "decline"); `MatchDetailScreen.tsx:50-51` (driver invite disabled); `DriverRequestScreen.tsx:21-27`
 - **Done when:** the booking spec (request lifecycle, both directions, and confirmation) is approved. The migration implements the invitation half: send in either direction, accept (driver invites only), decline, withdraw, expiry fields, rate limits, block, suspension and visibility checks, participant-only RLS. A declined request is indistinguishable from an expired one to the requester. CI passes.
+- **Advisor findings (hosted, after 0008):** `invitations.commute_id`, `crew_id`, `recipient_id` and `sender_id` have no indexes. Add them in this task's migration. `invitations` also has RLS with no policies (default-deny) until this task adds them.
 
 **Agent prompt**
 
@@ -4219,6 +4221,7 @@ When done, open a PR to main and stop.
 - **Touches:** `supabase/migrations/0022_security_fixes.sql`, `supabase/tests/security_audit_test.sql`, `docs/research/YYYY-MM-DD-rls-audit.md`
 - **Source:** `0001_initial.sql:1` ("Review and test RLS before connecting production users"); `docs/mvp.md:22-25`; auth spec lines 52–54 (Security Advisor via the read-only MCP), line 119
 - **Done when:** every table, view and function has been reviewed against the checklist. Fixes and negative tests land in this task's migration (planned 0022). The owner has run the Security Advisor and the results are recorded in the audit doc.
+- **Advisor findings (hosted, after 0008):** `propose_crew`, `respond_to_crew` and `set_crew_status` are client RPCs by design, and check `auth.uid()`. Confirm their tests cover that. `area_label` and the 0008 area helpers are being revoked from clients in 0009 (M-18 follow-up), so verify that. Run `npx supabase db advisors --linked --type all` from a linked worktree and resolve every WARN.
 
 **Agent prompt**
 
