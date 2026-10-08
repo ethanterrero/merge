@@ -11,6 +11,26 @@ import { TextField } from '../components/TextField';
 // TopBar has no disabled state, so the header Back is swapped for this no-op while the code is checked.
 const ignoreBack = () => {};
 
+// The Supabase client sets no fetch timeout, and neither React Native nor browsers add one, so a request on
+// a stalled connection never settles. The check gives up after this long so Checking… can't last forever.
+const VERIFY_TIMEOUT_MS = 25000;
+
+/**
+ * Rejects once `ms` have passed without `task` settling. The request itself can't be cancelled from here:
+ * it keeps running, and if it succeeds late, the auth status still changes.
+ */
+async function withTimeout<T>(task: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const expired = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error('timed out')), ms);
+  });
+  try {
+    return await Promise.race([task, expired]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export function VerifyCodeScreen({ email }: { email: string }) {
   const nav = useNav();
   const { status, sendCode, verifyCode } = useAuth();
@@ -37,7 +57,8 @@ export function VerifyCodeScreen({ email }: { email: string }) {
   // status effect above, and a sign-in that lands afterwards would strand them on Sign in.
   // Android hardware back is swallowed here. BackHandler calls the most recently added listener
   // first and Router re-adds its own after every stack change, so this is registered when
-  // `verifying` turns true (not on mount) to sit above Router's.
+  // `verifying` turns true (not on mount) to sit above Router's. A request that never settles
+  // ends as an error after VERIFY_TIMEOUT_MS, which resets `verifying` and frees every exit.
   useEffect(() => {
     if (!verifying) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
@@ -51,9 +72,10 @@ export function VerifyCodeScreen({ email }: { email: string }) {
     setVerifying(true);
     let err: string | null;
     try {
-      err = await verifyCode(email, code);
+      err = await withTimeout(verifyCode(email, code), VERIFY_TIMEOUT_MS);
     } catch {
-      // verifyCode resolves to a message, but a throw must not leave the screen stuck on 'Checking…'.
+      // verifyCode resolves to a message, but a throw or a request that never settles must not leave the
+      // screen stuck on 'Checking…' with every exit blocked.
       err = VERIFY_CODE_ERROR;
     }
     // On success, stay in the checking state: the auth status effect above leaves this screen.
