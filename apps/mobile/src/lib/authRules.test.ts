@@ -95,6 +95,47 @@ test('sendCodeErrorMessage lets an invalid-email code win over any status', () =
   assert.equal(sendCodeErrorMessage({ status: 429, code: 'email_address_invalid' }), 'Enter a valid email address.');
 });
 
+const PILOT_LIST_MESSAGE = "This email isn't on the Merge pilot list yet. Ask your pilot contact to add you.";
+
+test('sendCodeErrorMessage tells unknown emails they are not on the pilot list when sign-ups are off', () => {
+  // shouldCreateUser: true (what the app sends) reaches Auth's Signup handler: 422 signup_disabled.
+  assert.equal(
+    sendCodeErrorMessage({ status: 422, code: 'signup_disabled', message: 'Signups not allowed for this instance' }),
+    PILOT_LIST_MESSAGE,
+  );
+  // shouldCreateUser: false is refused earlier by the Otp handler: 422 otp_disabled.
+  assert.equal(
+    sendCodeErrorMessage({ status: 422, code: 'otp_disabled', message: 'Signups not allowed for otp' }),
+    PILOT_LIST_MESSAGE,
+  );
+  assert.equal(sendCodeErrorMessage({ code: 'signup_disabled' }), PILOT_LIST_MESSAGE);
+});
+
+test('sendCodeErrorMessage falls back to the message when the error has no code', () => {
+  assert.equal(sendCodeErrorMessage({ status: 422, message: 'Signups not allowed for otp' }), PILOT_LIST_MESSAGE);
+  assert.equal(sendCodeErrorMessage({ status: 422, message: 'Signups not allowed for this instance' }), PILOT_LIST_MESSAGE);
+  assert.equal(sendCodeErrorMessage({ message: 'signups NOT allowed for otp' }), PILOT_LIST_MESSAGE);
+  assert.equal(
+    sendCodeErrorMessage({ status: 422, message: 'Something else went wrong' }),
+    "Couldn't send the code. Check your connection and try again.",
+  );
+});
+
+test('sendCodeErrorMessage only uses the message when there is no code', () => {
+  assert.equal(
+    sendCodeErrorMessage({ status: 422, code: 'unexpected_failure', message: 'Signups not allowed for otp' }),
+    "Couldn't send the code. Check your connection and try again.",
+  );
+  assert.equal(
+    sendCodeErrorMessage({ status: 429, code: 'over_email_send_rate_limit', message: 'Signups not allowed for otp' }),
+    'Too many codes requested. Try again in a few minutes.',
+  );
+  assert.equal(
+    sendCodeErrorMessage({ status: 400, code: 'email_address_invalid', message: 'Signups not allowed for otp' }),
+    'Enter a valid email address.',
+  );
+});
+
 test('deriveStatus', () => {
   const base = { configured: true, sessionLoaded: true, hasSession: true, profileLoaded: true, hasProfile: true };
   assert.equal(deriveStatus({ ...base, configured: false, sessionLoaded: false }), 'prototype');
