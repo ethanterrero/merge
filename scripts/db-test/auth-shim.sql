@@ -1,6 +1,14 @@
 -- Test-only stand-in for the parts of Supabase that our migrations and tests
 -- rely on. Never apply this to a real database.
 
+-- The postgis/postgis image's init script (initdb-postgis.sh) already ran
+-- CREATE EXTENSION for postgis, postgis_topology, fuzzystrmatch and
+-- postgis_tiger_geocoder in this database, with no schema, so PostGIS sits in
+-- public. Hosted Supabase keeps it in the extensions schema, and 0001 asks for
+-- exactly that, but "create extension if not exists" would be a no-op here.
+-- Drop the image's copy so 0001 really installs PostGIS into extensions.
+drop extension if exists postgis_tiger_geocoder, postgis_topology, fuzzystrmatch, postgis cascade;
+
 create schema extensions;
 create schema auth;
 
