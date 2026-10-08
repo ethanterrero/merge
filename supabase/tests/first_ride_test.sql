@@ -7,6 +7,7 @@
 --   Eve 0e + Fay 0f   yes + no answer                                  (3)
 --   Gil 10 + Hal 11   yes + individual                                 (4, 7, 8)
 --   Ivy 12 + Jo  13   yes + yes, a proposed Crew                       (8, rule 4)
+--   Kim 14 + Lu  15   two rides; the latest answer wins                (rule 1 regression)
 -- Ride completion is not implemented yet (D-01), so rides are set up as admin.
 begin;
 
@@ -20,7 +21,9 @@ insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-000000000010', 'gil@example.test'),
   ('00000000-0000-0000-0000-000000000011', 'hal@example.test'),
   ('00000000-0000-0000-0000-000000000012', 'ivy@example.test'),
-  ('00000000-0000-0000-0000-000000000013', 'jo@example.test');
+  ('00000000-0000-0000-0000-000000000013', 'jo@example.test'),
+  ('00000000-0000-0000-0000-000000000014', 'kim@example.test'),
+  ('00000000-0000-0000-0000-000000000015', 'lu@example.test');
 
 insert into public.profiles (id, display_name, role) values
   ('00000000-0000-0000-0000-00000000000a', 'Ada A.', 'passenger'),
@@ -32,7 +35,9 @@ insert into public.profiles (id, display_name, role) values
   ('00000000-0000-0000-0000-000000000010', 'Gil G.', 'passenger'),
   ('00000000-0000-0000-0000-000000000011', 'Hal H.', 'driver'),
   ('00000000-0000-0000-0000-000000000012', 'Ivy I.', 'passenger'),
-  ('00000000-0000-0000-0000-000000000013', 'Jo J.', 'driver');
+  ('00000000-0000-0000-0000-000000000013', 'Jo J.', 'driver'),
+  ('00000000-0000-0000-0000-000000000014', 'Kim K.', 'passenger'),
+  ('00000000-0000-0000-0000-000000000015', 'Lu L.', 'driver');
 
 insert into public.commutes (id, owner_id, role, origin, destination, departure_time, weekdays)
 values (
@@ -52,10 +57,14 @@ insert into public.invitations (id, sender_id, recipient_id, commute_id, status,
   ('20000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-00000000000c', '00000000-0000-0000-0000-00000000000d', '30000000-0000-0000-0000-000000000001', 'accepted', '2026-10-12'),
   ('20000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-00000000000e', '00000000-0000-0000-0000-00000000000f', '30000000-0000-0000-0000-000000000001', 'accepted', '2026-10-12'),
   ('20000000-0000-0000-0000-000000000006', '00000000-0000-0000-0000-000000000010', '00000000-0000-0000-0000-000000000011', '30000000-0000-0000-0000-000000000001', 'accepted', '2026-10-12'),
-  ('20000000-0000-0000-0000-000000000007', '00000000-0000-0000-0000-000000000012', '00000000-0000-0000-0000-000000000013', '30000000-0000-0000-0000-000000000001', 'accepted', '2026-10-12');
+  ('20000000-0000-0000-0000-000000000007', '00000000-0000-0000-0000-000000000012', '00000000-0000-0000-0000-000000000013', '30000000-0000-0000-0000-000000000001', 'accepted', '2026-10-12'),
+  ('20000000-0000-0000-0000-000000000008', '00000000-0000-0000-0000-000000000014', '00000000-0000-0000-0000-000000000015', '30000000-0000-0000-0000-000000000001', 'accepted', '2026-10-20'),
+  ('20000000-0000-0000-0000-000000000009', '00000000-0000-0000-0000-000000000014', '00000000-0000-0000-0000-000000000015', '30000000-0000-0000-0000-000000000001', 'accepted', '2026-10-13');
 
 -- r1 Ada+Bea completed, r2 Ada+Bea confirmed, r3 Ada+Bea completed (cancelled in 2d),
 -- r4 Cal+Dan, r5 Eve+Fay, r6 Gil+Hal, r7 Ivy+Jo, all completed.
+-- r8 and r9 Kim+Lu, completed. r8 is answered first but has the later ride_date, so
+-- the ride_date tie-breaker can't make the rule 1 regression test pass by accident.
 insert into public.rides (id, invitation_id, driver_id, passenger_id, ride_date, pickup_time, status, kind, completed_at) values
   ('10000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-00000000000a', '2026-10-12', '07:30', 'completed', 'first_ride', now()),
   ('10000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-00000000000a', '2026-10-13', '07:30', 'confirmed', 'ride_again', null),
@@ -63,7 +72,9 @@ insert into public.rides (id, invitation_id, driver_id, passenger_id, ride_date,
   ('10000000-0000-0000-0000-000000000004', '20000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-00000000000d', '00000000-0000-0000-0000-00000000000c', '2026-10-12', '07:45', 'completed', 'first_ride', now()),
   ('10000000-0000-0000-0000-000000000005', '20000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-00000000000f', '00000000-0000-0000-0000-00000000000e', '2026-10-12', '08:00', 'completed', 'first_ride', now()),
   ('10000000-0000-0000-0000-000000000006', '20000000-0000-0000-0000-000000000006', '00000000-0000-0000-0000-000000000011', '00000000-0000-0000-0000-000000000010', '2026-10-12', '08:15', 'completed', 'first_ride', now()),
-  ('10000000-0000-0000-0000-000000000007', '20000000-0000-0000-0000-000000000007', '00000000-0000-0000-0000-000000000013', '00000000-0000-0000-0000-000000000012', '2026-10-12', '08:30', 'completed', 'first_ride', now());
+  ('10000000-0000-0000-0000-000000000007', '20000000-0000-0000-0000-000000000007', '00000000-0000-0000-0000-000000000013', '00000000-0000-0000-0000-000000000012', '2026-10-12', '08:30', 'completed', 'first_ride', now()),
+  ('10000000-0000-0000-0000-000000000008', '20000000-0000-0000-0000-000000000008', '00000000-0000-0000-0000-000000000015', '00000000-0000-0000-0000-000000000014', '2026-10-20', '08:45', 'completed', 'first_ride', now()),
+  ('10000000-0000-0000-0000-000000000009', '20000000-0000-0000-0000-000000000009', '00000000-0000-0000-0000-000000000015', '00000000-0000-0000-0000-000000000014', '2026-10-13', '08:45', 'completed', 'ride_again', now());
 
 -- 1. Only the author can read their ride_feedback. The other rider gets zero rows.
 select tests.as_user('00000000-0000-0000-0000-00000000000a');
@@ -557,6 +568,85 @@ begin
       where user_low = '00000000-0000-0000-0000-000000000012'
         and user_high = '00000000-0000-0000-0000-000000000013') is distinct from 'not_started' then
     raise exception 'Losing crew_eligible should move a proposed Crew to not_started';
+  end if;
+end
+$$;
+
+-- Rule 1 regression: the most recent *answer* wins. Editing only the experience
+-- (or dismissing) on an older ride must not bring back that ride's old answer.
+-- Kim says No on r8, then Yes on r9; Lu says Yes on r9.
+select tests.as_user('00000000-0000-0000-0000-000000000014');
+-- The client-supplied ride_again_at is ignored: the server sets it.
+insert into public.ride_feedback (ride_id, author_id, experience, ride_again, ride_again_at)
+values ('10000000-0000-0000-0000-000000000008', '00000000-0000-0000-0000-000000000014', 'good', 'no', '2999-01-01');
+insert into public.ride_feedback (ride_id, author_id, experience, ride_again)
+values ('10000000-0000-0000-0000-000000000009', '00000000-0000-0000-0000-000000000014', 'great', 'yes');
+select tests.as_user('00000000-0000-0000-0000-000000000015');
+insert into public.ride_feedback (ride_id, author_id, experience, ride_again)
+values ('10000000-0000-0000-0000-000000000009', '00000000-0000-0000-0000-000000000015', 'great', 'yes');
+
+select tests.as_admin();
+do $$
+begin
+  if (select ride_again_at from public.ride_feedback
+      where ride_id = '10000000-0000-0000-0000-000000000008'
+        and author_id = '00000000-0000-0000-0000-000000000014') > now() + interval '1 day' then
+    raise exception 'A client set ride_again_at';
+  end if;
+  if not exists (select 1 from public.connections
+                 where user_low = '00000000-0000-0000-0000-000000000014'
+                   and user_high = '00000000-0000-0000-0000-000000000015') then
+    raise exception 'Kim''s latest answer is Yes and Lu''s is Yes, so they should be connected';
+  end if;
+end
+$$;
+
+-- Kim edits only the experience, then dismisses, on r8. Her answer there doesn't change.
+select tests.as_user('00000000-0000-0000-0000-000000000014');
+update public.ride_feedback set experience = 'great'
+where ride_id = '10000000-0000-0000-0000-000000000008';
+update public.ride_feedback set dismissed_at = now()
+where ride_id = '10000000-0000-0000-0000-000000000008';
+
+select tests.as_admin();
+do $$
+begin
+  if (select crew_eligible from public.connections
+      where user_low = '00000000-0000-0000-0000-000000000014'
+        and user_high = '00000000-0000-0000-0000-000000000015') is distinct from true then
+    raise exception 'Editing only the experience on an older ride brought back its old No';
+  end if;
+end
+$$;
+
+-- Kim really answers No on r8 again. ride_again_at moves only when the answer
+-- changes, so she clears it first (r9's Yes is then her only answer), then says No.
+select tests.as_user('00000000-0000-0000-0000-000000000014');
+update public.ride_feedback set ride_again = null
+where ride_id = '10000000-0000-0000-0000-000000000008';
+
+select tests.as_admin();
+do $$
+begin
+  if not exists (select 1 from public.connections
+                 where user_low = '00000000-0000-0000-0000-000000000014'
+                   and user_high = '00000000-0000-0000-0000-000000000015') then
+    raise exception 'Clearing an older answer should leave the connection from the newer Yes';
+  end if;
+end
+$$;
+
+select tests.as_user('00000000-0000-0000-0000-000000000014');
+update public.ride_feedback set ride_again = 'no'
+where ride_id = '10000000-0000-0000-0000-000000000008';
+
+select tests.as_admin();
+do $$
+begin
+  if exists (select 1 from public.connections
+             where user_low = '00000000-0000-0000-0000-000000000014'
+               and user_high = '00000000-0000-0000-0000-000000000015') then
+    raise exception 'Changing r8''s answer to No (now the latest) should remove the connection';
   end if;
 end
 $$;

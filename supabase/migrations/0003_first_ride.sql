@@ -73,6 +73,9 @@ create table public.ride_feedback (
   author_id uuid not null references public.profiles(id),
   experience text check (experience in ('great','good','not_a_fit')),
   ride_again text check (ride_again in ('yes','individual','no')),
+  -- When ride_again last changed. Set by the server (ride_feedback_stamp), never by
+  -- the client; resolve_connection orders answers by it.
+  ride_again_at timestamptz,
   dismissed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -168,6 +171,10 @@ revoke insert, update, delete, truncate on public.connections from public, anon,
 revoke delete, truncate on public.ride_feedback from public, anon, authenticated;
 
 -- Feedback timestamps are set by the server, and a row can't be moved ----------
+-- ride_again_at moves only when the answer itself changes, so editing the
+-- experience or dismissing on an older ride never revives that ride's answer.
+-- clock_timestamp(), not now(): two answers recorded in one transaction still
+-- get distinct, ordered times.
 
 create function public.ride_feedback_stamp()
 returns trigger
@@ -177,12 +184,18 @@ as $$
 begin
   if tg_op = 'INSERT' then
     new.created_at := now();
+    new.ride_again_at := case when new.ride_again is null then null else clock_timestamp() end;
   else
     if new.ride_id is distinct from old.ride_id or new.author_id is distinct from old.author_id then
       raise exception 'Feedback can''t be moved to another ride or author'
         using errcode = '42501';
     end if;
     new.created_at := old.created_at;
+    if new.ride_again is distinct from old.ride_again then
+      new.ride_again_at := case when new.ride_again is null then null else clock_timestamp() end;
+    else
+      new.ride_again_at := old.ride_again_at;
+    end if;
   end if;
   new.updated_at := now();
   return new;
@@ -199,7 +212,8 @@ create trigger ride_feedback_stamp
 
 -- Recomputes the connection between a and b from their feedback:
 -- 1. Each person's answer is their most recent non-null ride_again across
---    completed rides the pair shared (by ride_feedback.updated_at).
+--    completed rides the pair shared (by ride_feedback.ride_again_at, which the
+--    server sets when the answer changes).
 -- 2. Both answered yes/individual: upsert the connection, crew_eligible when both yes.
 -- 3. Otherwise (any no, or a missing answer): delete the connection and end any
 --    proposed/active/paused Crew.
@@ -231,7 +245,7 @@ begin
     and f.ride_again is not null
     and r.status = 'completed'
     and ((r.driver_id = lo and r.passenger_id = hi) or (r.driver_id = hi and r.passenger_id = lo))
-  order by f.updated_at desc, r.ride_date desc, r.created_at desc, r.id desc
+  order by f.ride_again_at desc nulls last, r.ride_date desc, r.created_at desc, r.id desc
   limit 1;
 
   select f.ride_again into answer_hi
@@ -241,7 +255,7 @@ begin
     and f.ride_again is not null
     and r.status = 'completed'
     and ((r.driver_id = lo and r.passenger_id = hi) or (r.driver_id = hi and r.passenger_id = lo))
-  order by f.updated_at desc, r.ride_date desc, r.created_at desc, r.id desc
+  order by f.ride_again_at desc nulls last, r.ride_date desc, r.created_at desc, r.id desc
   limit 1;
 
   if answer_lo in ('yes','individual') and answer_hi in ('yes','individual') then
