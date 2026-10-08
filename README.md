@@ -1,4 +1,4 @@
-# merge.
+# merge
 
 **Find your way together.**
 
