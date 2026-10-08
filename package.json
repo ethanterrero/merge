@@ -7,7 +7,8 @@
     "start": "npm --workspace apps/mobile run start",
     "android": "npm --workspace apps/mobile run android",
     "ios": "npm --workspace apps/mobile run ios",
-    "typecheck": "npm --workspace apps/mobile run typecheck"
+    "typecheck": "npm --workspace apps/mobile run typecheck",
+    "db:test": "scripts/db-test.sh"
   },
   "workspaces": [
     "apps/*",
