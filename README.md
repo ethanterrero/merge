@@ -23,7 +23,7 @@ Merge is an open-source commuter carpooling app, initially focused on East Bay â
 
 ## Getting started
 
-Requires Node.js 20+ and npm.
+Requires Node.js 22 and npm 10.
 
 ```bash
 npm install
@@ -33,27 +33,35 @@ npm run start
 
 The starter screen works without a configured Supabase project. Later, add `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` to the mobile app's local environment file. **Never put a service-role key in the app.**
 
-Run `npm run typecheck` for the initial TypeScript check.
+## Development quality checks
+
+```bash
+npm run check   # lint, TypeScript, and tests
+```
+
+GitHub Actions additionally checks Expo dependency compatibility and rejects committed environment files. **Bootstrap limitation:** the repo does not yet have a generated npm lockfile. CI currently uses `npm install`; generating and committing `package-lock.json` and switching to `npm ci` is a priority before accepting dependency updates. CI has not yet been verified green.
+
+See [engineering guidelines](docs/engineering.md), [MVP scope](docs/mvp.md), and [contributing](CONTRIBUTING.md).
 
 ## Structure
 
 ```text
 apps/mobile/           Expo mobile app
 supabase/migrations/   Initial database model and RLS (default deny)
-docs/mvp.md            MVP product requirements
-.github/               CI and PR template
+docs/                 Product, engineering and deployment plans
+.github/               CI, dependency updates, and PR template
 CONTRIBUTING.md        Contribution guidelines
 ```
 
 ## Roadmap
 
-1. Starter app and repo setup
+1. Starter app, reproducible installs, and repo checks
 2. Authentication and saved commutes
 3. Privacy-safe map discovery and matching
 4. Invitations and seat/cargo reservations
 5. Closed pilot after safety, insurance, and regulatory review
 
-See [MVP scope](docs/mvp.md) and [contributing guidelines](CONTRIBUTING.md).
+**Future hosting:** a web frontend may be deployed to **Vercel**. This is a documented future option, not a live deployment. See [deployment plan](docs/deployment.md). Native Expo apps require their own build/distribution workflow.
 
 ## Safety and privacy
 
