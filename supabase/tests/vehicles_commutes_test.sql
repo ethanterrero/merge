@@ -17,9 +17,9 @@ insert into public.profiles (id, display_name) values
 insert into public.vehicles (id, owner_id, make, model, passenger_seats) values
   ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-00000000000b', 'Honda', 'Fit', 3);
 
-insert into public.commutes (id, owner_id, role, origin, destination, departure_time, vehicle_id) values
+insert into public.commutes (id, owner_id, role, origin, destination, departure_time, weekdays, seats_offered, vehicle_id) values
   ('00000000-0000-0000-0000-0000000000b2', '00000000-0000-0000-0000-00000000000b', 'driver',
-   'SRID=4326;POINT(-122.2833 37.7652)', 'SRID=4326;POINT(-122.3959 37.7936)', '07:30',
+   'SRID=4326;POINT(-122.2833 37.7652)', 'SRID=4326;POINT(-122.3959 37.7936)', '07:30', '{1,2,3,4,5}', 2,
    '00000000-0000-0000-0000-0000000000b1');
 
 -- 1. Ada can create, read and update her own vehicle and commute, and the
@@ -29,9 +29,9 @@ select tests.as_user('00000000-0000-0000-0000-00000000000a');
 insert into public.vehicles (id, owner_id, make, model, passenger_seats) values
   ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-00000000000a', 'Toyota', 'Prius', 3);
 
-insert into public.commutes (id, owner_id, role, origin, destination, departure_time, vehicle_id) values
+insert into public.commutes (id, owner_id, role, origin, destination, departure_time, weekdays, seats_offered, vehicle_id) values
   ('00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-00000000000a', 'driver',
-   'SRID=4326;POINT(-122.2416 37.7652)', 'SRID=4326;POINT(-122.3959 37.7936)', '08:00',
+   'SRID=4326;POINT(-122.2416 37.7652)', 'SRID=4326;POINT(-122.3959 37.7936)', '08:00', '{1,2,3,4,5}', 2,
    '00000000-0000-0000-0000-0000000000a1');
 
 -- 1a. SELECT shows exactly her own rows; an unfiltered UPDATE touches exactly
@@ -81,9 +81,9 @@ begin
     null;
   end;
   begin
-    insert into public.commutes (owner_id, role, origin, destination, departure_time)
+    insert into public.commutes (owner_id, role, origin, destination, departure_time, weekdays)
     values ('00000000-0000-0000-0000-00000000000b', 'passenger',
-            'SRID=4326;POINT(-122.2833 37.7652)', 'SRID=4326;POINT(-122.3959 37.7936)', '09:00');
+            'SRID=4326;POINT(-122.2833 37.7652)', 'SRID=4326;POINT(-122.3959 37.7936)', '09:00', '{1}');
     raise exception 'Ada created a commute owned by Bea';
   exception when insufficient_privilege then
     null;
@@ -112,18 +112,24 @@ end
 $$;
 
 -- 4. A commute cannot use someone else's vehicle, on insert or on update.
--- Ada knows the id of Bea's vehicle; the foreign key alone would accept it.
+-- Cal and Ada know the id of Bea's vehicle; the foreign key alone would accept it.
+-- (Cal inserts, because Ada already has a driver commute and 0008 allows one per role.)
+select tests.as_user('00000000-0000-0000-0000-00000000000c');
 do $$
 begin
-  begin
-    insert into public.commutes (owner_id, role, origin, destination, departure_time, vehicle_id)
-    values ('00000000-0000-0000-0000-00000000000a', 'driver',
-            'SRID=4326;POINT(-122.2416 37.7652)', 'SRID=4326;POINT(-122.3959 37.7936)', '17:30',
-            '00000000-0000-0000-0000-0000000000b1');
-    raise exception 'Ada created a commute that uses Bea''s vehicle';
-  exception when foreign_key_violation then
-    null;
-  end;
+  insert into public.commutes (owner_id, role, origin, destination, departure_time, weekdays, seats_offered, vehicle_id)
+  values ('00000000-0000-0000-0000-00000000000c', 'driver',
+          'SRID=4326;POINT(-122.2416 37.7652)', 'SRID=4326;POINT(-122.3959 37.7936)', '17:30', '{1}', 1,
+          '00000000-0000-0000-0000-0000000000b1');
+  raise exception 'Cal created a commute that uses Bea''s vehicle';
+exception when foreign_key_violation then
+  null;
+end
+$$;
+
+select tests.as_user('00000000-0000-0000-0000-00000000000a');
+do $$
+begin
   begin
     update public.commutes set vehicle_id = '00000000-0000-0000-0000-0000000000b1';
     raise exception 'Ada pointed her commute at Bea''s vehicle';
