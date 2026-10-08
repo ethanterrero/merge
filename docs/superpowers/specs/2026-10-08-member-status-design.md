@@ -5,8 +5,8 @@
 **Scope:** `supabase/migrations/0011_member_status.sql`, `supabase/tests/member_status_test.sql`
 **Builds on:** `0003_first_ride.sql` (`invitations`, `rides`, `commute_crews`,
 `connections`, `resolve_connection`, the Crew RPCs), `0005_blocks_reports.sql`
-(`connections_skip_blocked`, the pattern for server-only helpers). Main is at 0009;
-M-17a (account deletion) is being built in parallel as 0010 and isn't a dependency.
+(`connections_skip_blocked`, the pattern for server-only helpers), `0010_account_deletion.sql`
+(M-17a: deletion cascades and `profiles_apply_deletion_policy`), rebased onto it.
 
 The owner needs to remove someone from the pilot and to mark drivers as vetted, and
 every screen that shows a name to someone else needs one rule for how that name looks.
@@ -160,8 +160,7 @@ then, in this order:
    D-01), stay. M-32 adds a cancel reason; it should record these as safety
    cancellations. The other rider sees the ride as cancelled, with no reason.
 
-It's a separate function so M-17a (account deletion) can run the same withdrawal
-before it deletes or anonymizes a profile.
+It's a separate function so later server code can run the same withdrawal.
 
 ### Keeping a suspended member disconnected
 
@@ -195,19 +194,26 @@ yes/yes feedback edit, or the owner, can connect the pair again.
   suspended member's card isn't shown; how history reads ("A past rider") is theirs to
   design.
 
-## Account deletion (M-17a) notes
+## Account deletion (M-17a, 0010)
 
-- The two columns live on `profiles` and go with the row; nothing else references
-  them.
-- Deletion should call `public.withdraw_member(uid)` first, so the other side of a
-  future ride sees "Ride cancelled" rather than a vanished ride.
-- Deleting a suspended member's account deletes the record that they were removed.
-  Sign-ups are off (D-11) and the owner adds each tester by hand, so the owner, not
-  the database, prevents a removed member coming back.
-- `safety_reports.reported_user_id` is the evidence behind a removal; M-17a decides
-  whether reports outlive the reported member's account.
-- A deletion RPC that writes `profiles` runs as the owner and passes the guard; it
+- 0011 adds two columns on `profiles` and no table or foreign key, so suspension and
+  vetting go with the profile row when the account is deleted, and 0010's
+  schema-wide foreign-key rule is unaffected. No record of a removal outlives the
+  account (D-15 keeps no identifier of a deleted person).
+- 0010's `profiles_apply_deletion_policy` already cancels future rides and ends open
+  Crews on deletion, so deletion doesn't call `withdraw_member`. The two differ on
+  purpose in one place: deletion cancels confirmed rides whose pickup time is still
+  ahead; suspension cancels every confirmed ride dated today or later, even if today's
+  pickup has passed.
+- Sign-ups are off (D-11) and the owner adds each tester by hand, so the owner, not
+  the database, prevents a removed member who deleted their account from coming back.
+- A deletion path that writes `profiles` runs as the owner and passes the guard; it
   must not copy client values into `suspended_at` or `vetted_at`.
+- `supabase/tests/account_deletion_member_status_test.sql` deletes a suspended member
+  (with a withdrawn invitation, a cancelled ride, a deleted connection and an ended
+  Crew shared with another member) and a vetted driver, then checks that no profile and
+  no row in any table with a foreign key into `profiles` still names either of them,
+  and that the other member keeps the cancelled ride and ended Crew as "Former member".
 
 ## Testing — `supabase/tests/member_status_test.sql`
 

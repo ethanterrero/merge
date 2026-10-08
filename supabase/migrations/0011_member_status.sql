@@ -122,7 +122,7 @@ grant execute on function public.public_name(text) to authenticated;
 
 -- Withdrawal ------------------------------------------------------------------------
 -- Ends everything a member shares with others. Called by the suspension trigger
--- below; account deletion (M-17a) can call it too. Order matters: connections go
+-- below (account deletion has its own policy in 0010). Order matters: connections go
 -- before Crews, so a concurrent propose_crew (which holds the connection for share)
 -- either commits first and has its Crew ended here, or runs after and finds no
 -- connection. In read committed each statement takes a fresh snapshot.

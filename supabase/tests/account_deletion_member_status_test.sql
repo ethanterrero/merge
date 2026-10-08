@@ -33,6 +33,24 @@ insert into public.commutes (id, owner_id, role, origin, destination, departure_
   ('30000000-0000-0000-0000-00000000000e', '00000000-0000-0000-0000-00000000000e', 'passenger',
    'SRID=4326;POINT(-122.2700 37.7700)', 'SRID=4326;POINT(-122.4000 37.7900)', '08:00', '{1,2}');
 
+-- Shared with Bea: a pending invitation, a confirmed ride next week (with its accepted
+-- invitation), a connection and an active Crew. Suspension withdraws them; deletion
+-- (0010) then deletes or detaches what's left.
+insert into public.invitations (id, sender_id, recipient_id, commute_id, status, ride_date) values
+  ('20000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-00000000000c',
+   '30000000-0000-0000-0000-00000000000c', 'pending', (now() at time zone 'America/Los_Angeles')::date + 3),
+  ('20000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-00000000000c',
+   '30000000-0000-0000-0000-00000000000c', 'accepted', (now() at time zone 'America/Los_Angeles')::date + 7);
+insert into public.rides (id, invitation_id, driver_id, passenger_id, ride_date, pickup_time, status, kind) values
+  ('10000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000002',
+   '00000000-0000-0000-0000-00000000000c', '00000000-0000-0000-0000-00000000000b',
+   (now() at time zone 'America/Los_Angeles')::date + 7, '07:30', 'confirmed', 'first_ride');
+insert into public.connections (user_low, user_high, crew_eligible) values
+  ('00000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-00000000000c', true);
+insert into public.commute_crews (id, user_low, user_high, proposed_by, weekdays, departure_time, status, responded_at) values
+  ('40000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-00000000000c',
+   '00000000-0000-0000-0000-00000000000b', '{1,2}', '07:30', 'active', now());
+
 -- The owner vets Eve and suspends Sam.
 update public.profiles set vetted_at = now() where id = '00000000-0000-0000-0000-00000000000e';
 update public.profiles set suspended_at = now() where id = '00000000-0000-0000-0000-00000000000c';
@@ -88,6 +106,22 @@ begin
   if not exists (select 1 from public.profiles where id = '00000000-0000-0000-0000-00000000000b')
      or public.is_active('00000000-0000-0000-0000-00000000000b') is not true then
     raise exception 'Bea should be untouched';
+  end if;
+
+  -- Bea keeps the cancelled ride and the ended Crew with Sam as "Former member" (0010);
+  -- the withdrawn invitation that led to no ride is gone.
+  if (select status || ':' || coalesce(driver_id::text, 'former')
+      from public.rides where id = '10000000-0000-0000-0000-000000000002')
+     is distinct from 'cancelled:former' then
+    raise exception 'Bea''s ride with Sam should be cancelled with the driver cleared';
+  end if;
+  if (select status || ':' || coalesce(user_high::text, 'former')
+      from public.commute_crews where id = '40000000-0000-0000-0000-000000000001')
+     is distinct from 'ended:former' then
+    raise exception 'Bea''s Crew with Sam should be ended with Sam cleared';
+  end if;
+  if exists (select 1 from public.invitations where id = '20000000-0000-0000-0000-000000000001') then
+    raise exception 'The withdrawn invitation should be deleted with Sam';
   end if;
 end
 $$;
