@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { AppState } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type { Database } from '../lib/database.types';
@@ -7,6 +8,7 @@ import {
   deriveStatus,
   normalizeDisplayName,
   normalizeEmail,
+  profileRetryDelayMs,
   SAVE_PROFILE_ERROR,
   sendCodeErrorMessage,
   VERIFY_CODE_ERROR,
@@ -53,20 +55,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const client = supabase;
     if (!client || !userId) return;
     let cancelled = false;
-    client
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (cancelled) return;
-        // A failed lookup reads as "no profile yet". Saving upserts, so the
-        // worst case is asking for a name the person already gave.
-        setProfile(data ?? null);
-        setProfileLoaded(true);
-      });
+    let loaded = false;
+    let attempt = 0;
+    let latest = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    // A failed lookup is not "no profile yet": it leaves profileLoaded false, so
+    // status stays 'loading' and a returning user is never asked for a name (and
+    // saving never overwrites their stored role). It retries with backoff, and
+    // right away when the app returns to the foreground.
+    const load = () => {
+      clearTimeout(timer);
+      const request = ++latest;
+      client
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle()
+        .then(({ data, error }) => {
+          if (cancelled || loaded) return;
+          if (error) {
+            // A newer request owns the retry schedule.
+            if (request !== latest) return;
+            timer = setTimeout(load, profileRetryDelayMs(attempt));
+            attempt += 1;
+            return;
+          }
+          loaded = true;
+          clearTimeout(timer);
+          subscription.remove();
+          setProfile(data ?? null);
+          setProfileLoaded(true);
+        });
+    };
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && !loaded) load();
+    });
+    load();
+
     return () => {
       cancelled = true;
+      clearTimeout(timer);
+      subscription.remove();
     };
   }, [userId]);
 

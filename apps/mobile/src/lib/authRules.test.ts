@@ -10,6 +10,7 @@ import {
   mustLeaveRoute,
   normalizeDisplayName,
   normalizeEmail,
+  profileRetryDelayMs,
   sendCodeErrorMessage,
   welcomeNext,
 } from './authRules';
@@ -106,4 +107,23 @@ test('mustLeaveRoute only moves signed-out people off signed-in screens', () => 
   assert.equal(mustLeaveRoute('signedOut', 'role'), false);
   assert.equal(mustLeaveRoute('ready', 'discover'), false);
   assert.equal(mustLeaveRoute('prototype', 'discover'), false);
+});
+
+test('profileRetryDelayMs doubles from one second', () => {
+  assert.equal(profileRetryDelayMs(0), 1000);
+  assert.equal(profileRetryDelayMs(1), 2000);
+  assert.equal(profileRetryDelayMs(2), 4000);
+});
+
+test('profileRetryDelayMs caps at 30 seconds', () => {
+  assert.equal(profileRetryDelayMs(4), 16000);
+  assert.equal(profileRetryDelayMs(5), 30000);
+  assert.equal(profileRetryDelayMs(50), 30000);
+});
+
+test('profileRetryDelayMs treats negative or non-finite attempts as the first', () => {
+  assert.equal(profileRetryDelayMs(-1), 1000);
+  assert.equal(profileRetryDelayMs(Number.NaN), 1000);
+  assert.equal(profileRetryDelayMs(Number.NEGATIVE_INFINITY), 1000);
+  assert.equal(profileRetryDelayMs(Number.POSITIVE_INFINITY), 1000);
 });

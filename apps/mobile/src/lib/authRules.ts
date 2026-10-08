@@ -51,6 +51,19 @@ export function sendCodeErrorMessage(error: { status?: number; code?: string }):
   return "Couldn't send the code. Check your connection and try again.";
 }
 
+const PROFILE_RETRY_BASE_MS = 1000;
+const PROFILE_RETRY_MAX_MS = 30000;
+
+/**
+ * Wait before retrying a failed profile lookup: 1s, 2s, 4s, ... capped at 30s.
+ * `attempt` counts failures so far (0 for the first retry); negative or
+ * non-finite values count as 0.
+ */
+export function profileRetryDelayMs(attempt: number): number {
+  const failures = Number.isFinite(attempt) && attempt > 0 ? attempt : 0;
+  return Math.min(PROFILE_RETRY_BASE_MS * 2 ** failures, PROFILE_RETRY_MAX_MS);
+}
+
 export type AuthStatus = 'loading' | 'signedOut' | 'needsProfile' | 'ready' | 'prototype';
 
 export function deriveStatus(input: {
