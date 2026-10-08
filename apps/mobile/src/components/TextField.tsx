@@ -20,7 +20,7 @@ export function TextField({
         {...input}
       />
       {error ? (
-        <Text accessibilityLiveRegion="polite" style={[type.small, { color: colors.ember }]}>
+        <Text accessibilityLiveRegion="polite" style={[type.small, { color: colors.danger }]}>
           {error}
         </Text>
       ) : hint ? (
@@ -41,5 +41,5 @@ const styles = StyleSheet.create({
     fontSize: 17,
     color: colors.textPrimary,
   },
-  inputError: { borderColor: colors.ember },
+  inputError: { borderColor: colors.danger },
 });
