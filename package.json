@@ -1,0 +1,16 @@
+{
+  "name": "merge",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "npm@10.9.2",
+  "scripts": {
+    "start": "npm --workspace apps/mobile run start",
+    "android": "npm --workspace apps/mobile run android",
+    "ios": "npm --workspace apps/mobile run ios",
+    "typecheck": "npm --workspace apps/mobile run typecheck"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}
