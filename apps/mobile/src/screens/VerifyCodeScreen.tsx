@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { BackHandler, Text, View } from 'react-native';
 import { colors, space, type } from '../theme';
 import { useNav } from '../navigation';
 import { useAuth } from '../state/auth';
-import { digitsOnly, isCompleteCode, RESEND_AFTER_SECONDS } from '../lib/authRules';
+import { digitsOnly, isCompleteCode, RESEND_AFTER_SECONDS, VERIFY_CODE_ERROR } from '../lib/authRules';
 import { Screen, TopBar } from '../components/Screen';
 import { Button } from '../components/Button';
 import { TextField } from '../components/TextField';
+
+// TopBar has no disabled state, so the header Back is swapped for this no-op while the code is checked.
+const ignoreBack = () => {};
 
 export function VerifyCodeScreen({ email }: { email: string }) {
   const nav = useNav();
@@ -30,12 +33,29 @@ export function VerifyCodeScreen({ email }: { email: string }) {
     else if (status === 'ready') nav.reset({ name: 'discover' });
   }, [status, nav]);
 
+  // While the code is being checked, hold the person on this screen: leaving would unmount the
+  // status effect above, and a sign-in that lands afterwards would strand them on Sign in.
+  // Android hardware back is swallowed here. BackHandler calls the most recently added listener
+  // first and Router re-adds its own after every stack change, so this is registered when
+  // `verifying` turns true (not on mount) to sit above Router's.
+  useEffect(() => {
+    if (!verifying) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => true);
+    return () => sub.remove();
+  }, [verifying]);
+
   const submit = async () => {
     if (!isCompleteCode(code) || verifying) return;
     setError(null);
     setNotice(null);
     setVerifying(true);
-    const err = await verifyCode(email, code);
+    let err: string | null;
+    try {
+      err = await verifyCode(email, code);
+    } catch {
+      // verifyCode resolves to a message, but a throw must not leave the screen stuck on 'Checking…'.
+      err = VERIFY_CODE_ERROR;
+    }
     // On success, stay in the checking state: the auth status effect above leaves this screen.
     if (err) {
       setVerifying(false);
@@ -65,7 +85,7 @@ export function VerifyCodeScreen({ email }: { email: string }) {
 
   return (
     <Screen
-      header={<TopBar title="Enter code" />}
+      header={<TopBar title="Enter code" onBack={verifying ? ignoreBack : undefined} />}
       footer={<Button label={verifying ? 'Checking…' : 'Verify'} disabled={!isCompleteCode(code) || verifying} onPress={submit} />}
     >
       <Text style={type.title} accessibilityRole="header">
