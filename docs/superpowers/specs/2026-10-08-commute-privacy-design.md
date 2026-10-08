@@ -254,8 +254,8 @@ D-04 sets the scooter: one medium foldable scooter per passenger, folded within 
 | --- | --- | --- | --- |
 | `public.area_radius_m()` | `immutable sql`, returns 402 | `authenticated` | One place for R |
 | `public.within_area(area, spot)` | `immutable sql`, returns boolean | `authenticated` | The D-16 check. It reads no table. |
-| `public.random_area_center(p)` | `volatile`, invoker | `authenticated` | Rule 3: a uniform draw in the disk using `extensions.gen_random_bytes` |
-| `public.commute_area_for(owner, self_id, p, sibling)` | `stable`, invoker | `authenticated` | Rules 2–3: reuse an area of the owner's (RLS shows only their own) or draw one |
+| `public.random_area_center(pin)` | `volatile`, invoker | `authenticated` | Rule 3: a uniform draw in the disk using `extensions.gen_random_bytes` |
+| `public.commute_area_for(for_owner, self_id, pin, sibling)` | `volatile`, invoker | `authenticated` | Rules 2–3: reuse an area of the owner's (RLS shows only their own) or draw one |
 | `public.area_label(center)` | `stable`, `security definer` | `authenticated` | Section 3 |
 | `public.commutes_set_areas()` | Trigger, invoker, before insert or update | nobody (fires as trigger) | Rules 1–3 and labels; ignores client-sent areas and labels |
 | `public.commutes_normalize()` | Trigger, before insert or update | nobody | Sorts and de-duplicates `weekdays` |
