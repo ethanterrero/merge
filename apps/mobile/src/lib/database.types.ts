@@ -574,6 +574,7 @@ export type Database = {
         Returns: string
       }
       random_area_center: { Args: { pin: unknown }; Returns: unknown }
+      relabel_commute_areas: { Args: never; Returns: number }
       resolve_connection: { Args: { a: string; b: string }; Returns: undefined }
       respond_to_crew: {
         Args: { accept: boolean; crew_id: string }
