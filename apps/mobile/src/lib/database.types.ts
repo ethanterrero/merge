@@ -53,11 +53,11 @@ export type Database = {
           departure_time: string
           ended_at: string | null
           id: string
-          proposed_by: string
+          proposed_by: string | null
           responded_at: string | null
           status: string
-          user_high: string
-          user_low: string
+          user_high: string | null
+          user_low: string | null
           weekdays: number[]
         }
         Insert: {
@@ -65,11 +65,11 @@ export type Database = {
           departure_time: string
           ended_at?: string | null
           id?: string
-          proposed_by: string
+          proposed_by?: string | null
           responded_at?: string | null
           status?: string
-          user_high: string
-          user_low: string
+          user_high?: string | null
+          user_low?: string | null
           weekdays: number[]
         }
         Update: {
@@ -77,11 +77,11 @@ export type Database = {
           departure_time?: string
           ended_at?: string | null
           id?: string
-          proposed_by?: string
+          proposed_by?: string | null
           responded_at?: string | null
           status?: string
-          user_high?: string
-          user_low?: string
+          user_high?: string | null
+          user_low?: string | null
           weekdays?: number[]
         }
         Relationships: [
@@ -227,33 +227,33 @@ export type Database = {
       }
       invitations: {
         Row: {
-          commute_id: string
+          commute_id: string | null
           created_at: string
           crew_id: string | null
           id: string
-          recipient_id: string
+          recipient_id: string | null
           ride_date: string
-          sender_id: string
+          sender_id: string | null
           status: string
         }
         Insert: {
-          commute_id: string
+          commute_id?: string | null
           created_at?: string
           crew_id?: string | null
           id?: string
-          recipient_id: string
+          recipient_id?: string | null
           ride_date: string
-          sender_id: string
+          sender_id?: string | null
           status?: string
         }
         Update: {
-          commute_id?: string
+          commute_id?: string | null
           created_at?: string
           crew_id?: string | null
           id?: string
-          recipient_id?: string
+          recipient_id?: string | null
           ride_date?: string
-          sender_id?: string
+          sender_id?: string | null
           status?: string
         }
         Relationships: [
@@ -325,6 +325,8 @@ export type Database = {
           id: string
           ride_prefs: string[]
           role: string
+          suspended_at: string | null
+          vetted_at: string | null
         }
         Insert: {
           created_at?: string
@@ -333,6 +335,8 @@ export type Database = {
           id: string
           ride_prefs?: string[]
           role?: string
+          suspended_at?: string | null
+          vetted_at?: string | null
         }
         Update: {
           created_at?: string
@@ -341,6 +345,8 @@ export type Database = {
           id?: string
           ride_prefs?: string[]
           role?: string
+          suspended_at?: string | null
+          vetted_at?: string | null
         }
         Relationships: []
       }
@@ -396,11 +402,11 @@ export type Database = {
         Row: {
           completed_at: string | null
           created_at: string
-          driver_id: string
+          driver_id: string | null
           id: string
           invitation_id: string
           kind: string
-          passenger_id: string
+          passenger_id: string | null
           pickup_time: string
           ride_date: string
           status: string
@@ -408,11 +414,11 @@ export type Database = {
         Insert: {
           completed_at?: string | null
           created_at?: string
-          driver_id: string
+          driver_id?: string | null
           id?: string
           invitation_id: string
           kind: string
-          passenger_id: string
+          passenger_id?: string | null
           pickup_time: string
           ride_date: string
           status?: string
@@ -420,11 +426,11 @@ export type Database = {
         Update: {
           completed_at?: string | null
           created_at?: string
-          driver_id?: string
+          driver_id?: string | null
           id?: string
           invitation_id?: string
           kind?: string
-          passenger_id?: string
+          passenger_id?: string | null
           pickup_time?: string
           ride_date?: string
           status?: string
@@ -455,30 +461,33 @@ export type Database = {
       }
       safety_reports: {
         Row: {
+          account_deleted_at: string | null
           category: string
           created_at: string
           details: string | null
           id: string
           reported_user_id: string | null
-          reporter_id: string
+          reporter_id: string | null
           ride_id: string | null
         }
         Insert: {
+          account_deleted_at?: string | null
           category: string
           created_at?: string
           details?: string | null
           id?: string
           reported_user_id?: string | null
-          reporter_id: string
+          reporter_id?: string | null
           ride_id?: string | null
         }
         Update: {
+          account_deleted_at?: string | null
           category?: string
           created_at?: string
           details?: string | null
           id?: string
           reported_user_id?: string | null
-          reporter_id?: string
+          reporter_id?: string | null
           ride_id?: string | null
         }
         Relationships: [
@@ -568,11 +577,40 @@ export type Database = {
         }
         Returns: unknown
       }
+      detour_limit_minutes: { Args: never; Returns: number }
+      detour_road_factor: { Args: never; Returns: number }
+      detour_speed_mph: { Args: never; Returns: number }
+      estimate_detour_minutes: {
+        Args: {
+          driver_dest: unknown
+          driver_origin: unknown
+          pax_dest: unknown
+          pax_origin: unknown
+        }
+        Returns: number
+      }
+      estimate_trip_minutes: {
+        Args: { dest: unknown; origin: unknown }
+        Returns: number
+      }
+      is_active: { Args: { uid: string }; Returns: boolean }
       is_blocked: { Args: { a: string; b: string }; Returns: boolean }
+      is_detour_within_limit: {
+        Args: {
+          driver_dest: unknown
+          driver_origin: unknown
+          pax_dest: unknown
+          pax_origin: unknown
+        }
+        Returns: boolean
+      }
+      is_vetted: { Args: { uid: string }; Returns: boolean }
       propose_crew: {
         Args: { departure_time: string; other: string; weekdays: number[] }
         Returns: string
       }
+      public_name: { Args: { display_name: string }; Returns: string }
+      purge_expired_safety_reports: { Args: never; Returns: number }
       random_area_center: { Args: { pin: unknown }; Returns: unknown }
       relabel_commute_areas: { Args: never; Returns: number }
       resolve_connection: { Args: { a: string; b: string }; Returns: undefined }
@@ -580,10 +618,12 @@ export type Database = {
         Args: { accept: boolean; crew_id: string }
         Returns: undefined
       }
+      road_minutes: { Args: { meters: number }; Returns: number }
       set_crew_status: {
         Args: { crew_id: string; status: string }
         Returns: undefined
       }
+      withdraw_member: { Args: { uid: string }; Returns: undefined }
       within_area: { Args: { area: unknown; spot: unknown }; Returns: boolean }
     }
     Enums: {
