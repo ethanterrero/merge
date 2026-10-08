@@ -1,8 +1,10 @@
 # Merge UI prototype
 
-The mobile app in `apps/mobile` is a clickable UI prototype of the v0.1 flows. It uses sample data only (`src/data/mock.ts`). Nothing is saved, and no request reaches a server.
+The mobile app in `apps/mobile` is a clickable UI prototype of the v0.1 flows. When Supabase is configured, sign-in and the profile are real. Everything after that (commute, matches, requests, bookings) uses sample data only (`src/data/mock.ts`), and nothing else is saved.
 
 ## Flows
+
+**Sign-in (when Supabase is configured):** Welcome + role → Sign in (email) → Enter code (6 digits, resend after 60 s) → Your name (new accounts only) → Where and when. Returning users open straight to Discover. The account button on Discover shows the signed-in email and Sign out. Without Supabase values in `.env`, sign-in is skipped and the prototype starts at Welcome as before.
 
 **Passenger:** Welcome + role → Where and when → Preferences (optional) → Discover → Match detail → Request a ride → Booked.
 
@@ -40,4 +42,4 @@ Icons come from Ionicons, using filled variants through `src/components/Icon.tsx
 - The real map (react-native-maps or Mapbox) replacing the stylized `BayMap`
 - React Navigation or Expo Router replacing the minimal stack in `src/navigation.tsx`
 - The custom font (Plus Jakarta Sans via `expo-font`); the system font is used for now
-- Time and area pickers, messaging, block and report flows, and sign-in / verification
+- Time and area pickers, messaging, block and report flows, and verification
