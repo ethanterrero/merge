@@ -4,6 +4,12 @@ This backlog splits the Merge MVP work left after the in-flight sign-in branch i
 
 > **Status update, 2026-10-08 (evening).** PRs #5–#11 were merged into the sign-in branch, along with #13, which adds `seats_offered` to the driver-commute fixtures that 0008 broke once combined. The sign-in branch was then merged to main as a merge commit (#12, `704503d`). So M-04, M-05, M-06, M-07, M-08, M-11 and M-18 are **on main**. The owner pushed 0003, 0004, 0005 and 0008 to the hosted project (O-02 for those), and #14 regenerates `database.types.ts`. O-01 is still partial: the sign-in fix round and Task 9 come in a second PR from the same branch. M-18's hand-drawn East Bay neighborhoods ship as a follow-up migration, `0009_east_bay_neighborhoods.sql` on `feat/m-18b-east-bay-neighborhoods`, so 0008 isn't edited after merge. Wave 1 tasks that waited for O-01 (M-03, M-09, M-10, M-12) can now start from main. The repo's commit email is `ethanterrero@gmail.com`.
 
+> **Design update, 2026-10-08 (PR #17, `bd39f92`).** The owner approved a redesign in the "Merge mobile app" design canvas, and it is now on main:
+> - **Forest palette** in `src/theme.ts`, with semantic tokens `primary`, `deep`, `accent`, `accentLight` and `tint`. The old names (`chili`, `maroon`, `ember`, `peach`, `blush`) are deprecated aliases. New code uses the semantic names. M-51 still owns the theme.
+> - **WelcomeScreen is replaced** by an animated map. **Log in** plays a merge-and-zoom animation, then calls `welcomeNext(status)`. **Sign up** goes to a new `RoleScreen` (`role` route), which now holds the Drive / Ride / Both choice. M-13 no longer edits Welcome copy; its Welcome items are done or obsolete. M-10 drops its Welcome edits on rebase.
+> - **The logo mark is flipped vertically**, so the two branches sit at the bottom and merge upward. M-14 must use the flipped mark for the app icon and splash.
+> - **Motion maths** is in `src/lib/welcomeMotion.ts`, with tests.
+
 ## How agents work these tasks
 
 Every agent prompt repeats these rules, so each prompt works on its own:
