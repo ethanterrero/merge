@@ -1,39 +1,65 @@
-import React from 'react';
-import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-
-const milestones = ['Create your commute', 'Discover compatible routes', 'Invite commuters', 'Confirm seats and cargo'];
+import React, { useEffect } from 'react';
+import { BackHandler } from 'react-native';
+import { NavigationProvider, Route, useNav } from './src/navigation';
+import { CommuteProvider } from './src/state/commute';
+import { WelcomeScreen } from './src/screens/WelcomeScreen';
+import { CommuteScreen } from './src/screens/CommuteScreen';
+import { PreferencesScreen } from './src/screens/PreferencesScreen';
+import { DiscoverScreen } from './src/screens/DiscoverScreen';
+import { MatchDetailScreen } from './src/screens/MatchDetailScreen';
+import { RequestRideScreen } from './src/screens/RequestRideScreen';
+import { BookedScreen } from './src/screens/BookedScreen';
+import { DriverRequestsScreen } from './src/screens/DriverRequestsScreen';
+import { DriverRequestScreen } from './src/screens/DriverRequestScreen';
+import { DriverConfirmScreen } from './src/screens/DriverConfirmScreen';
 
 export default function App() {
   return (
-    <SafeAreaView style={styles.screen}>
-      <StatusBar style="dark" />
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.brand}>merge.</Text>
-        <Text style={styles.heading}>Find your way together.</Text>
-        <Text style={styles.description}>A better Bay Bridge commute starts with people already going your way.</Text>
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Your morning commute</Text>
-          <Text style={styles.route}>East Bay → San Francisco</Text>
-          <Text style={styles.note}>Route discovery is coming next. This is an initial app shell, not a live booking service.</Text>
-        </View>
-        <Text style={styles.section}>How Merge works</Text>
-        {milestones.map((step, i) => <View key={step} style={styles.step}><Text style={styles.stepText}>{i + 1}. {step}</Text></View>)}
-      </ScrollView>
-    </SafeAreaView>
+    <CommuteProvider>
+      <NavigationProvider initial={{ name: 'welcome' }}>
+        <Router />
+      </NavigationProvider>
+    </CommuteProvider>
   );
 }
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F6F8F7' },
-  content: { padding: 24, gap: 18 },
-  brand: { fontSize: 34, fontWeight: '800', color: '#173B36' },
-  heading: { fontSize: 28, fontWeight: '700', color: '#132B28' },
-  description: { fontSize: 16, lineHeight: 24, color: '#536B66' },
-  card: { padding: 22, borderRadius: 18, backgroundColor: '#E1EEE9', gap: 12 },
-  cardTitle: { fontSize: 14, color: '#46635C' },
-  route: { fontSize: 20, fontWeight: '700', color: '#173B36' },
-  note: { fontSize: 13, lineHeight: 19, color: '#536B66' },
-  section: { fontSize: 18, fontWeight: '700', color: '#173B36' },
-  step: { padding: 16, backgroundColor: '#FFFFFF', borderRadius: 12 },
-  stepText: { fontSize: 15, color: '#173B36' },
-});
+
+function Router() {
+  const nav = useNav();
+
+  // Android hardware back pops the in-app stack before leaving the app.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (!nav.canGoBack) return false;
+      nav.back();
+      return true;
+    });
+    return () => sub.remove();
+  }, [nav]);
+
+  return renderRoute(nav.route);
+}
+
+function renderRoute(route: Route): React.ReactElement {
+  switch (route.name) {
+    case 'welcome':
+      return <WelcomeScreen />;
+    case 'commute':
+      return <CommuteScreen />;
+    case 'preferences':
+      return <PreferencesScreen />;
+    case 'discover':
+      return <DiscoverScreen />;
+    case 'match':
+      return <MatchDetailScreen matchId={route.matchId} />;
+    case 'request':
+      return <RequestRideScreen matchId={route.matchId} />;
+    case 'booked':
+      return <BookedScreen matchId={route.matchId} />;
+    case 'driverRequests':
+      return <DriverRequestsScreen key={route.tab ?? 'new'} initialTab={route.tab} />;
+    case 'driverRequest':
+      return <DriverRequestScreen requestId={route.requestId} />;
+    case 'driverConfirm':
+      return <DriverConfirmScreen requestId={route.requestId} />;
+  }
+}
