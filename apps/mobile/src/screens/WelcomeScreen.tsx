@@ -3,6 +3,8 @@ import { Platform, Pressable, SafeAreaView, StatusBar as RNStatusBar, StyleSheet
 import { colors, radius, space, type } from '../theme';
 import { useNav } from '../navigation';
 import { Role, useCommute } from '../state/commute';
+import { useAuth } from '../state/auth';
+import { welcomeNext } from '../lib/authRules';
 import { Screen } from '../components/Screen';
 import { Button } from '../components/Button';
 import { Icon, IconName } from '../components/Icon';
@@ -23,13 +25,14 @@ const WHY: { icon: IconName; title: string; body: string }[] = [
 export function WelcomeScreen() {
   const nav = useNav();
   const { commute, update } = useCommute();
+  const { status } = useAuth();
 
   return (
     <Screen
       statusBar="light"
       background={colors.surface}
       contentStyle={{ padding: 0, gap: 0 }}
-      footer={<Button label="Continue" onPress={() => nav.push({ name: 'commute' })} />}
+      footer={<Button label="Continue" onPress={() => nav.push({ name: welcomeNext(status) })} />}
     >
       <View style={styles.hero}>
         <SafeAreaView>

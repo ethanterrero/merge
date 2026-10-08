@@ -1,7 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BackHandler } from 'react-native';
 import { NavigationProvider, Route, useNav } from './src/navigation';
 import { CommuteProvider } from './src/state/commute';
+import { AuthProvider, useAuth } from './src/state/auth';
+import { launchRoute, mustLeaveRoute } from './src/lib/authRules';
+import { LoadingScreen } from './src/screens/LoadingScreen';
 import { WelcomeScreen } from './src/screens/WelcomeScreen';
 import { SignInScreen } from './src/screens/SignInScreen';
 import { VerifyCodeScreen } from './src/screens/VerifyCodeScreen';
@@ -18,16 +21,41 @@ import { DriverConfirmScreen } from './src/screens/DriverConfirmScreen';
 
 export default function App() {
   return (
-    <CommuteProvider>
-      <NavigationProvider initial={{ name: 'welcome' }}>
-        <Router />
-      </NavigationProvider>
-    </CommuteProvider>
+    <AuthProvider>
+      <CommuteProvider>
+        <AuthGate />
+      </CommuteProvider>
+    </AuthProvider>
+  );
+}
+
+/**
+ * Waits for the stored session and profile, then picks the first screen once.
+ * Later status changes don't remount navigation, so onboarding isn't interrupted.
+ */
+function AuthGate() {
+  const { status } = useAuth();
+  const [initial, setInitial] = useState<Route | null>(() => (status === 'loading' ? null : { name: launchRoute(status) }));
+
+  useEffect(() => {
+    if (initial === null && status !== 'loading') {
+      // Typed as Route first: TS won't match { name: 'welcome' | 'discover' } to setState's value-or-updater parameter.
+      const first: Route = { name: launchRoute(status) };
+      setInitial(first);
+    }
+  }, [status, initial]);
+
+  if (initial === null) return <LoadingScreen />;
+  return (
+    <NavigationProvider initial={initial}>
+      <Router />
+    </NavigationProvider>
   );
 }
 
 function Router() {
   const nav = useNav();
+  const { status } = useAuth();
 
   // Android hardware back pops the in-app stack before leaving the app.
   useEffect(() => {
@@ -38,6 +66,11 @@ function Router() {
     });
     return () => sub.remove();
   }, [nav]);
+
+  // Signing out, or a session ending elsewhere, returns to Welcome.
+  useEffect(() => {
+    if (mustLeaveRoute(status, nav.route.name)) nav.reset({ name: 'welcome' });
+  }, [status, nav]);
 
   return renderRoute(nav.route);
 }
