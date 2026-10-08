@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
-"""Build the place_boundaries rows for supabase/migrations/0008_commute_privacy.sql.
+"""Build the place_boundaries rows for the boundary migrations.
 
-Downloads two public-domain sources into a fresh, empty temp directory outside
-the repo, simplifies the polygons, and rewrites the generated block of the
-migration (between the BEGIN/END GENERATED markers).
+0008 (San Francisco neighborhoods and city limits): downloads two public-domain
+sources into a fresh, empty temp directory outside the repo, simplifies the
+polygons, and rewrites the generated block of the migration (between the
+BEGIN/END GENERATED markers).
 
   python3 -I scripts/boundaries/build.py supabase/migrations/0008_commute_privacy.sql
 
 Pass --from-dir DIR to reuse files fetched earlier (named as in SOURCES).
+
+0009 (East Bay neighborhoods): reads the hand-drawn outlines in
+east-bay-neighborhoods.geojson next to this script (no downloads) and rewrites
+the generated block of 0009. The SQL clips each outline to its city's TIGER
+limits and removes overlaps in file order when the migration runs.
+
+  python3 -I scripts/boundaries/build.py --east-bay supabase/migrations/0009_east_bay_neighborhoods.sql
 
 The downloads are untrusted data: they're parsed with the standard library
 (json, zipfile, struct) and never executed, unpacked to disk, or imported.
@@ -59,6 +67,15 @@ M_PER_DEG_LON = 111_320.0 * math.cos(math.radians(LAT0))
 
 BEGIN = "-- BEGIN GENERATED place_boundaries (scripts/boundaries/build.py; do not edit by hand)"
 END = "-- END GENERATED place_boundaries"
+
+EAST_BAY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "east-bay-neighborhoods.geojson")
+EAST_BAY_SOURCE = "Merge (hand-drawn, approximate)"
+EAST_BAY_LICENSE = "CC0-1.0"
+EAST_BAY_CITIES = {"Alameda", "Oakland", "Berkeley"}
+EAST_BAY_MAX_VERTICES = 20
+EAST_BAY_MIN_PART_M2 = MIN_RING_M2  # clipping slivers smaller than this are dropped
+EAST_BAY_BEGIN = "-- BEGIN GENERATED east_bay_neighborhoods (scripts/boundaries/build.py --east-bay; do not edit by hand)"
+EAST_BAY_END = "-- END GENERATED east_bay_neighborhoods"
 
 
 def fetch(url, path):
@@ -293,6 +310,119 @@ def tiger_cities(path):
     return rows
 
 
+def segments_cross(a, b, c, d):
+    """True if segments ab and cd properly cross (shared endpoints don't count)."""
+
+    def orient(p, q, r):
+        v = (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
+        return (v > 0) - (v < 0)
+
+    if len({a, b, c, d}) < 4:
+        return False
+    return orient(a, b, c) * orient(a, b, d) < 0 and orient(c, d, a) * orient(c, d, b) < 0
+
+
+def east_bay_neighborhoods(path):
+    """Hand-drawn outlines, validated, in file (priority) order."""
+    with open(path, "rb") as f:
+        data = json.loads(f.read().decode("utf-8"))
+    if data.get("source") != EAST_BAY_SOURCE or data.get("license") != EAST_BAY_LICENSE:
+        raise SystemExit(f"{path} must declare source {EAST_BAY_SOURCE!r} and license {EAST_BAY_LICENSE!r}")
+    rows, seen = [], set()
+    for feat in data.get("features", []):
+        props = feat.get("properties") or {}
+        name, city = str(props.get("name", "")).strip(), str(props.get("city", "")).strip()
+        geom = feat.get("geometry") or {}
+        if not name or city not in EAST_BAY_CITIES:
+            raise SystemExit(f"Unexpected East Bay feature: {name!r} in {city!r}")
+        if (name, city) in seen:
+            raise SystemExit(f"Duplicate East Bay neighborhood: {name}, {city}")
+        seen.add((name, city))
+        if geom.get("type") != "Polygon" or len(geom.get("coordinates", [])) != 1:
+            raise SystemExit(f"{name}, {city}: expected a Polygon with one ring and no holes")
+        ring = [check_coord(p) for p in geom["coordinates"][0]]
+        if ring[0] != ring[-1]:
+            raise SystemExit(f"{name}, {city}: ring is not closed")
+        if not 3 <= len(ring) - 1 <= EAST_BAY_MAX_VERTICES:
+            raise SystemExit(f"{name}, {city}: {len(ring) - 1} vertices; keep outlines to 3-{EAST_BAY_MAX_VERTICES}")
+        edges = list(zip(ring, ring[1:]))
+        for i in range(len(edges)):
+            for j in range(i + 1, len(edges)):
+                if segments_cross(*edges[i], *edges[j]):
+                    raise SystemExit(f"{name}, {city}: outline crosses itself")
+        if abs(ring_area_m2(ring)) < MIN_RING_M2:
+            raise SystemExit(f"{name}, {city}: outline is too small")
+        slug = lambda t: re.sub(r"[^a-z0-9]+", "-", t.lower()).strip("-")
+        wkt = "POLYGON((" + ",".join(f"{x:.{DECIMALS}f} {y:.{DECIMALS}f}" for x, y in ring) + "))"
+        rows.append({"id": f"merge-eastbay:{slug(city)}:{slug(name)}", "name": name, "city": city, "wkt": wkt})
+    if len(rows) < 20:
+        raise SystemExit(f"Expected the East Bay neighborhood set, got {len(rows)} features")
+    return rows
+
+
+def render_east_bay(rows, digest):
+    values = ",\n".join(
+        f"      ({i}, {sql_text(r['id'])}, {sql_text(r['name'])}, {sql_text(r['city'])},\n"
+        f"       {sql_text(r['wkt'])})"
+        for i, r in enumerate(rows, 1)
+    )
+    return f"""{EAST_BAY_BEGIN}
+-- Source: scripts/boundaries/east-bay-neighborhoods.geojson (sha256 {digest}).
+-- Replaces any earlier hand-drawn rows, so it can run again. Outlines are in
+-- priority order: each is clipped to its city's TIGER limits, loses whatever an
+-- earlier outline already covers, and drops slivers under {EAST_BAY_MIN_PART_M2:g} m2.
+delete from public.place_boundaries where source = {sql_text(EAST_BAY_SOURCE)};
+
+do $$
+declare
+  r record;
+  g extensions.geometry;
+  taken extensions.geometry := extensions.st_geomfromtext('MULTIPOLYGON EMPTY', 4326);
+begin
+  for r in
+    select * from (values
+{values}
+    ) v(ord, id, name, city, wkt)
+    order by ord
+  loop
+    select extensions.st_difference(
+             extensions.st_intersection(extensions.st_makevalid(extensions.st_geomfromtext(r.wkt, 4326)), c.geom),
+             taken)
+      into g
+      from public.place_boundaries c
+     where c.kind = 'city' and c.city = r.city;
+    if not found then
+      raise exception 'No city boundary for %', r.city;
+    end if;
+
+    select extensions.st_multi(extensions.st_union(d.geom))
+      into g
+      from extensions.st_dump(extensions.st_collectionextract(extensions.st_makevalid(g), 3)) d
+     where extensions.st_area(d.geom::extensions.geography) >= {EAST_BAY_MIN_PART_M2:g};
+    if g is null then
+      raise exception '% is empty after clipping', r.id;
+    end if;
+
+    insert into public.place_boundaries (id, kind, name, city, source, license, geom)
+    values (r.id, 'neighborhood', r.name, r.city, {sql_text(EAST_BAY_SOURCE)}, {sql_text(EAST_BAY_LICENSE)}, g);
+    taken := extensions.st_union(taken, g);
+  end loop;
+end
+$$;
+{EAST_BAY_END}"""
+
+
+def replace_block(path, begin, end, block):
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+    start, stop = text.find(begin), text.find(end)
+    if start < 0 or stop < start:
+        raise SystemExit(f"{path} has no generated block markers")
+    text = text[:start] + block + text[stop + len(end) :]
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+
+
 def sql_text(s):
     return "'" + s.replace("'", "''") + "'"
 
@@ -325,9 +455,17 @@ def render(rows, hashes):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("migration", help="path to 0008_commute_privacy.sql (its generated block is replaced)")
+    ap.add_argument("migration", help="path to the migration whose generated block is replaced")
     ap.add_argument("--from-dir", help="reuse downloads in this directory instead of fetching")
+    ap.add_argument("--east-bay", action="store_true", help="build the hand-drawn East Bay block (0009)")
     args = ap.parse_args()
+
+    if args.east_bay:
+        rows = east_bay_neighborhoods(EAST_BAY_FILE)
+        block = render_east_bay(rows, sha256(EAST_BAY_FILE))
+        replace_block(args.migration, EAST_BAY_BEGIN, EAST_BAY_END, block)
+        print(f"{len(rows)} East Bay neighborhoods, {len(block.encode('utf-8'))} bytes", file=sys.stderr)
+        return
 
     if args.from_dir:
         workdir = args.from_dir
@@ -341,15 +479,7 @@ def main():
     rows = sf_neighborhoods(os.path.join(workdir, "sf_neighborhoods.geojson"))
     rows += tiger_cities(os.path.join(workdir, "tiger_ca_place.zip"))
     block = render(rows, hashes)
-
-    with open(args.migration, encoding="utf-8") as f:
-        text = f.read()
-    start, end = text.find(BEGIN), text.find(END)
-    if start < 0 or end < start:
-        raise SystemExit(f"{args.migration} has no generated block markers")
-    text = text[:start] + block + text[end + len(END) :]
-    with open(args.migration, "w", encoding="utf-8") as f:
-        f.write(text)
+    replace_block(args.migration, BEGIN, END, block)
     print(f"{len(rows)} rows, {len(block.encode('utf-8'))} bytes; downloads in {workdir}", file=sys.stderr)
 
 

@@ -92,13 +92,13 @@ A grid needs no secret and puts everyone in a cell behind the same marker. But t
 
 The trigger labels each stored area from its **center**, never the exact pin, with `public.area_label(center)`:
 
-1. A **neighborhood** polygon covers the center → "{neighborhood} area, {city}", for example "Mission area, San Francisco".
-2. Else a **city** polygon covers the center → "{city}", for example "Alameda".
+1. A **neighborhood** polygon covers the center → "{neighborhood} area, {city}", for example "Mission area, San Francisco" or "Park Street area, Alameda".
+2. Else a **city** polygon covers the center → "{city}", for example "Emeryville", or "Alameda" in a gap between Alameda's neighborhoods.
 3. Else (outside every polygon) → a fixed regional label: "San Francisco" if the nearest city polygon is San Francisco, otherwise "East Bay".
 
 If two polygons of the same kind cover the center (possible in slivers left by simplifying), the smallest wins, then the lowest id, so the result is deterministic.
 
-- The labels are stored as `commutes.origin_area_label` and `commutes.destination_area_label`. They're recomputed only when that area's center changes.
+- The labels are stored as `commutes.origin_area_label` and `commutes.destination_area_label`. They're recomputed only when that area's center changes, or when a migration changes the boundaries and calls `public.relabel_commute_areas()` (0009 does). That function is owner-only: it re-labels every saved area whose label differs from `area_label(center)` and leaves the areas alone.
 - The center is already what others see, so a label derived from it adds nothing. A label from the exact pin could, near a boundary. Test 23 checks this with a pin 55 m inside the Mission.
 - There's no geocoding or reverse-geocoding vendor. The lookup is a point-in-polygon query on our own table.
 
@@ -106,7 +106,7 @@ If two polygons of the same kind cover the center (possible in slivers left by s
 
 | Column | Type | Notes |
 | --- | --- | --- |
-| `id` | `text primary key` | `datasf-j2bu-swwd:<slug>` or `tiger2025-place:<GEOID>` |
+| `id` | `text primary key` | `datasf-j2bu-swwd:<slug>`, `tiger2025-place:<GEOID>` or `merge-eastbay:<city>:<slug>` |
 | `kind` | `text` | `neighborhood` or `city` |
 | `name`, `city` | `text not null` | For a city row, both are the city name |
 | `geom` | `extensions.geometry(MultiPolygon, 4326) not null` | GiST index |
@@ -114,7 +114,10 @@ If two polygons of the same kind cover the center (possible in slivers left by s
 
 - **Geometry, not geography.** The only operation is point-in-polygon (`st_covers`), which doesn't depend on distance, and planar coordinates make it exact and fast with a GiST index. The nearest-city fallback uses the `<->` index operator in degrees, which is fine for choosing between San Francisco and the East Bay.
 - **Clients can't read or write it.** Its rows are open data, but the app doesn't need them: labels are stored on the commute. RLS is enabled with no policies, and all privileges are revoked from `public`, `anon` and `authenticated`. Only the migration (or the service role) writes it.
-- `area_label` is `security definer`, so it can read the table on the signed-in person's behalf. It's executable by `authenticated` (the commute trigger runs as the signed-in person), not by `anon`. It returns only labels derived from public data.
+- `area_label` is `security definer`, so it can read the table on the signed-in person's behalf. It returns only labels derived from public data.
+- **The area helpers are owner-only (0009).** 0008 left `area_label`, `area_radius_m`, `within_area`, `random_area_center` and `commute_area_for` executable by `authenticated`, because the commute trigger ran as the signed-in person. Through `/rest/v1/rpc` that made `area_label` an open reverse-geocoder, which the hosted security advisor flagged. 0009 makes `commutes_set_areas` `security definer` (same body, `set search_path = ''`) and revokes execute on every helper from `public`, `anon` and `authenticated`.
+  - Running as its owner, the trigger bypasses RLS, so `commute_area_for` could read anyone's areas. It's only ever asked for `new.owner_id`'s areas, and the trigger first refuses a row whose `owner_id` isn't `auth.uid()` (when there is one), with the policy's error code. Otherwise the insert/update policies would reject that row only after the trigger had run.
+  - Future server code that needs the helpers (D-16's pickup check) must call them from owner-run functions too.
 
 ### Sources and licences
 
@@ -122,14 +125,19 @@ If two polygons of the same kind cover the center (possible in slivers left by s
 | --- | --- | --- | --- |
 | San Francisco neighborhoods | DataSF **Analysis Neighborhoods** (`j2bu-swwd`), https://data.sfgov.org/d/j2bu-swwd, downloaded from https://data.sf.gov/resource/j2bu-swwd.geojson | Open Data Commons PDDL 1.0 (public domain dedication) | 41 |
 | City limits: San Francisco, Alameda, Oakland, Berkeley, Emeryville, Piedmont, San Leandro, Richmond, Albany | US Census Bureau **TIGER/Line 2025, Places, California**, https://www2.census.gov/geo/tiger/TIGER2025/PLACE/tl_2025_06_place.zip | Public domain (US Government work, 17 U.S.C. 105) | 9 |
+| East Bay neighborhoods: Alameda, Oakland, Berkeley (0009) | **Merge (hand-drawn, approximate)**, `scripts/boundaries/east-bay-neighborhoods.geojson` | CC0 1.0 (our own work) | 42 |
 
 - **Why Analysis Neighborhoods, not SF Find Neighborhoods (`pty2-tcw4`).** Both are public domain. Analysis Neighborhoods is the City's official 41-area set: it covers the whole city with no overlaps. Find Neighborhoods has about 117 smaller, more familiar names, but it's built for search, not as a clean partition. Coarser labels are also the more private choice. Its names are what DataSF publishes, for example "Financial District/South Beach".
-- **East Bay neighborhoods: none. Labels there are city-level** ("Alameda", "Oakland").
-  - No open, licence-clear neighborhood polygons were found for Alameda or Berkeley.
+- **East Bay neighborhoods are our own approximate outlines** (0009). No open, cleanly licensed set exists:
+  - None were found for Alameda or Berkeley.
   - Oakland's are a 2002 city layer, or a Zillow set under CC BY-SA, neither current nor clean to reuse.
-  - OpenStreetMap neighbourhoods here are mostly points. (The Overpass API was down during the build, so this wasn't re-checked.) Voronoi cells around points would draw boundaries nobody published, mislabel people near them, and bring in ODbL share-alike.
-  - So the simpler correct option is city-level labels. The table can take East Bay neighborhoods later without a schema change.
-- **No OpenStreetMap data is used**, so there are no ODbL terms. Every row is public domain.
+  - OpenStreetMap neighbourhoods here are mostly points, and would bring in ODbL share-alike.
+
+  So Merge drew 42 outlines by hand from general knowledge of the streets, BART stations, freeways, the estuary and the shoreline: 9 in Alameda, 24 in Oakland and 9 in Berkeley. No geometry was copied from OSM, Zillow or any other dataset; the TIGER city limits were the only map reference. They're released as CC0 1.0.
+  - **Approximate by design.** Edges are within a block or two of where a local would put them, and some names (for example "Central Alameda", the split between Bay Farm Island and Harbor Bay) are judgment calls. That's enough for a label on a circle 0.5 mi wide that's already offset up to 0.25 mi from the pin.
+  - **Clipped and non-overlapping.** Outlines may overshoot into water or a neighboring city. When 0009 runs, each is intersected with its city's TIGER limits and loses whatever an earlier outline in the file already covers, so the file order is the priority. Slivers under 2,000 m² are dropped. Gaps are allowed and fall back to the city label.
+  - Emeryville, Piedmont, Albany, San Leandro and Richmond keep city-level labels.
+- **No OpenStreetMap data is used**, so there are no ODbL terms. Every row is public domain or CC0.
 - TIGER coordinates are NAD83. They're used as WGS 84: in the Bay Area the two differ by under 2 m, far below the simplification tolerance.
 - TIGER city limits include the water inside them (much of the Bay is inside San Francisco, Alameda or Oakland). So an area center over water still gets a city label.
 
@@ -147,6 +155,16 @@ python3 -I scripts/boundaries/build.py supabase/migrations/0008_commute_privacy.
 - Each geometry is loaded through `extensions.st_makevalid`, keeping polygons only. So any self-intersection from simplifying is repaired in the database.
 - **Topology:** simplification is per ring, not shared-edge (the test image's GEOS 3.9 has no coverage simplification). Neighbors can have slivers of up to about 20 m between them or overlapping. A center in a gap falls back to the city label. A center in an overlap takes the smaller polygon. Neither reveals anything, because the label comes from the public center.
 - **Size:** 50 rows, 2,882 vertices, about 76 KB of SQL, so it fits in 0008.
+
+East Bay neighborhoods (0009) come from the hand-drawn GeoJSON next to the script, with no downloads:
+
+```
+python3 -I scripts/boundaries/build.py --east-bay supabase/migrations/0009_east_bay_neighborhoods.sql
+```
+
+- Checks that each feature is a simple polygon (one ring, closed, 3–20 vertices, no self-crossing) inside the Bay Area, named, in Alameda, Oakland or Berkeley, and not repeated; and that the file declares the Merge source and CC0.
+- Rewrites only the block between `-- BEGIN GENERATED east_bay_neighborhoods` and its `END` marker in 0009, recording the GeoJSON's SHA-256. The block deletes any earlier hand-drawn rows, then clips and de-overlaps the outlines in file order in the database (`st_intersection` with the city row, `st_difference` with the outlines already loaded, `st_makevalid`, polygons only), so 0009 can run again.
+- **Size:** 42 outlines, about 14 KB of SQL.
 
 ## 4. Ride preferences
 
@@ -278,7 +296,7 @@ D-04 sets the scooter: one medium foldable scooter per passenger, folded within 
   - Close Q7 (no gender).
 - `docs/mvp.md`: preferences rank only (M-09).
 - The generated database types.
-- About/Legal screen (M-40), attribution line: "Neighborhood boundaries: DataSF Analysis Neighborhoods (PDDL 1.0). City limits: US Census Bureau TIGER/Line 2025 (public domain)." Neither licence requires it, but it's good practice.
+- About/Legal screen (M-40), attribution line: "Neighborhood boundaries: DataSF Analysis Neighborhoods (PDDL 1.0). City limits: US Census Bureau TIGER/Line 2025 (public domain). East Bay neighborhoods: hand-drawn by Merge (CC0)." None of the licences require it, but it's good practice.
 
 ## Tests: `supabase/tests/commute_privacy_test.sql`
 
@@ -331,11 +349,24 @@ They run with `scripts/db-test.sh`, using the same harness and `tests.as_user` a
 22. Known centers get the expected labels:
     - in the Mission → "Mission area, San Francisco";
     - in the Financial District → "Financial District/South Beach area, San Francisco";
-    - in Alameda → "Alameda";
+    - in Emeryville (a city with no neighborhood polygons) → "Emeryville";
     - in Walnut Creek (outside every polygon, nearest the East Bay) → "East Bay";
     - in Daly City (outside every polygon, nearest San Francisco) → "San Francisco".
 23. The label comes from the center, not the pin. A pin 55 m inside the Mission is redrawn until its center lands in another polygon. The stored label then differs from the pin's, and every draw matches `area_label(center)`.
 24. A label isn't recomputed while its center stays put: renaming the boundary and editing another field keeps the old label (part of test 3).
+
+Since 0009 the area helpers are owner-only, so tests 1, 4, 8, 22 and 23 run their helper calls as admin; the commutes are still saved as the signed-in person. Where tests 1, 3 and 4 use a center in central Alameda, they accept "Alameda" or any "… area, Alameda" label, as long as it matches `area_label(center)`. Test 3 renames every Alameda boundary, not just the city row.
+
+`east_bay_neighborhoods_test.sql` (0009):
+
+1. Known centers get their neighborhood label, each at least 300 m inside its outline: Park St & Central Ave → "Park Street area, Alameda"; Webster St & Central Ave → "West End area, Alameda"; Bay Farm Island; Harbor Bay; Fruitvale BART; Rockridge BART; 12th St BART → "Downtown area, Oakland"; Lake Merritt; West Oakland BART; Shattuck Ave by Downtown Berkeley BART → "Downtown area, Berkeley"; College & Ashby → "Elmwood area, Berkeley".
+2. Emeryville and Piedmont keep city labels.
+3. At least 8 Alameda, 15 Oakland and 8 Berkeley outlines, each a valid, non-empty multipolygon with the Merge source and CC0.
+4. Every outline lies inside its city's TIGER limits (under 1 m² outside).
+5. No outline overlaps another neighborhood (under 1 m² shared).
+6. A signed-in person's commute still gets areas within 402 m and labels from their centers through the `security definer` trigger, and saving a commute owned by someone else fails with `insufficient_privilege`.
+7. `relabel_commute_areas()` fixes stale saved labels from the area centers, keeps the areas, re-enables the area trigger, and changes nothing on a second run.
+8. Neither `authenticated` nor `anon` can execute `area_label`, `area_radius_m`, `within_area`, `random_area_center`, `commute_area_for`, `commutes_set_areas` or `relabel_commute_areas`, and a signed-in call to `area_label` is refused.
 
 `vehicles_commutes_test.sql` (0004) now gives its commutes weekdays and, for drivers, `seats_offered`, which 0008 requires.
 
@@ -343,5 +374,4 @@ They run with `scripts/db-test.sh`, using the same harness and `tests.as_user` a
 
 - The discovery and matching function and the detour estimate (M-33, 0012).
 - Requests, booking, the plate reveal and enforcing the pickup spot (they use `within_area`).
-- East Bay neighborhood polygons (no open source found; section 3).
 - App screens. The follow-ups noted above are: no Women-only, discovery off by default, show the stored area labels, seat stepper max and scooter limits copy.
