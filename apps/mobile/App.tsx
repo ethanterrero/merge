@@ -18,6 +18,7 @@ import { BookedScreen } from './src/screens/BookedScreen';
 import { DriverRequestsScreen } from './src/screens/DriverRequestsScreen';
 import { DriverRequestScreen } from './src/screens/DriverRequestScreen';
 import { DriverConfirmScreen } from './src/screens/DriverConfirmScreen';
+import { RoleScreen } from './src/screens/RoleScreen';
 
 export default function App() {
   return (
@@ -103,5 +104,7 @@ function renderRoute(route: Route): React.ReactElement {
       return <DriverRequestScreen requestId={route.requestId} />;
     case 'driverConfirm':
       return <DriverConfirmScreen requestId={route.requestId} />;
+    case 'role':
+      return <RoleScreen />;
   }
 }

@@ -103,6 +103,7 @@ test('mustLeaveRoute only moves signed-out people off signed-in screens', () => 
   assert.equal(mustLeaveRoute('signedOut', 'welcome'), false);
   assert.equal(mustLeaveRoute('signedOut', 'signIn'), false);
   assert.equal(mustLeaveRoute('signedOut', 'verifyCode'), false);
+  assert.equal(mustLeaveRoute('signedOut', 'role'), false);
   assert.equal(mustLeaveRoute('ready', 'discover'), false);
   assert.equal(mustLeaveRoute('prototype', 'discover'), false);
 });
