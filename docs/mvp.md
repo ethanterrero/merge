@@ -32,3 +32,7 @@ Payments, tips, live tracking, automatic multi-stop group formation, AI-based ma
 - Expo starter launches in development.
 - README, environment template, initial data model, and contribution instructions exist.
 - No real user data or secrets are committed.
+
+## Pilot blockers
+- **Custom SMTP** (e.g. Resend or Postmark). Supabase's built-in sender only reaches project team members, so sign-in codes won't reach pilot testers without it.
+- **In-app account deletion.** App Store guideline 5.1.1(v) requires it for any app that supports account creation.

@@ -7,7 +7,8 @@
     "start": "expo start",
     "ios": "expo start --ios",
     "android": "expo start --android",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test 'src/**/*.test.ts'"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -20,7 +21,9 @@
     "react-native-url-polyfill": "^2.0.0"
   },
   "devDependencies": {
+    "@types/node": "^22.20.5",
     "@types/react": "~19.1.10",
+    "tsx": "^4.23.15",
     "typescript": "~5.9.2"
   }
 }

@@ -7,6 +7,9 @@ import React, { createContext, useCallback, useContext, useMemo, useState } from
  */
 export type Route =
   | { name: 'welcome' }
+  | { name: 'signIn' }
+  | { name: 'verifyCode'; email: string }
+  | { name: 'profileName' }
   | { name: 'commute' }
   | { name: 'preferences' }
   | { name: 'discover' }

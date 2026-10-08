@@ -7,10 +7,18 @@
     "start": "npm --workspace apps/mobile run start",
     "android": "npm --workspace apps/mobile run android",
     "ios": "npm --workspace apps/mobile run ios",
-    "typecheck": "npm --workspace apps/mobile run typecheck"
+    "typecheck": "npm --workspace apps/mobile run typecheck",
+    "test": "npm --workspace apps/mobile run test",
+    "db:test": "scripts/db-test.sh",
+    "db:link": "supabase link --project-ref aeycmdjoplppvizvwhgs",
+    "db:push": "supabase db push",
+    "db:types": "supabase gen types typescript --linked --schema public > apps/mobile/src/lib/database.types.ts"
   },
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "devDependencies": {
+    "supabase": "^2.120.0"
+  }
 }

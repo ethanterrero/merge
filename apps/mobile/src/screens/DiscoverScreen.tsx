@@ -15,8 +15,10 @@ import { StatusBar } from 'expo-status-bar';
 import { colors, radius, shadow, space, type } from '../theme';
 import { useNav } from '../navigation';
 import { useCommute } from '../state/commute';
+import { useAuth } from '../state/auth';
 import { Match, MATCHES } from '../data/mock';
 import { BayMap, Zone } from '../components/BayMap';
+import { AccountSheet } from '../components/AccountSheet';
 import { TabBar } from '../components/TabBar';
 import { Icon } from '../components/Icon';
 import { IconButton } from '../components/Screen';
@@ -29,6 +31,8 @@ export function DiscoverScreen() {
   const nav = useNav();
   const { commute } = useCommute();
   const [filter, setFilter] = useState<Filter>('all');
+  const { status } = useAuth();
+  const [accountOpen, setAccountOpen] = useState(false);
   const [area, setArea] = useState({ width: 390, height: 700 });
 
   const matches = MATCHES.filter((m) => filter === 'all' || m.role === filter);
@@ -98,6 +102,9 @@ export function DiscoverScreen() {
                 </Text>
               </View>
               <IconButton icon="pencil" label="Edit commute" background={colors.background} onPress={() => nav.push({ name: 'commute' })} />
+              {status !== 'prototype' ? (
+                <IconButton icon="person-circle" label="Account" background={colors.background} onPress={() => setAccountOpen(true)} />
+              ) : null}
             </View>
             <View style={[styles.filterWrap, shadow.sm]}>
               <Segmented<Filter>
@@ -139,6 +146,7 @@ export function DiscoverScreen() {
         </Animated.View>
       </View>
       <TabBar active="discover" />
+      <AccountSheet visible={accountOpen} onClose={() => setAccountOpen(false)} />
     </View>
   );
 }

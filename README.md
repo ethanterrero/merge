@@ -4,7 +4,7 @@
 
 Merge is an open-source commuter carpooling app, initially focused on East Bay → San Francisco trips across the Bay Bridge. It helps drivers and passengers discover overlapping routes, coordinate recurring rides, and use HOV opportunities when occupancy qualifies.
 
-> **Status:** MVP scaffold. The app currently displays a starter screen. Authentication, route maps, matching, and bookings are planned but not implemented. Merge is a working name.
+> **Status:** MVP prototype. Email sign-in and profiles work against Supabase when it's configured. Without it, the app runs as a click-through prototype on sample data. Route maps, matching, and bookings are planned but not implemented. Merge is a working name.
 
 ## MVP features
 
@@ -31,15 +31,41 @@ cp apps/mobile/.env.example apps/mobile/.env
 npm run start
 ```
 
-The starter screen works without a configured Supabase project. Later, add `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` to the mobile app's local environment file. **Never put a service-role key in the app.**
+With the Supabase values in `apps/mobile/.env` left empty, the app runs as a click-through prototype with sample data and no sign-in.
 
-Run `npm run typecheck` for the initial TypeScript check.
+### Connecting Supabase
+
+1. `npx supabase login`
+2. `npm run db:link` (asks for the project's database password)
+3. `npm run db:push` to apply `supabase/migrations/`
+4. Copy the Project URL and `anon` public key (Project Settings → API) into `apps/mobile/.env` as `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`. **Never put a service-role key in the app.**
+5. In the Supabase dashboard:
+   - Authentication → Providers → Email: enabled, with "Confirm email" on. Email OTP Expiration: 600 seconds.
+   - Authentication → Email Templates → Magic Link: include `{{ .Token }}` in the body so the email contains a 6-digit code.
+
+After changing the schema, run `npm run db:types` to regenerate `apps/mobile/src/lib/database.types.ts`.
+
+In migrations, schema-qualify extension objects (for example `extensions.geography`), because the Supabase CLI applies migrations as a role whose `search_path` is only `"$user", public`.
+
+Supabase's built-in email sender only delivers to members of your Supabase team, and only a few emails an hour. Testers outside the team need a custom SMTP provider.
+
+### Checks
+
+```bash
+npm run typecheck
+npm test
+npm run db:test
+```
+
+`db:test` runs the migrations and `supabase/tests/` in a throwaway PostGIS container, so it needs Docker.
 
 ## Structure
 
 ```text
 apps/mobile/           Expo mobile app
-supabase/migrations/   Initial database model and RLS (default deny)
+supabase/migrations/   Database model and RLS (default deny)
+supabase/tests/        SQL tests for RLS and database rules
+scripts/               Database test runner
 docs/mvp.md            MVP product requirements
 .github/               CI and PR template
 CONTRIBUTING.md        Contribution guidelines

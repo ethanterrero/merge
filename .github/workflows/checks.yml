@@ -12,3 +12,9 @@ jobs:
           node-version: '22'
       - run: npm install
       - run: npm run typecheck
+      - run: npm test
+  database:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: scripts/db-test.sh
