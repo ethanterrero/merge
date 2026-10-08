@@ -4,7 +4,7 @@
 # Keeps supabase/migrations in the order the owner pushes them to the hosted
 # project. Fails when this branch:
 # - adds a migration whose number isn't above every migration on <base-ref>
-#   (gaps are fine: 0006 and 0007 are unused, and the next one may be 0009),
+#   (gaps are fine: 0006 and 0007 are unused),
 # - adds two migrations with the same number, or one without a number, or
 # - edits, renames or deletes a migration that already exists.
 # "This branch" means the commits since its merge base with <base-ref>; on a
