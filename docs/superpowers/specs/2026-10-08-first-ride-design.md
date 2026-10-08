@@ -58,6 +58,7 @@ RLS: participants can `select` their own rides. Writes come later with the booki
 | `author_id` | uuid, references `profiles` | |
 | `experience` | text null | `great` \| `good` \| `not_a_fit` |
 | `ride_again` | text null | `yes` \| `individual` \| `no` |
+| `ride_again_at` | timestamptz null | set by the server when `ride_again` changes; clients can't set it |
 | `dismissed_at` | timestamptz null | "Decide later" |
 | `created_at`, `updated_at` | timestamptz | |
 
@@ -75,7 +76,7 @@ RLS: members can `select`. Clients have no insert/update/delete grants or polici
 
 Maintained by `resolve_connection(a uuid, b uuid)`, a `security definer` function called from an `after insert or update` trigger on `ride_feedback`:
 
-1. For each person, take their most recent non-null `ride_again` across completed rides shared by the pair (ordered by `ride_feedback.updated_at`).
+1. For each person, take their most recent non-null `ride_again` across completed rides shared by the pair (ordered by `ride_feedback.ride_again_at`, set by the server when the answer changes).
 2. If both answers are in (`yes`, `individual`): upsert the connection with `crew_eligible = (both = 'yes')`.
 3. Otherwise (any `no`, or either missing): delete the connection, and set any `proposed`/`active`/`paused` Crew for the pair to `ended`.
 4. If the connection remains but `crew_eligible` becomes false, a `proposed` Crew becomes `not_started`. An `active`/`paused` Crew is left alone. Members end it explicitly.
