@@ -1,5 +1,6 @@
 import React from 'react';
-import { Platform, Pressable, SafeAreaView, ScrollView, StatusBar as RNStatusBar, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { colors, radius, space } from '../theme';
 import { useNav } from '../navigation';
@@ -16,8 +17,6 @@ const ROLES: { id: Role; label: string; desc: string; icon: IconName }[] = [
   { id: 'both', label: 'Both', desc: 'Drive some days, ride others', icon: 'swap-horizontal' },
 ];
 
-const androidTop = Platform.OS === 'android' ? RNStatusBar.currentHeight ?? 0 : 0;
-
 /** Sign-up's first step: pick how you'll usually commute. */
 export function RoleScreen() {
   const nav = useNav();
@@ -28,7 +27,7 @@ export function RoleScreen() {
     <View style={styles.root}>
       <StatusBar style="dark" />
       <SafeAreaView style={styles.root}>
-        <View style={[styles.top, { paddingTop: androidTop + space.sm }]}>
+        <View style={[styles.top, { paddingTop: space.sm }]}>
           <IconButton icon="chevron-back" label="Back" onPress={nav.back} />
         </View>
         <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>

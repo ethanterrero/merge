@@ -2,15 +2,13 @@ import React, { useMemo, useRef, useState } from 'react';
 import {
   Animated,
   PanResponder,
-  Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
-  StatusBar as RNStatusBar,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { colors, radius, shadow, space, type } from '../theme';
 import { useNav } from '../navigation';
@@ -25,7 +23,6 @@ import { IconButton } from '../components/Screen';
 import { Avatar, CheckRow, Segmented } from '../components/primitives';
 
 type Filter = 'all' | 'driver' | 'passenger';
-const topInset = Platform.OS === 'android' ? RNStatusBar.currentHeight ?? 0 : 0;
 
 export function DiscoverScreen() {
   const nav = useNav();
@@ -33,6 +30,7 @@ export function DiscoverScreen() {
   const [filter, setFilter] = useState<Filter>('all');
   const { status } = useAuth();
   const [accountOpen, setAccountOpen] = useState(false);
+  const insets = useSafeAreaInsets();
   const [area, setArea] = useState({ width: 390, height: 700 });
 
   const matches = MATCHES.filter((m) => filter === 'all' || m.role === filter);
@@ -91,8 +89,8 @@ export function DiscoverScreen() {
           </View>
         </BayMap>
 
-        <SafeAreaView style={styles.overlay} pointerEvents="box-none">
-          <View style={{ paddingTop: topInset + space.sm, paddingHorizontal: space.lg, gap: 10 }} pointerEvents="box-none">
+        <View style={styles.overlay} pointerEvents="box-none">
+          <View style={{ paddingTop: insets.top + space.sm, paddingHorizontal: space.lg, gap: 10 }} pointerEvents="box-none">
             <View style={[styles.searchCard, shadow.md]}>
               <Icon name="time" size={20} color={colors.chili} />
               <View style={{ flex: 1 }}>
@@ -119,7 +117,7 @@ export function DiscoverScreen() {
               />
             </View>
           </View>
-        </SafeAreaView>
+        </View>
 
         <Animated.View style={[styles.sheet, { top }]}>
           <View {...pan.panHandlers}>

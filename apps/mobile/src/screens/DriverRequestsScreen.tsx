@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Platform, Pressable, SafeAreaView, ScrollView, StatusBar as RNStatusBar, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { colors, radius, shadow, space, type } from '../theme';
 import { useNav } from '../navigation';
@@ -19,35 +20,34 @@ export function DriverRequestsScreen({ initialTab = 'new' }: { initialTab?: Tab 
   const [tab, setTab] = useState<Tab>(initialTab);
   const pending = REQUESTS.filter((r) => !commute.acceptedRequests.includes(r.id));
   const accepted = REQUESTS.filter((r) => commute.acceptedRequests.includes(r.id));
+  const insets = useSafeAreaInsets();
   const seatsOpen = Math.max(0, commute.seatsOffered - 1 - accepted.reduce((n, r) => n + r.seats, 0));
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar style="dark" />
       <View style={styles.header}>
-        <SafeAreaView>
-          <View style={{ paddingTop: (Platform.OS === 'android' ? RNStatusBar.currentHeight ?? 0 : 0) + space.lg, paddingHorizontal: space.xl, gap: 14, paddingBottom: 14 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm }}>
-              <Text style={type.title} accessibilityRole="header">
-                Trips
+        <View style={{ paddingTop: insets.top + space.lg, paddingHorizontal: space.xl, gap: 14, paddingBottom: 14 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm }}>
+            <Text style={type.title} accessibilityRole="header">
+              Trips
+            </Text>
+            <View style={styles.drivingPill}>
+              <Icon name="car" size={14} color={colors.ember} />
+              <Text style={{ fontSize: 12, fontWeight: '700', color: colors.maroon }}>
+                Driving · {seatsOpen} of {commute.seatsOffered} seats open
               </Text>
-              <View style={styles.drivingPill}>
-                <Icon name="car" size={14} color={colors.ember} />
-                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.maroon }}>
-                  Driving · {seatsOpen} of {commute.seatsOffered} seats open
-                </Text>
-              </View>
             </View>
-            <Segmented<Tab>
-              value={tab}
-              onChange={setTab}
-              options={[
-                { value: 'new', label: `New · ${pending.length}` },
-                { value: 'upcoming', label: 'Upcoming' },
-              ]}
-            />
           </View>
-        </SafeAreaView>
+          <Segmented<Tab>
+            value={tab}
+            onChange={setTab}
+            options={[
+              { value: 'new', label: `New · ${pending.length}` },
+              { value: 'upcoming', label: 'Upcoming' },
+            ]}
+          />
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={{ padding: space.lg, gap: space.md }}>

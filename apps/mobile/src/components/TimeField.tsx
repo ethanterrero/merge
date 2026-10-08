@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { FlatList, Modal, Platform, Pressable, SafeAreaView, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { FlatList, Modal, Platform, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { colors, radius, space, TOUCH, type } from '../theme';
 import { SLOT_STEP_MINUTES, dateToDeparture, departureSlots, departureToDate, slotsWith } from '../lib/timeSlots';
@@ -88,7 +89,7 @@ function TimeSheet({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.scrim} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close time picker" />
       <View style={styles.sheet} accessibilityViewIsModal>
-        <SafeAreaView>
+        <SafeAreaView edges={['bottom']}>
           <View style={styles.sheetBody}>
             <Text style={type.heading} accessibilityRole="header">
               {title}

@@ -1,5 +1,6 @@
 import React from 'react';
-import { Platform, SafeAreaView, StatusBar as RNStatusBar, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius, space, type } from '../theme';
 import { useNav } from '../navigation';
 import { findMatch } from '../data/mock';
@@ -16,33 +17,32 @@ export function MatchDetailScreen({ matchId }: { matchId: string }) {
   const first = m.name.split(' ')[0];
   const isDriver = m.role === 'driver';
   const cargoOk = !commute.bringsCargo || !!m.vehicle?.cargoFits;
+  const insets = useSafeAreaInsets();
 
   return (
     <Screen
       statusBar="light"
       header={
         <View style={styles.header}>
-          <SafeAreaView>
-            <View style={{ paddingTop: Platform.OS === 'android' ? RNStatusBar.currentHeight ?? 0 : 0 }}>
-              <View style={styles.headerBar}>
-                <IconButton icon="chevron-back" label="Back to discover" color={colors.onDark} onPress={nav.back} />
-                <IconButton icon="ellipsis-vertical" label="Block or report" color={colors.onDark} />
+          <View style={{ paddingTop: insets.top }}>
+            <View style={styles.headerBar}>
+              <IconButton icon="chevron-back" label="Back to discover" color={colors.onDark} onPress={nav.back} />
+              <IconButton icon="ellipsis-vertical" label="Block or report" color={colors.onDark} />
+            </View>
+            <View style={styles.identity}>
+              <View style={styles.avatarRing}>
+                <Avatar initials={m.initials} size={58} />
               </View>
-              <View style={styles.identity}>
-                <View style={styles.avatarRing}>
-                  <Avatar initials={m.initials} size={58} />
-                </View>
-                <View style={{ gap: 2, flex: 1 }}>
-                  <Text style={[type.title, { color: colors.onDark, fontSize: 24 }]} accessibilityRole="header">
-                    {m.name}
-                  </Text>
-                  <Text style={[type.small, { color: colors.onDarkMuted }]}>
-                    {isDriver ? 'Driver' : 'Passenger'} · Alameda → Financial District
-                  </Text>
-                </View>
+              <View style={{ gap: 2, flex: 1 }}>
+                <Text style={[type.title, { color: colors.onDark, fontSize: 24 }]} accessibilityRole="header">
+                  {m.name}
+                </Text>
+                <Text style={[type.small, { color: colors.onDarkMuted }]}>
+                  {isDriver ? 'Driver' : 'Passenger'} · Alameda → Financial District
+                </Text>
               </View>
             </View>
-          </SafeAreaView>
+          </View>
         </View>
       }
       footer={
