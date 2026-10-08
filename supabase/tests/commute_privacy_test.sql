@@ -43,6 +43,8 @@ values ('00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-0000000
         'SRID=4326;POINT(-122.2580 37.7650)', 'SRID=4326;POINT(-122.3990 37.7930)', '07:30', '{1,2,3}', 2,
         '00000000-0000-0000-0000-0000000000a1');
 
+-- The area helpers are owner-only (0009), so the checks run as admin.
+select tests.as_admin();
 do $$
 declare
   c public.commutes;
@@ -58,8 +60,9 @@ begin
   if public.area_radius_m() <> 402 then
     raise exception 'The area radius should be 402 m (0.5 mi wide), got %', public.area_radius_m();
   end if;
-  if c.origin_area_label is distinct from 'Alameda' then
-    raise exception 'An area in central Alameda should be labelled Alameda, got %', c.origin_area_label;
+  if c.origin_area_label is distinct from public.area_label(c.origin_area)
+     or not (c.origin_area_label = 'Alameda' or c.origin_area_label like '% area, Alameda') then
+    raise exception 'An area in central Alameda should be labelled in Alameda, from its center, got %', c.origin_area_label;
   end if;
   if c.destination_area_label is distinct from public.area_label(c.destination_area)
      or c.destination_area_label not like '% area, San Francisco' then
@@ -67,6 +70,8 @@ begin
   end if;
 end
 $$;
+
+select tests.as_user('00000000-0000-0000-0000-00000000000a');
 
 -- 5. Ada's passenger row ("Both") with the same points reuses the driver row's
 -- areas, so one home never yields two independent circles.
@@ -98,7 +103,9 @@ $$;
 -- never change on re-read or when other fields change, and a label is not
 -- recomputed while its area stays the same.
 select tests.as_admin();
-update public.place_boundaries set name = 'Renamed', city = 'Renamed' where id = 'tiger2025-place:0600562';
+-- Rename every Alameda boundary (city and neighborhoods), so a recomputed label would differ.
+update public.place_boundaries set city = 'Renamed' where city = 'Alameda';
+update public.place_boundaries set name = 'Renamed' where id = 'tiger2025-place:0600562';
 select tests.as_user('00000000-0000-0000-0000-00000000000a');
 
 do $$
@@ -123,7 +130,8 @@ begin
      or after.destination_area::text is distinct from before.destination_area::text then
     raise exception 'Areas changed although the exact points did not';
   end if;
-  if after.origin_area_label is distinct from 'Alameda'
+  if after.origin_area_label is distinct from before.origin_area_label
+     or after.origin_area_label like '%Renamed%'
      or after.destination_area_label is distinct from before.destination_area_label then
     raise exception 'Labels changed although the areas did not (got %, %)', after.origin_area_label, after.destination_area_label;
   end if;
@@ -135,7 +143,8 @@ end
 $$;
 
 select tests.as_admin();
-update public.place_boundaries set name = 'Alameda', city = 'Alameda' where id = 'tiger2025-place:0600562';
+update public.place_boundaries set city = 'Alameda' where city = 'Renamed';
+update public.place_boundaries set name = 'Alameda' where id = 'tiger2025-place:0600562';
 select tests.as_user('00000000-0000-0000-0000-00000000000a');
 
 -- 4. Moving the pin 100 m toward its area center keeps the area. Moving it
@@ -162,12 +171,15 @@ begin
   if after.origin_area::text = before.origin_area::text then
     raise exception 'A 1 km move should draw a new area';
   end if;
+  perform tests.as_admin();  -- the area helpers are owner-only (0009)
   if extensions.st_distance(after.origin, after.origin_area) > public.area_radius_m() then
     raise exception 'The new area should contain the new point';
   end if;
-  if after.origin_area_label is distinct from 'Alameda' then
+  if after.origin_area_label is distinct from public.area_label(after.origin_area)
+     or not (after.origin_area_label = 'Alameda' or after.origin_area_label like '% area, Alameda') then
     raise exception 'The new area should be labelled again, got %', after.origin_area_label;
   end if;
+  perform tests.as_user('00000000-0000-0000-0000-00000000000a');
 end
 $$;
 
@@ -253,8 +265,9 @@ end
 $$;
 
 -- 8. within_area: true inside R of the area center, false outside, and a spot
--- near the exact point but more than R from the center is outside.
-select tests.as_user('00000000-0000-0000-0000-00000000000a');
+-- near the exact point but more than R from the center is outside. (Owner-only
+-- since 0009, so this runs as admin.)
+select tests.as_admin();
 do $$
 declare
   center extensions.geography := 'SRID=4326;POINT(-122.2580 37.7650)';
@@ -399,6 +412,8 @@ $$;
 
 -- 22. Known centers get the expected labels: a San Francisco neighborhood, a
 -- city with no neighborhood data, and the regional fallback outside every polygon.
+-- (East Bay neighborhood labels are tested in east_bay_neighborhoods_test.sql.)
+select tests.as_admin();
 do $$
 declare
   got text;
@@ -411,9 +426,9 @@ begin
   if got is distinct from 'Financial District/South Beach area, San Francisco' then
     raise exception 'Financial District center labelled %', got;
   end if;
-  got := public.area_label('SRID=4326;POINT(-122.2580 37.7650)');
-  if got is distinct from 'Alameda' then
-    raise exception 'Alameda center labelled %', got;
+  got := public.area_label('SRID=4326;POINT(-122.2950 37.8390)');  -- Emeryville
+  if got is distinct from 'Emeryville' then
+    raise exception 'Emeryville center labelled %', got;
   end if;
   got := public.area_label('SRID=4326;POINT(-122.0650 37.9100)');  -- Walnut Creek
   if got is distinct from 'East Bay' then
@@ -434,10 +449,14 @@ select tests.as_user('00000000-0000-0000-0000-00000000000b');
 do $$
 declare
   pin extensions.geography := 'SRID=4326;POINT(-122.4180 37.7487)';
-  pin_label text := public.area_label('SRID=4326;POINT(-122.4180 37.7487)');
+  pin_label text;
   c public.commutes;
   crossed boolean := false;
 begin
+  -- area_label is owner-only (0009): read labels as admin, save commutes as Bea.
+  perform tests.as_admin();
+  pin_label := public.area_label('SRID=4326;POINT(-122.4180 37.7487)');
+  perform tests.as_user('00000000-0000-0000-0000-00000000000b');
   if pin_label is distinct from 'Mission area, San Francisco' then
     raise exception 'Test setup: the pin should be in the Mission, got %', pin_label;
   end if;
@@ -445,9 +464,11 @@ begin
     insert into public.commutes (owner_id, role, origin, destination, departure_time, weekdays, seats_offered)
     values ('00000000-0000-0000-0000-00000000000b', 'driver', pin, 'SRID=4326;POINT(-122.3990 37.7930)', '07:30', '{1}', 1)
     returning * into c;
+    perform tests.as_admin();
     if c.origin_area_label is distinct from public.area_label(c.origin_area) then
       raise exception 'Label % does not match its center''s label %', c.origin_area_label, public.area_label(c.origin_area);
     end if;
+    perform tests.as_user('00000000-0000-0000-0000-00000000000b');
     if c.origin_area_label <> pin_label then
       crossed := true;
     end if;
@@ -636,8 +657,8 @@ end
 $$;
 
 -- 21. Trigger functions aren't callable by clients, and anon can't call the
--- area helpers. (Signed-in users must be able to run the helpers, because the
--- commute trigger runs as the signed-in user.)
+-- area helpers. (Since 0009 signed-in users can't either; that's checked in
+-- east_bay_neighborhoods_test.sql.)
 do $$
 declare
   f text;
