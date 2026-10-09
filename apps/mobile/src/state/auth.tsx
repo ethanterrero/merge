@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import type { Database } from '../lib/database.types';
@@ -7,8 +8,10 @@ import {
   deriveStatus,
   normalizeDisplayName,
   normalizeEmail,
+  profileRetryDelayMs,
   SAVE_PROFILE_ERROR,
   sendCodeErrorMessage,
+  SIGN_OUT_ERROR,
   VERIFY_CODE_ERROR,
 } from '../lib/authRules';
 import type { Role } from './commute';
@@ -23,7 +26,7 @@ type Auth = {
   sendCode: (email: string) => Promise<string | null>;
   verifyCode: (email: string, code: string) => Promise<string | null>;
   saveProfile: (input: { displayName: string; role: Role }) => Promise<string | null>;
-  signOut: () => Promise<void>;
+  signOut: () => Promise<string | null>;
 };
 
 const AuthContext = createContext<Auth | null>(null);
@@ -33,12 +36,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
+  // Mirrors `session` for signOut, which resolves after SIGNED_OUT has been delivered.
+  const sessionRef = useRef<Session | null>(null);
 
   useEffect(() => {
     const client = supabase;
     if (!client) return;
     // Fires INITIAL_SESSION right away with any session restored from storage.
     const { data } = client.auth.onAuthStateChange((_event, next) => {
+      sessionRef.current = next;
       setSession(next);
       setSessionLoaded(true);
     });
@@ -53,20 +59,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const client = supabase;
     if (!client || !userId) return;
     let cancelled = false;
-    client
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (cancelled) return;
-        // A failed lookup reads as "no profile yet". Saving upserts, so the
-        // worst case is asking for a name the person already gave.
-        setProfile(data ?? null);
-        setProfileLoaded(true);
-      });
+    let loaded = false;
+    let attempt = 0;
+    let latest = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    // A failed lookup is not "no profile yet": it leaves profileLoaded false, so
+    // status stays 'loading' and a returning user is never asked for a name (and
+    // saving never overwrites their stored role). It retries with backoff, and
+    // right away when the app returns to the foreground.
+    const load = () => {
+      clearTimeout(timer);
+      const request = ++latest;
+      client
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle()
+        .then(({ data, error }) => {
+          if (cancelled || loaded) return;
+          if (error) {
+            // A newer request owns the retry schedule.
+            if (request !== latest) return;
+            timer = setTimeout(load, profileRetryDelayMs(attempt));
+            attempt += 1;
+            return;
+          }
+          loaded = true;
+          clearTimeout(timer);
+          subscription.remove();
+          setProfile(data ?? null);
+          setProfileLoaded(true);
+        });
+    };
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && !loaded) load();
+    });
+    load();
+
     return () => {
       cancelled = true;
+      clearTimeout(timer);
+      subscription.remove();
     };
   }, [userId]);
 
@@ -107,7 +142,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return null;
       },
       signOut: async () => {
-        if (client) await client.auth.signOut();
+        if (!client) return null;
+        const { error } = await client.auth.signOut();
+        // An error is only a failed sign-out if the session is still there (offline with
+        // an expired token). When the logout request fails some other way, auth-js has
+        // already cleared the session and delivered SIGNED_OUT before this resolves, so
+        // sessionRef is null and the person is signed out: don't tell them to try again.
+        // getSession() can't answer this: with an expired token it retries the refresh,
+        // and offline it returns no session while the stored one is still in place.
+        return error && sessionRef.current ? SIGN_OUT_ERROR : null;
       },
     };
   }, [session, sessionLoaded, profile, profileLoaded]);

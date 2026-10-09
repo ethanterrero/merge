@@ -35,4 +35,4 @@ Payments, tips, live tracking, automatic multi-stop group formation, AI-based ma
 
 ## Pilot blockers
 - **Custom SMTP** (e.g. Resend or Postmark). Supabase's built-in sender only reaches project team members, so sign-in codes won't reach pilot testers without it.
-- **In-app account deletion.** App Store guideline 5.1.1(v) requires it for any app that supports account creation.
+- **In-app account deletion.** App Store guideline 5.1.1(v) requires it for any app that supports account creation. Google Play also requires in-app deletion, plus a web link (given in the Data safety form) where users can request deletion without the app.

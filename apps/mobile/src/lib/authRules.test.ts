@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  SERVER_ERROR,
   deriveStatus,
   digitsOnly,
   displayNameError,
@@ -10,6 +11,7 @@ import {
   mustLeaveRoute,
   normalizeDisplayName,
   normalizeEmail,
+  profileRetryDelayMs,
   sendCodeErrorMessage,
   welcomeNext,
 } from './authRules';
@@ -60,8 +62,22 @@ test('isCompleteCode requires exactly 6 digits', () => {
 
 test('sendCodeErrorMessage distinguishes rate limits from other failures', () => {
   assert.equal(sendCodeErrorMessage({ status: 429 }), 'Too many codes requested. Try again in a few minutes.');
-  assert.equal(sendCodeErrorMessage({ status: 500 }), "Couldn't send the code. Check your connection and try again.");
   assert.equal(sendCodeErrorMessage({}), "Couldn't send the code. Check your connection and try again.");
+});
+
+test('sendCodeErrorMessage blames our side for server errors (HTTP 500 and up)', () => {
+  assert.equal(SERVER_ERROR, 'Something went wrong on our side. Try again in a few minutes.');
+  assert.equal(sendCodeErrorMessage({ status: 500 }), SERVER_ERROR);
+  assert.equal(sendCodeErrorMessage({ status: 503 }), SERVER_ERROR);
+  assert.equal(sendCodeErrorMessage({ status: 500, code: 'unexpected_failure' }), SERVER_ERROR);
+});
+
+test('sendCodeErrorMessage keeps the connection message for failures with no server status', () => {
+  const connection = "Couldn't send the code. Check your connection and try again.";
+  assert.equal(sendCodeErrorMessage({ status: 0 }), connection);
+  assert.equal(sendCodeErrorMessage({ status: undefined }), connection);
+  assert.equal(sendCodeErrorMessage({}), connection);
+  assert.equal(sendCodeErrorMessage({ status: 499 }), connection);
 });
 
 test('sendCodeErrorMessage reports addresses the server rejects as invalid emails', () => {
@@ -71,6 +87,12 @@ test('sendCodeErrorMessage reports addresses the server rejects as invalid email
     sendCodeErrorMessage({ status: 429, code: 'over_email_send_rate_limit' }),
     'Too many codes requested. Try again in a few minutes.',
   );
+});
+
+test('sendCodeErrorMessage lets an invalid-email code win over any status', () => {
+  assert.equal(sendCodeErrorMessage({ status: 500, code: 'email_address_invalid' }), 'Enter a valid email address.');
+  assert.equal(sendCodeErrorMessage({ status: 503, code: 'validation_failed' }), 'Enter a valid email address.');
+  assert.equal(sendCodeErrorMessage({ status: 429, code: 'email_address_invalid' }), 'Enter a valid email address.');
 });
 
 test('deriveStatus', () => {
@@ -106,4 +128,23 @@ test('mustLeaveRoute only moves signed-out people off signed-in screens', () => 
   assert.equal(mustLeaveRoute('signedOut', 'role'), false);
   assert.equal(mustLeaveRoute('ready', 'discover'), false);
   assert.equal(mustLeaveRoute('prototype', 'discover'), false);
+});
+
+test('profileRetryDelayMs doubles from one second', () => {
+  assert.equal(profileRetryDelayMs(0), 1000);
+  assert.equal(profileRetryDelayMs(1), 2000);
+  assert.equal(profileRetryDelayMs(2), 4000);
+});
+
+test('profileRetryDelayMs caps at 30 seconds', () => {
+  assert.equal(profileRetryDelayMs(4), 16000);
+  assert.equal(profileRetryDelayMs(5), 30000);
+  assert.equal(profileRetryDelayMs(50), 30000);
+});
+
+test('profileRetryDelayMs treats negative or non-finite attempts as the first', () => {
+  assert.equal(profileRetryDelayMs(-1), 1000);
+  assert.equal(profileRetryDelayMs(Number.NaN), 1000);
+  assert.equal(profileRetryDelayMs(Number.NEGATIVE_INFINITY), 1000);
+  assert.equal(profileRetryDelayMs(Number.POSITIVE_INFINITY), 1000);
 });
