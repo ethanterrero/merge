@@ -588,9 +588,12 @@ export type Database = {
         }
         Returns: unknown
       }
-      detour_limit_minutes: { Args: never; Returns: number }
-      detour_road_factor: { Args: never; Returns: number }
-      detour_speed_mph: { Args: never; Returns: number }
+      detour_limit_minutes: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      detour_road_factor: { Args: Record<PropertyKey, never>; Returns: number }
+      detour_speed_mph: { Args: Record<PropertyKey, never>; Returns: number }
       estimate_detour_minutes: {
         Args: {
           driver_dest: unknown
@@ -621,9 +624,15 @@ export type Database = {
         Returns: string
       }
       public_name: { Args: { display_name: string }; Returns: string }
-      purge_expired_safety_reports: { Args: never; Returns: number }
+      purge_expired_safety_reports: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       random_area_center: { Args: { pin: unknown }; Returns: unknown }
-      relabel_commute_areas: { Args: never; Returns: number }
+      relabel_commute_areas: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       resolve_connection: { Args: { a: string; b: string }; Returns: undefined }
       respond_to_crew: {
         Args: { accept: boolean; crew_id: string }
