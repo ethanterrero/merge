@@ -9,6 +9,7 @@
     "ios": "npm --workspace apps/mobile run ios",
     "typecheck": "npm --workspace apps/mobile run typecheck",
     "test": "npm --workspace apps/mobile run test",
+    "lint": "npm --workspace apps/mobile run lint",
     "db:test": "scripts/db-test.sh",
     "db:link": "supabase link --project-ref aeycmdjoplppvizvwhgs",
     "db:push": "supabase db push",
@@ -20,6 +21,7 @@
     "packages/*"
   ],
   "devDependencies": {
+    "prettier": "3.6.2",
     "supabase": "^2.120.0"
   }
 }

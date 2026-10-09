@@ -10,11 +10,63 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm install
+          cache: npm
+      - run: npm ci
       - run: npm run typecheck
       - run: npm test
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+  migration-order:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history, so origin/<base> and the merge base are both present.
+          fetch-depth: 0
+      - name: New migrations are numbered above the base branch's highest
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: scripts/check-migration-order.sh "origin/$BASE_REF"
   database:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: scripts/db-test.sh
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      # The Supabase CLI and Prettier (both pinned by the lockfile) generate the types.
+      - run: npm ci
+      - name: Apply migrations, generate types, run SQL tests
+        run: |
+          mkdir -p "$RUNNER_TEMP/database-types"
+          DB_TYPES_OUT="$RUNNER_TEMP/database-types/database.types.ts" scripts/db-test.sh
+      # Uploaded before the comparison, so a failing run still publishes the file.
+      - name: Upload generated types
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-types
+          path: ${{ runner.temp }}/database-types/database.types.ts
+          if-no-files-found: warn
+      - name: Committed database.types.ts matches the migrations
+        if: always()
+        run: |
+          generated="$RUNNER_TEMP/database-types/database.types.ts"
+          if [ ! -s "$generated" ]; then
+            echo "::error::Types weren't generated; see the step above."
+            exit 1
+          fi
+          if ! git diff --no-index --exit-code apps/mobile/src/lib/database.types.ts "$generated"; then
+            echo "::error file=apps/mobile/src/lib/database.types.ts::database.types.ts doesn't match the migrations. Download the database-types artifact from this run and commit it (see CONTRIBUTING.md, \"Database changes\")."
+            exit 1
+          fi
