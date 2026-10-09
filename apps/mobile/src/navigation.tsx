@@ -19,7 +19,8 @@ export type Route =
   | { name: 'driverRequests'; tab?: 'new' | 'upcoming' }
   | { name: 'driverRequest'; requestId: string }
   | { name: 'driverConfirm'; requestId: string }
-  | { name: 'role' };
+  | { name: 'role' }
+;
 
 export type RouteName = Route['name'];
 

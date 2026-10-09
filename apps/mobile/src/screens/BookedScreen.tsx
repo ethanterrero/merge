@@ -1,5 +1,6 @@
 import React from 'react';
-import { Platform, SafeAreaView, StatusBar as RNStatusBar, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, space, type } from '../theme';
 import { useNav } from '../navigation';
 import { findMatch } from '../data/mock';
@@ -14,30 +15,29 @@ export function BookedScreen({ matchId }: { matchId: string }) {
   const { commute } = useCommute();
   const m = findMatch(matchId);
   const first = m.name.split(' ')[0];
+  const insets = useSafeAreaInsets();
 
   return (
     <Screen
       statusBar="light"
       header={
         <View style={styles.header}>
-          <SafeAreaView>
-            <View style={{ paddingTop: Platform.OS === 'android' ? RNStatusBar.currentHeight ?? 0 : 0, gap: space.md }}>
-              <View style={{ paddingHorizontal: space.sm }}>
-                <IconButton icon="close" label="Close" color={colors.onDark} onPress={() => nav.reset({ name: 'discover' })} />
+          <View style={{ paddingTop: insets.top, gap: space.md }}>
+            <View style={{ paddingHorizontal: space.sm }}>
+              <IconButton icon="close" label="Close" color={colors.onDark} onPress={() => nav.reset({ name: 'discover' })} />
+            </View>
+            <View style={styles.identity}>
+              <View style={styles.check}>
+                <Icon name="checkmark" size={28} color={colors.maroon} />
               </View>
-              <View style={styles.identity}>
-                <View style={styles.check}>
-                  <Icon name="checkmark" size={28} color={colors.maroon} />
-                </View>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={[type.heading, { color: colors.onDark, fontSize: 22 }]} accessibilityRole="header">
-                    Booked with {first}
-                  </Text>
-                  <Text style={[type.small, { color: colors.onDarkMuted }]}>Mon–Thu · first ride Mon, Oct 12</Text>
-                </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[type.heading, { color: colors.onDark, fontSize: 22 }]} accessibilityRole="header">
+                  Booked with {first}
+                </Text>
+                <Text style={[type.small, { color: colors.onDarkMuted }]}>Mon–Thu · first ride Mon, Oct 12</Text>
               </View>
             </View>
-          </SafeAreaView>
+          </View>
         </View>
       }
       footer={

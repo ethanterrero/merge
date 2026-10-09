@@ -3,15 +3,13 @@ import {
   AccessibilityInfo,
   Animated,
   LayoutChangeEvent,
-  Platform,
   Pressable,
-  SafeAreaView,
-  StatusBar as RNStatusBar,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, shadow, TOUCH } from '../theme';
@@ -44,7 +42,6 @@ const BADGES = badgeTracks();
 const OVERLAY = overlayTracks();
 
 const MAP_LABEL = 'A street map where three cars turn onto one avenue and merge into a single car';
-const androidTop = Platform.OS === 'android' ? RNStatusBar.currentHeight ?? 0 : 0;
 
 /** The owner-approved mark: Ionicons git-merge, flipped vertically. */
 function MergeGlyph({ size }: { size: number }) {
@@ -168,8 +165,8 @@ export function WelcomeScreen() {
         </Animated.View>
       </View>
 
-      <SafeAreaView style={styles.chipArea} pointerEvents="none">
-        <Animated.View style={[styles.chip, { marginTop: androidTop + 8, opacity: overlay.chipOpacity }]}>
+      <SafeAreaView style={styles.chipArea} edges={['top']} pointerEvents="none">
+        <Animated.View style={[styles.chip, { marginTop: 8, opacity: overlay.chipOpacity }]}>
           <View style={styles.chipLogo}>
             <MergeGlyph size={18} />
           </View>
@@ -185,7 +182,7 @@ export function WelcomeScreen() {
         accessibilityElementsHidden={playing}
         importantForAccessibility={playing ? 'no-hide-descendants' : 'auto'}
       >
-        <SafeAreaView>
+        <SafeAreaView edges={['bottom']}>
           <View style={styles.sheetInner}>
             <Text style={styles.headline} accessibilityRole="header">
               Share the commute.
