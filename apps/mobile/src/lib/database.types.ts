@@ -20,6 +20,7 @@ export type Database = {
           blocker_id: string
           created_at: string
         }
+        ComputedFields: never
         Insert: {
           blocked_id: string
           blocker_id: string
@@ -60,6 +61,7 @@ export type Database = {
           user_low: string | null
           weekdays: number[]
         }
+        ComputedFields: never
         Insert: {
           created_at?: string
           departure_time: string
@@ -129,6 +131,7 @@ export type Database = {
           vehicle_id: string | null
           weekdays: number[]
         }
+        ComputedFields: never
         Insert: {
           brings_scooter?: boolean
           created_at?: string
@@ -194,6 +197,7 @@ export type Database = {
           user_high: string
           user_low: string
         }
+        ComputedFields: never
         Insert: {
           created_at?: string
           crew_eligible?: boolean
@@ -236,6 +240,7 @@ export type Database = {
           sender_id: string | null
           status: string
         }
+        ComputedFields: never
         Insert: {
           commute_id?: string | null
           created_at?: string
@@ -297,6 +302,7 @@ export type Database = {
           name: string
           source: string
         }
+        ComputedFields: never
         Insert: {
           city: string
           geom: unknown
@@ -328,6 +334,7 @@ export type Database = {
           suspended_at: string | null
           vetted_at: string | null
         }
+        ComputedFields: never
         Insert: {
           created_at?: string
           discovery_opt_in?: boolean
@@ -361,6 +368,7 @@ export type Database = {
           ride_id: string
           updated_at: string
         }
+        ComputedFields: never
         Insert: {
           author_id: string
           created_at?: string
@@ -411,6 +419,7 @@ export type Database = {
           ride_date: string
           status: string
         }
+        ComputedFields: never
         Insert: {
           completed_at?: string | null
           created_at?: string
@@ -470,6 +479,7 @@ export type Database = {
           reporter_id: string | null
           ride_id: string | null
         }
+        ComputedFields: never
         Insert: {
           account_deleted_at?: string | null
           category: string
@@ -527,6 +537,7 @@ export type Database = {
           passenger_seats: number
           plate: string | null
         }
+        ComputedFields: never
         Insert: {
           accepts_foldable_scooters?: boolean
           color?: string | null
@@ -567,7 +578,7 @@ export type Database = {
     }
     Functions: {
       area_label: { Args: { center: unknown }; Returns: string }
-      area_radius_m: { Args: never; Returns: number }
+      area_radius_m: { Args: Record<PropertyKey, never>; Returns: number }
       commute_area_for: {
         Args: {
           for_owner: string
@@ -577,9 +588,12 @@ export type Database = {
         }
         Returns: unknown
       }
-      detour_limit_minutes: { Args: never; Returns: number }
-      detour_road_factor: { Args: never; Returns: number }
-      detour_speed_mph: { Args: never; Returns: number }
+      detour_limit_minutes: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      detour_road_factor: { Args: Record<PropertyKey, never>; Returns: number }
+      detour_speed_mph: { Args: Record<PropertyKey, never>; Returns: number }
       estimate_detour_minutes: {
         Args: {
           driver_dest: unknown
@@ -610,9 +624,15 @@ export type Database = {
         Returns: string
       }
       public_name: { Args: { display_name: string }; Returns: string }
-      purge_expired_safety_reports: { Args: never; Returns: number }
+      purge_expired_safety_reports: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       random_area_center: { Args: { pin: unknown }; Returns: unknown }
-      relabel_commute_areas: { Args: never; Returns: number }
+      relabel_commute_areas: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       resolve_connection: { Args: { a: string; b: string }; Returns: undefined }
       respond_to_crew: {
         Args: { accept: boolean; crew_id: string }
@@ -643,12 +663,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -672,11 +692,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -697,11 +717,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -722,11 +742,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -739,11 +759,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
