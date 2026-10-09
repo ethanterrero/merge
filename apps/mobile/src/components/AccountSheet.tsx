@@ -43,7 +43,7 @@ export function AccountSheet({ visible, onClose }: { visible: boolean; onClose: 
             </Text>
             <Text style={[type.small, { color: colors.textMuted }]}>Signed in as {email}</Text>
             {error ? (
-              <Text accessibilityLiveRegion="polite" style={[type.small, { color: colors.ember }]}>
+              <Text accessibilityLiveRegion="polite" style={[type.small, { color: colors.danger }]}>
                 {error}
               </Text>
             ) : null}
