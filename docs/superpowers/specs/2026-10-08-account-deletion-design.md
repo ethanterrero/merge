@@ -165,6 +165,28 @@ add its own on the same columns.
   `auth.users`, so the cascade doesn't touch it. M-17b's Edge Function purges the
   person's rows after deleting the user. Not done here: migrations don't own the `auth`
   schema.
+
+  *Added by M-17b:* `supabase/functions/delete-account` connects with the injected
+  `SUPABASE_DB_URL` (the table isn't exposed through the Data API) and deletes the entries
+  whose `actor_id` or `traits.user_id` is the person, or whose `actor_username` or
+  `traits.user_email` is their email. If that fails (for example, the database connection
+  times out), the account is still deleted: the function answers
+  `auditLogPurged: false` and logs "audit log purge failed" without identifiers. Nothing
+  identifies the person afterwards, so the owner's fallback is a sweep of entries for
+  users who no longer exist, run in the SQL editor:
+
+  ```sql
+  delete from auth.audit_log_entries a
+  where exists (
+    select 1
+    from (values (a.payload ->> 'actor_id'), (a.payload -> 'traits' ->> 'user_id')) as ref(id)
+    where ref.id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      and ref.id <> '00000000-0000-0000-0000-000000000000'
+      and not exists (select 1 from auth.users u where u.id = ref.id::uuid)
+  );
+  ```
+
+  It misses any entry that carries only an email, with no user id.
 - The Edge Function, app UI (M-17b), the web request page (M-40), third-party data
   (Sentry, the SMTP provider, Expo), admin tools.
 - Scheduling `purge_expired_safety_reports()` (pg_cron or the Edge Function). The owner

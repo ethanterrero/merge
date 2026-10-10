@@ -24,6 +24,20 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+  # Edge Functions (supabase/functions/<name>/, Deno). The repo has no Deno config or
+  # lockfile, so both steps run with --no-lock; imports pin exact versions instead.
+  deno:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.5.x
+      - name: deno check
+        run: deno check --no-lock 'supabase/functions/**/*.ts'
+      # --permit-no-files keeps this green for functions without tests.
+      - name: deno test
+        run: deno test --no-lock --permit-no-files supabase/functions
   migration-order:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
