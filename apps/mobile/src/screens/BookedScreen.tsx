@@ -3,7 +3,8 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, space, type } from '../theme';
 import { useNav } from '../navigation';
-import { findMatch } from '../data/mock';
+import { PROTOTYPE_RIDE_DATE, findMatch } from '../data/mock';
+import { formatRideDate } from '../lib/dates';
 import { useCommute } from '../state/commute';
 import { IconButton, Screen } from '../components/Screen';
 import { Button } from '../components/Button';
@@ -16,6 +17,7 @@ export function BookedScreen({ matchId }: { matchId: string }) {
   const m = findMatch(matchId);
   const first = m.name.split(' ')[0];
   const insets = useSafeAreaInsets();
+  const rideDay = formatRideDate(PROTOTYPE_RIDE_DATE);
 
   return (
     <Screen
@@ -32,19 +34,16 @@ export function BookedScreen({ matchId }: { matchId: string }) {
               </View>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={[type.heading, { color: colors.onDark, fontSize: 22 }]} accessibilityRole="header">
-                  Booked with {first}
+                  First Ride booked with {first}
                 </Text>
-                <Text style={[type.small, { color: colors.onDarkMuted }]}>Mon–Thu · first ride Mon, Oct 12</Text>
+                <Text style={[type.small, { color: colors.onDarkMuted }]}>{rideDay}</Text>
               </View>
             </View>
           </View>
         </View>
       }
       footer={
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <Button label="Skip one day" variant="secondary" size="md" style={{ flex: 1 }} />
-          <Button label="Cancel ride" variant="destructive" size="md" style={{ flex: 1 }} accessibilityHint={`Cancels your recurring ride with ${first}`} />
-        </View>
+        <Button label="Cancel ride" variant="destructive" size="md" accessibilityHint={`Cancels only this ride with ${first}, on ${rideDay}`} />
       }
     >
       <Card raised style={{ padding: space.lg, gap: space.md }}>
@@ -72,8 +71,8 @@ export function BookedScreen({ matchId }: { matchId: string }) {
           If plans change
         </Text>
         <Plan icon="notifications" lead={`If ${first} can't drive,`} body="you're notified right away and Merge shows other drivers for that day." />
-        <Plan icon="time" lead="If you can't make it," body={`skip a day or cancel before [cutoff] so ${first} can plan.`} />
-        <Text style={[type.caption, { color: colors.textMuted }]}>No live tracking during the pilot. Use messages to coordinate.</Text>
+        <Plan icon="time" lead="If you can't make it," body={`cancel before [cutoff] so ${first} can plan.`} />
+        <Text style={[type.caption, { color: colors.textMuted }]}>Your location stays on your phone. {first} never sees it. Use messages to coordinate.</Text>
       </Card>
     </Screen>
   );
