@@ -15,8 +15,8 @@ const DELETED = [
 ];
 
 const KEPT = [
-  'Rides you shared stay in the other person’s history as “Former member”, with no name or photo.',
-  'Upcoming confirmed rides are cancelled, and any Commute Crew you’re in ends.',
+  'Rides you shared stay in the other person\'s history as "Former member", with no name or photo.',
+  "Upcoming confirmed rides are cancelled, and any Commute Crew you're in ends.",
   'Safety reports are kept for 12 months for safety follow-up, no longer linked to your account.',
 ];
 
@@ -74,7 +74,7 @@ export function DeleteAccountConfirm({ onCancel, onDeleted }: { onCancel: () => 
       <Text style={type.heading} accessibilityRole="header">
         Delete your account?
       </Text>
-      <Text style={[type.body, { color: colors.textSecondary }]}>This can’t be undone.</Text>
+      <Text style={[type.body, { color: colors.textSecondary }]}>{"This can't be undone."}</Text>
       <Eyebrow>Deleted</Eyebrow>
       <Bullets items={DELETED} />
       <Eyebrow>What others keep</Eyebrow>
