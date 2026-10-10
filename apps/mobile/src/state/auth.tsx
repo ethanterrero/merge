@@ -5,6 +5,9 @@ import { supabase } from '../lib/supabase';
 import type { Database } from '../lib/database.types';
 import {
   AuthStatus,
+  DELETE_ACCOUNT_ERROR,
+  DELETED_SIGN_OUT_ERROR,
+  deleteAccountResult,
   deriveStatus,
   normalizeDisplayName,
   normalizeEmail,
@@ -27,7 +30,15 @@ type Auth = {
   verifyCode: (email: string, code: string) => Promise<string | null>;
   saveProfile: (input: { displayName: string; role: Role }) => Promise<string | null>;
   signOut: () => Promise<string | null>;
+  /**
+   * Deletes the signed-in account through the delete-account Edge Function, then signs
+   * this device out (the Router returns to Welcome). Connected mode only.
+   */
+  deleteAccount: () => Promise<string | null>;
 };
+
+// The function deletes the user, then purges their audit log (up to 10 s).
+const DELETE_ACCOUNT_TIMEOUT_MS = 30000;
 
 const AuthContext = createContext<Auth | null>(null);
 
@@ -151,6 +162,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // getSession() can't answer this: with an expired token it retries the refresh,
         // and offline it returns no session while the stored one is still in place.
         return error && sessionRef.current ? SIGN_OUT_ERROR : null;
+      },
+      deleteAccount: async () => {
+        if (!client || !session) return DELETE_ACCOUNT_ERROR;
+        // invoke() sends the session's access token; the function deletes only that user.
+        const result = deleteAccountResult(
+          await client.functions.invoke('delete-account', { method: 'POST', timeout: DELETE_ACCOUNT_TIMEOUT_MS }),
+        );
+        if (!result.deleted) return result.message;
+        // The account and its sessions are gone on the server; clear this device's copy.
+        // Auth answers 403 for a deleted user, which signOut treats as signed out.
+        const { error } = await client.auth.signOut({ scope: 'local' });
+        return error && sessionRef.current ? DELETED_SIGN_OUT_ERROR : null;
       },
     };
   }, [session, sessionLoaded, profile, profileLoaded]);

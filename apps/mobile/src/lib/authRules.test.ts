@@ -1,7 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  DELETE_ACCOUNT_ERROR,
+  DELETE_ACCOUNT_SESSION_ERROR,
+  DELETE_ACCOUNT_UNAVAILABLE_ERROR,
   SERVER_ERROR,
+  deleteAccountResult,
   deriveStatus,
   digitsOnly,
   displayNameError,
@@ -188,4 +192,55 @@ test('profileRetryDelayMs treats negative or non-finite attempts as the first', 
   assert.equal(profileRetryDelayMs(Number.NaN), 1000);
   assert.equal(profileRetryDelayMs(Number.NEGATIVE_INFINITY), 1000);
   assert.equal(profileRetryDelayMs(Number.POSITIVE_INFINITY), 1000);
+});
+
+// supabase-js FunctionsError shapes: FunctionsHttpError carries the Response as `context`.
+const httpError = (status: number) => ({ name: 'FunctionsHttpError', context: { status } });
+
+test('deleteAccountResult accepts only the function\'s "deleted" answer', () => {
+  assert.deepEqual(deleteAccountResult({ data: { deleted: true, auditLogPurged: true }, error: null }), { deleted: true });
+  assert.deepEqual(deleteAccountResult({ data: { deleted: true, auditLogPurged: false }, error: null }), { deleted: true });
+  assert.deepEqual(deleteAccountResult({ data: null, error: null }), { deleted: false, message: DELETE_ACCOUNT_ERROR });
+  assert.deepEqual(deleteAccountResult({ data: { deleted: false }, error: null }), {
+    deleted: false,
+    message: DELETE_ACCOUNT_ERROR,
+  });
+  assert.deepEqual(deleteAccountResult({ data: 'ok', error: null }), { deleted: false, message: DELETE_ACCOUNT_ERROR });
+});
+
+test('deleteAccountResult asks to sign in again when the function rejects the session', () => {
+  assert.deepEqual(deleteAccountResult({ data: null, error: httpError(401) }), {
+    deleted: false,
+    message: DELETE_ACCOUNT_SESSION_ERROR,
+  });
+});
+
+test('deleteAccountResult explains a function that is not deployed', () => {
+  assert.deepEqual(deleteAccountResult({ data: null, error: httpError(404) }), {
+    deleted: false,
+    message: DELETE_ACCOUNT_UNAVAILABLE_ERROR,
+  });
+});
+
+test('deleteAccountResult blames the server for 5xx answers and relay errors', () => {
+  for (const error of [httpError(500), httpError(502), httpError(503), { name: 'FunctionsRelayError', context: {} }]) {
+    assert.deepEqual(deleteAccountResult({ data: null, error }), { deleted: false, message: SERVER_ERROR });
+  }
+});
+
+test('deleteAccountResult points at the connection for network and unknown errors', () => {
+  for (const error of [
+    { name: 'FunctionsFetchError', context: {} },
+    { name: 'FunctionsHttpError' },
+    { name: 'FunctionsHttpError', context: null },
+    httpError(400),
+    httpError(405),
+    new Error('weird'),
+  ]) {
+    assert.deepEqual(deleteAccountResult({ data: null, error }), { deleted: false, message: DELETE_ACCOUNT_ERROR });
+  }
+});
+
+test('deleteAccountResult treats any error as not deleted, even with data', () => {
+  assert.equal(deleteAccountResult({ data: { deleted: true }, error: httpError(500) }).deleted, false);
 });

@@ -1,21 +1,25 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, radius, space, type } from '../theme';
 import { useAuth } from '../state/auth';
 import { Button } from './Button';
+import { DeleteAccountConfirm } from './DeleteAccountConfirm';
 
-/** Who's signed in, and the way out. */
+/** Who's signed in, and the ways out: sign out, or delete the account. */
 export function AccountSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const { email, profile, signOut } = useAuth();
+  const { status, email, profile, signOut } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const open = useRef(visible);
+  const { height } = useWindowDimensions();
 
-  // Closing or reopening the sheet starts it without a stale message.
+  // Closing or reopening the sheet starts it without a stale message, on the main view.
   useEffect(() => {
     open.current = visible;
     setError(null);
+    setConfirmingDelete(false);
   }, [visible]);
 
   const confirmSignOut = async () => {
@@ -38,24 +42,43 @@ export function AccountSheet({ visible, onClose }: { visible: boolean; onClose: 
       <Pressable style={styles.scrim} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close account" />
       <View style={styles.sheet}>
         <SafeAreaView edges={['bottom']}>
-          <View style={{ padding: space.xl, gap: space.md }}>
-            <Text style={type.heading} accessibilityRole="header">
-              {profile?.display_name ?? 'Account'}
-            </Text>
-            <Text style={[type.small, { color: colors.textMuted }]}>Signed in as {email}</Text>
-            {error ? (
-              <Text accessibilityLiveRegion="polite" style={[type.small, { color: colors.danger }]}>
-                {error}
+          {confirmingDelete ? (
+            // The confirmation is longer than the sheet's main view; let it scroll on short screens.
+            <ScrollView style={{ maxHeight: height * 0.85 }} contentContainerStyle={{ padding: space.xl }}>
+              {/* On success the Router sends the signed-out person to Welcome. */}
+              <DeleteAccountConfirm onCancel={() => setConfirmingDelete(false)} onDeleted={onClose} />
+            </ScrollView>
+          ) : (
+            <View style={{ padding: space.xl, gap: space.md }}>
+              <Text style={type.heading} accessibilityRole="header">
+                {profile?.display_name ?? 'Account'}
               </Text>
-            ) : null}
-            <Button
-              label={signingOut ? 'Signing out…' : 'Sign out'}
-              variant="destructive"
-              disabled={signingOut}
-              onPress={confirmSignOut}
-            />
-            <Button label="Close" variant="secondary" onPress={onClose} />
-          </View>
+              <Text style={[type.small, { color: colors.textMuted }]}>Signed in as {email}</Text>
+              {error ? (
+                <Text accessibilityLiveRegion="polite" style={[type.small, { color: colors.danger }]}>
+                  {error}
+                </Text>
+              ) : null}
+              <Button
+                label={signingOut ? 'Signing out…' : 'Sign out'}
+                variant="destructive"
+                disabled={signingOut}
+                onPress={confirmSignOut}
+              />
+              <Button label="Close" variant="secondary" onPress={onClose} />
+              {/* Prototype mode has no account to delete. */}
+              {status !== 'prototype' ? (
+                <Button
+                  label="Delete account"
+                  variant="secondary"
+                  size="md"
+                  disabled={signingOut}
+                  onPress={() => setConfirmingDelete(true)}
+                  style={{ alignSelf: 'center', marginTop: space.sm }}
+                />
+              ) : null}
+            </View>
+          )}
         </SafeAreaView>
       </View>
     </Modal>
