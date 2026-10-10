@@ -1297,7 +1297,7 @@ App rules:
 
 Verify: typecheck. On the web build in prototype mode, walk Welcome → … → Request → Booked and the driver path Trips → request → confirm, and screenshot each changed screen.
 
-Branch: feat/m-13-first-ride-one-date
+Branch: feat/m-13-first-ride-requests
 When done, open a PR to main and stop.
 ```
 
@@ -1778,7 +1778,7 @@ App rules:
 
 Verify: `deno check` and `deno test` pass in CI; typecheck and test pass. In prototype mode the item is hidden. After the owner deploys the function, ask them to delete a throwaway account in connected mode on the web build.
 
-Branch: feat/m-17b-account-deletion-app
+Branch: feat/m-17b-account-deletion
 When done, open a PR to main and stop.
 ```
 
@@ -2441,7 +2441,7 @@ Database rules:
 
 Verify: the CI `database` job passes.
 
-Branch: feat/m-26-matching
+Branch: feat/m-26-matching-rpc
 When done, open a PR to main and stop.
 ```
 
