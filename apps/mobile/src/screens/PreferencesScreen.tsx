@@ -6,6 +6,8 @@ import { RidePref, toggleIn, useCommute } from '../state/commute';
 import { Screen, StepProgress } from '../components/Screen';
 import { Button } from '../components/Button';
 import { Card, Chip, Eyebrow, SettingRow, Stepper, Toggle } from '../components/primitives';
+import { Icon } from '../components/Icon';
+import { maxSeatsOffered, vehicleSummary } from '../lib/vehicleRules';
 
 const PREFS: RidePref[] = ['Quiet ride', 'Smoke-free', 'Women-only'];
 
@@ -15,6 +17,11 @@ export function PreferencesScreen() {
   const drives = commute.role !== 'passenger';
   const rides = commute.role !== 'driver';
   const finish = () => nav.reset({ name: 'discover' });
+  const vehicle = commute.vehicle;
+  const seatsMax = maxSeatsOffered(vehicle);
+  const vehicleDescription = vehicle
+    ? `${vehicleSummary(vehicle)}${vehicle.acceptsFoldableScooters ? ' · Fits a folded scooter' : ''}`
+    : 'Add make, model, seats and plate';
 
   return (
     <Screen
@@ -44,15 +51,20 @@ export function PreferencesScreen() {
         <View style={{ gap: space.sm }}>
           <Eyebrow>When you drive</Eyebrow>
           <Card>
-            <SettingRow
-              title="Seats to offer"
-              trailing={<Stepper label="seats" value={commute.seatsOffered} onChange={(seatsOffered) => update({ seatsOffered })} max={6} />}
-            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={vehicle ? `Vehicle, ${vehicleDescription}` : 'Vehicle, not added yet'}
+              accessibilityHint="Opens the vehicle form"
+              onPress={() => nav.push({ name: 'vehicle' })}
+              style={({ pressed }) => (pressed ? { backgroundColor: colors.background } : null)}
+            >
+              <SettingRow title="Vehicle" description={vehicleDescription} trailing={<Icon name="chevron-forward" size={20} color={colors.textFaint} />} />
+            </Pressable>
             <SettingRow
               divider
-              title="Trunk space for cargo"
-              description="Up to a medium foldable scooter"
-              trailing={<Toggle label="Trunk space for cargo" value={commute.trunkSpace} onValueChange={(trunkSpace) => update({ trunkSpace })} />}
+              title="Seats to offer"
+              description={vehicle ? `Up to ${seatsMax}, the passenger seats in your car` : undefined}
+              trailing={<Stepper label="seats" value={Math.min(commute.seatsOffered, seatsMax)} onChange={(seatsOffered) => update({ seatsOffered })} max={seatsMax} />}
             />
           </Card>
         </View>

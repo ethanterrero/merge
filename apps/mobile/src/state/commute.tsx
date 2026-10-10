@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useMemo, useState } from 'react';
 import type { Weekday } from '../data/mock';
+import type { Vehicle } from '../lib/vehicleRules';
 
 export type Role = 'driver' | 'passenger' | 'both';
 export type RidePref = 'Quiet ride' | 'Smoke-free' | 'Women-only';
@@ -14,6 +15,8 @@ export type CommuteDraft = {
   flexMinutes: 5 | 10 | 15;
   seatsOffered: number;
   trunkSpace: boolean;
+  /** The driver's car, from the Vehicle form (M-21). Unset until they add one. */
+  vehicle?: Vehicle;
   bringsCargo: boolean;
   ridePrefs: RidePref[];
   discoverable: boolean;
