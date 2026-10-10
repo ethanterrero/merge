@@ -10,6 +10,8 @@ This backlog splits the Merge MVP work left after the in-flight sign-in branch i
 > - **The logo mark is flipped vertically**, so the two branches sit at the bottom and merge upward. M-14 must use the flipped mark for the app icon and splash.
 > - **Motion maths** is in `src/lib/welcomeMotion.ts`, with tests.
 
+> **Status update, 2026-10-10.** Waves 0 and 1 are complete, and Wave 2 is done except M-13, M-14 and M-19. Everything through PR #29 (`670d6ae`) is on main, with migrations up to 0013, and the hosted project is current through 0013 (O-02). Eight tasks are in flight with no PR yet: M-13, M-14, M-17b, M-21 and M-40 are building, and M-16, M-19 and M-26 are in design. Unbuilt migrations were renumbered to start at 0014. See [Waves](#waves), [Migration numbers](#migration-numbers) and the 2026-10-10 refresh under [Revision notes](#revision-notes).
+
 ## How agents work these tasks
 
 Every agent prompt repeats these rules, so each prompt works on its own:
@@ -52,11 +54,11 @@ Only the owner can do these. Agents stop and ask when they reach one. Decisions 
 | D-21 | **First Ride spec amendment.** M-20 keeps First Ride state in a new `state/firstRide.tsx`, not in `state/commute.tsx` as the approved spec says (line 128), so the onboarding work can own `commute.tsx`. | **Decided (2026-10-08)** | M-20 | Approve the amendment. M-20 edits that one spec bullet. **Decided:** approved. |
 | D-22 | **Decline timing.** If a decline becomes visible to the passenger sooner than an expiry would, the timing reveals the "no", which breaks the invariant that "no" and "not answered" look the same. (Raised by the owner on 2026-10-08. Filed as D-22 because D-20 already names the pilot cuts.) | **Decided (2026-10-08)** | M-27, M-35, M-36 | A declined request keeps showing as pending to the passenger until the D-02 reply cutoff (8 PM America/Los_Angeles the evening before), then shows exactly like an expired request. Alternative: record the earlier reveal as an accepted D-16 trade-off. Agents stop and ask while this row is open. **Decided:** hold a decline as pending until the reply cutoff, then show it exactly like an expiry. |
 | O-00 | **Publish this backlog.** Commit it to main as `docs/mvp-backlog.md` and keep the Status column current. In GitHub branch protection for main, require the CI checks and "Require branches to be up to date before merging", so the migration-order check always runs against the latest main. | n/a | Every task (prompts read decisions from that file) | n/a |
-| O-01 | Finish the in-flight sign-in plan and merge `claude/first-ride-carpool-504811` to main. The plan's owner checkpoints are: CLI login and link, approving the 0001/0002 push, dashboard email settings, and typing the code during end-to-end testing. With "Confirm email" on, a new user's first code uses the **Confirm signup** template, so paste `{{ .Token }}` into both the hosted Magic Link and Confirm signup templates during this dashboard step, then check that a brand-new address gets a code, not a link. Before sign-ups go off (D-11), make sure the owner's own email already exists as a user for Task 9's end-to-end test. O-01 doesn't wait for M-12, which later commits a matching `supabase/templates/confirmation.html`. | Plan Tasks 1–8 committed (`b6d67d0`, which also carries M-04 via PR #5); Task 9 to go. Merge it as a merge commit, so the stacked PRs #6–#11 retarget to main cleanly. | All of Wave 1 onward (see the early-start note in [Waves](#waves)) | n/a |
-| O-02 | **Hosted push gate**, after each DB PR merges. Review `supabase migration list` and `supabase db push --dry-run`, approve, push, run the Security Advisor, and note the result on the PR. Main's migrations are always in ascending merge order (M-03's check), so pushing main as-is keeps the hosted order equal to CI's. Never use `--include-all`: if the dry run lists a version below the hosted maximum, stop and investigate. | n/a | Connected-mode checks of every DB-backed task | Push in batches when a wiring task needs it. |
+| O-01 | Finish the in-flight sign-in plan and merge `claude/first-ride-carpool-504811` to main. The plan's owner checkpoints are: CLI login and link, approving the 0001/0002 push, dashboard email settings, and typing the code during end-to-end testing. With "Confirm email" on, a new user's first code uses the **Confirm signup** template, so paste `{{ .Token }}` into both the hosted Magic Link and Confirm signup templates during this dashboard step, then check that a brand-new address gets a code, not a link. Before sign-ups go off (D-11), make sure the owner's own email already exists as a user for Task 9's end-to-end test. O-01 doesn't wait for M-12, which later commits a matching `supabase/templates/confirmation.html`. | **Done (2026-10-09).** The sign-in branch merged to main as a merge commit in #12 (`704503d`, 2026-10-08), carrying plan Tasks 1–8, M-04 (PR #5), the stacked PRs #6–#11 and the fixtures fix #13. The fix round, Task 9 (web support) and the code-only email templates followed from the same branch in #25 (`25970cd`, 2026-10-09). | All of Wave 1 onward (see the early-start note in [Waves](#waves)) | n/a |
+| O-02 | **Hosted push gate**, after each DB PR merges. Review `supabase migration list` and `supabase db push --dry-run`, approve, push, run the Security Advisor, and note the result on the PR. Main's migrations are always in ascending merge order (M-03's check), so pushing main as-is keeps the hosted order equal to CI's. Never use `--include-all`: if the dry run lists a version below the hosted maximum, stop and investigate. | Current through 0013 (2026-10-09). | Connected-mode checks of every DB-backed task | Push in batches when a wiring task needs it. |
 | O-03 | Register a domain, set up support@, privacy@, safety@ and security@ mailboxes, and host static pages (for example GitHub Pages). | n/a | O-04, M-40, M-53, O-10 | n/a |
-| O-04 | **Custom SMTP** (a pilot blocker). Choose a provider, set up SPF, DKIM and DMARC, enter the SMTP settings, raise the auth email rate limit (the config default is `email_sent = 2` per hour), paste in M-12's templates (both Magic Link and Confirm signup must carry `{{ .Token }}`), and test delivery to Gmail, iCloud and a work address. | n/a | Pilot start; connected-mode checks from M-17b onward, unless O-14 is done | Resend or Postmark. |
-| O-05 | **Supabase production settings.** Pro plan with a spend cap (daily backups, no pausing), sign-ups off per D-11 (after the owner's and test accounts exist), Site URL, OTP rate limits, MFA on the account, anonymous and phone sign-in off. | n/a | M-41 testing, pilot start | n/a |
+| O-04 | **Custom SMTP** (a pilot blocker). Choose a provider, set up SPF, DKIM and DMARC, enter the SMTP settings, raise the auth email rate limit (the config default is `email_sent = 2` per hour), paste in M-12's templates (both Magic Link and Confirm signup must carry `{{ .Token }}`), and test delivery to Gmail, iCloud and a work address. | Owed. The step-by-step is `docs/pilot/sign-in.md` (from M-12). | Pilot start; connected-mode checks from M-17b onward, unless O-14 is done | Resend or Postmark. |
+| O-05 | **Supabase production settings.** Pro plan with a spend cap (daily backups, no pausing), sign-ups off per D-11 (after the owner's and test accounts exist), Site URL, OTP rate limits, MFA on the account, anonymous and phone sign-in off. | Sign-ups off is still owed; follow `docs/pilot/sign-in.md` (from M-12). | M-41 testing, pilot start | n/a |
 | O-06 | **Accounts with 2FA.** Apple Developer Program, Google Play Console, Expo, and the App Store Connect and Play app records with the D-10 IDs. Turn on 2FA for Supabase, GitHub, the registrar and SMTP too. | n/a | O-07, O-08, O-10 | Start Apple enrollment early, because it can take days to weeks. |
 | O-07 | Run `eas init` (an agent can commit the resulting `app.json` diff). Set the EAS environment variables (`EXPO_PUBLIC_SUPABASE_*`, the map display key, Sentry DSN), set up signing credentials, make the first builds, and run `eas submit`. | n/a | Device checks for M-22, M-38, O-12 | Back up the Android upload keystore. |
 | O-08 | **Keys and credentials:** the map display key (Stadia Maps tiles, D-08; no geocoding or routing key in the pilot), an APNs key and an FCM v1 service account (via EAS), a Sentry project (D-17), and an Expo push access token. | n/a | M-22 (real tiles), M-31, M-38, M-45 | Restrict every key to the app IDs. |
@@ -110,38 +112,44 @@ Several tasks touch the same files. A **serialized** zone allows one open PR at 
 
 ### Migration numbers
 
-`0001` and `0002` exist, and `0003` is reserved for First Ride (auth spec, line 44). The numbers below are planned in dependency order, with decision-gated migrations late in the band so they don't hold anything up. They're a guide: the final number is set at merge time by the rule above, so a late migration never blocks an earlier-ready one. "If needed" means no file at all when the design needs no SQL.
+`0001` and `0002` came with the sign-in work, and `0003` is First Ride's (auth spec, line 44). The numbers below are planned in dependency order, with decision-gated migrations late in the band so they don't hold anything up. They're a guide: the final number is set at merge time by the rule above, so a late migration never blocks an earlier-ready one. "If needed" means no file at all when the design needs no SQL.
 
-Numbers already taken by built work (2026-10-08): 0003 M-04, 0004 M-05, 0005 M-06, 0008 M-18, and 0012 for M-33's detour estimate. The fold-in renumbered only what collided with them: M-56 moved from 0005 to 0007 (M-06's old slot), and M-32 moved from 0012 to 0013, which pushed M-38, M-39, M-41, M-46, M-37, M-45 and M-49 up by one each (into the slot M-33 left at 0020). M-26 (0010) and M-27 (0011) now depend on M-33's 0012, so they'll take a number above it at merge under the rule above.
+Numbers on main (2026-10-10): 0003 M-04, 0004 M-05, 0005 M-06, 0008 M-18, 0009 M-18b (East Bay neighborhoods, PR #15), 0010 M-17a, 0011 M-56, 0012 M-33, and 0013 the daily safety-report purge schedule (PR #24). 0006 and 0007 are unused gaps; no later migration fills them, because a new one must sit above the highest on main. The hosted project has all of them (O-02). Built rows below show their real numbers. Every unbuilt migration was renumbered on 2026-10-10 to start above 0013, in the same dependency order, with M-17b's optional slot added after M-26.
 
 | Planned | File | Task | Gated by |
 | --- | --- | --- | --- |
-| 0003 | `0003_first_ride.sql` (fixed) | M-04 (PR #5, merged into the sign-in branch) | none |
-| 0004 | `0004_vehicles_commutes_rls.sql` | M-05 (PR #6) | none (merges after M-04) |
-| 0005 | `0005_blocks_reports.sql` | M-06 (PR #7) | none (merges after M-04 and M-05) |
-| 0006 | `0006_account_deletion.sql` | M-17a | D-15 |
-| 0007 | `0007_member_status.sql` | M-56 | D-07 (D-06 decided) |
-| 0008 | `0008_commute_privacy.sql` | M-18 (PR #11) | none (D-04, D-05, D-14 decided) |
-| 0009 | `0009_profile_cards.sql` | M-16 | none |
-| 0010 | `0010_matching.sql` (renames above 0012 at merge) | M-26 | none (D-05, D-06, D-08, D-14 decided) |
-| 0011 | `0011_invitations.sql` (renames above 0012 at merge) | M-27 | none (D-02, D-16 decided) |
-| 0012 | `0012_detour_estimate.sql` | M-33 | none (D-08 decided) |
-| 0013 | `0013_booking.sql` | M-32 | none (D-02, D-06, D-16 decided) |
-| 0014 | `0014_push_tokens.sql` | M-38 | none (D-13 decided) |
-| 0015 | `0015_messages.sql` | M-39 | none (D-13 decided) |
-| 0016 | `0016_review_cohort.sql` (if needed) | M-41 | none (D-11 decided) |
-| 0017 | `0017_terms_acceptance.sql` (only if D-12 requires a record) | M-46 | D-12 |
-| 0018 | `0018_ride_lifecycle.sql` | M-37 | none (D-01 decided; real-device check first) |
-| 0019 | `0019_notification_triggers.sql` (if needed) | M-45 | none (D-13 decided) |
-| 0020 | `0020_trust_signals.sql` | M-49 | D-03 (D-06 decided) |
-| 0021 | `0021_contact_sharing.sql` | M-55a | none (D-19 decided) |
-| 0022 | `0022_security_fixes.sql` (always last) | M-52 | every migration above |
+| 0003 | `0003_first_ride.sql` (fixed) | M-04 (on main, PR #5 via #12) | none |
+| 0004 | `0004_vehicles_commutes_rls.sql` | M-05 (on main, PR #6 via #12) | none |
+| 0005 | `0005_blocks_reports.sql` | M-06 (on main, PR #7 via #12) | none |
+| 0006, 0007 | unused gaps | none | n/a |
+| 0008 | `0008_commute_privacy.sql` | M-18 (on main, PR #11 via #12) | none (D-04, D-05, D-14 decided) |
+| 0009 | `0009_east_bay_neighborhoods.sql` | M-18b, a follow-up to M-18 (on main, PR #15) | none |
+| 0010 | `0010_account_deletion.sql` | M-17a (on main, PR #20) | none (D-15 decided) |
+| 0011 | `0011_member_status.sql` | M-56 (on main, PR #21) | none (D-06, D-07 decided) |
+| 0012 | `0012_detour_estimate.sql` | M-33 (on main, PR #18) | none (D-08 decided) |
+| 0013 | `0013_schedule_report_purge.sql` | safety-report purge schedule, a follow-up, not a numbered task (on main, PR #24) | none |
+| 0014 | `0014_profile_cards.sql` | M-16 | none |
+| 0015 | `0015_matching.sql` | M-26 | none (D-05, D-06, D-08, D-14 decided) |
+| 0016 | only if needed | M-17b | none (D-15 decided) |
+| 0017 | `0017_invitations.sql` | M-27 | none (D-02, D-16 decided) |
+| 0018 | `0018_booking.sql` | M-32 | none (D-02, D-06, D-16 decided) |
+| 0019 | `0019_push_tokens.sql` | M-38 | none (D-13 decided) |
+| 0020 | `0020_messages.sql` | M-39 | none (D-13 decided) |
+| 0021 | `0021_review_cohort.sql` (if needed) | M-41 | none (D-11 decided) |
+| 0022 | `0022_terms_acceptance.sql` (only if D-12 requires a record) | M-46 | D-12 |
+| 0023 | `0023_ride_lifecycle.sql` | M-37 | none (D-01 decided; real-device check first) |
+| 0024 | `0024_notification_triggers.sql` (if needed) | M-45 | none (D-13 decided) |
+| 0025 | `0025_trust_signals.sql` | M-49 | none (D-03, D-06 decided) |
+| 0026 | `0026_contact_sharing.sql` | M-55a | none (D-19 decided) |
+| 0027 | `0027_security_fixes.sql` (always last) | M-52 | every migration above |
 
 Dev fixtures (M-57) are not migrations. They live in `supabase/seed/` and are never pushed.
 
 ### Screen lock table
 
 At most one open PR per screen. Each arrow is also a **Depends on** edge.
+
+Status on 2026-10-10: M-10 and M-15 have merged, so they're done in every chain below. `WelcomeScreen.tsx` was rewritten by #17 (`bd39f92`, the animated Welcome; a design pivot, not a backlog task), and M-13 is next in its chain. The same PR replaced the old palette with the Forest theme in `src/theme.ts`; the theme-tokens rule above still applies.
 
 | Screen file | Tasks in order |
 | --- | --- |
@@ -174,15 +182,15 @@ At most one open PR per screen. Each arrow is also a **Depends on** edge.
 
 A wave is the dependency depth: a task sits one wave after the latest task it depends on. Every task in a wave can run in parallel with the others in that wave. They share no serialized zone, which was checked mechanically from the dependency lists and zone memberships. DB tasks in one wave each add a migration, and the merge-time numbering rule keeps them apart. Labeled merge-order and stacked edges don't add a wave.
 
-**Wave 0: in flight, plus research** (2 tasks): M-01, M-02. Wave 0 is the in-flight sign-in plan, `docs/superpowers/plans/2026-10-08-supabase-auth.md` (spec `2026-10-08-supabase-auth-design.md`): 0002 and the DB test harness, the CLI and generated types, `authRules` and `npm test`, `AuthProvider`, the sign-in screens, the launch gate, `AccountSheet`, docs, and Expo web. Plan Tasks 1–8 are committed on `claude/first-ride-carpool-504811` (`b6d67d0`), which also carries M-04 (PR #5 merged into it). Task 9 (web build and end-to-end verification) remains, then O-01 merges the branch to main as a merge commit. Main doesn't have 0002, the harness, the auth spec or plan, or the First Ride spec yet. **M-01** is done (on `origin/main`). **M-02** is closed: it's reduced to a note under D-06. Owner, now: O-00; start O-03 and O-06.
+**Wave 0: in flight, plus research** (2 tasks): M-01, M-02. Wave 0 is the in-flight sign-in plan, `docs/superpowers/plans/2026-10-08-supabase-auth.md` (spec `2026-10-08-supabase-auth-design.md`): 0002 and the DB test harness, the CLI and generated types, `authRules` and `npm test`, `AuthProvider`, the sign-in screens, the launch gate, `AccountSheet`, docs, and Expo web. Status on 2026-10-10: complete. O-01 merged `claude/first-ride-carpool-504811` to main as a merge commit in #12 (`704503d`), and #25 (`25970cd`) brought the fix round and Task 9 (web build and end-to-end verification). **M-01** is done (on main). **M-02** is closed: it's reduced to a note under D-06. Owner, now: O-00; start O-03 and O-06.
 
-**Wave 1: foundations** (9 tasks): M-03, M-04, M-05, M-06, M-07, M-08, M-10, M-11, M-12. **Early start:** tasks here that touch none of the in-flight files may branch from the sign-in branch before O-01 when the owner allows it. Status on 2026-10-08: M-04 is done (PR #5, merged into the sign-in branch); M-05 (PR #6), M-06 (PR #7, stacked on M-04), M-07 (PR #8), M-08 (PR #9) and M-11 (PR #10) are open PRs stacked on the sign-in branch, and they're retargeted to main after O-01. M-06 is counted in Wave 1 because it was built stacked on M-04; it merges after M-04 and M-05. M-03, M-10 and M-12 touch in-flight files and must wait for O-01. M-10 merges after M-03 (lockfile), and M-05 merges after M-04 (0003). Owner: decide D-15 (M-17a) and D-07 (M-56) during this wave, and D-22 before Wave 5 (M-27).
+**Wave 1: foundations** (9 tasks): M-03, M-04, M-05, M-06, M-07, M-08, M-10, M-11, M-12. **Early start:** tasks here that touch none of the in-flight files may branch from the sign-in branch before O-01 when the owner allows it. Status on 2026-10-10: complete. M-04, M-05, M-06, M-07, M-08 and M-11 reached main through #12 (`704503d`), and M-03 (#26), M-12 (#27) and M-10 (#28) merged on 2026-10-09. M-06 is counted in Wave 1 because it was built stacked on M-04.
 
-**Wave 2** (7 tasks): M-09, M-13, M-14, M-15, M-17a, M-19, M-56. All in parallel. M-17a and M-56 both add migrations; the merge-time numbering rule keeps them apart.
+**Wave 2** (7 tasks): M-09, M-13, M-14, M-15, M-17a, M-19, M-56. All in parallel. M-17a and M-56 both add migrations; the merge-time numbering rule keeps them apart. Status on 2026-10-10: done except M-13, M-14 and M-19, which are in progress. M-09 (#29), M-15 (#19), M-17a (#20, 0010) and M-56 (#21, 0011) are on main. #17 replaced the old palette with the Forest theme and rewrote `WelcomeScreen.tsx`, so M-13 starts from that version.
 
-**Wave 3** (9 tasks): M-16, M-17b, M-18, M-20, M-22, M-23, M-24, M-33, M-40. All in parallel. M-18 is already built (PR #11, stacked on M-05's PR #6) and merges once its Depends on list has merged. M-33 develops in parallel and merges after M-18, keeping 0008 below 0012. M-20, M-23 and M-24 append routes (parallel-safe). Owner: decide D-07 copy (M-24) and D-17 (M-31).
+**Wave 3** (9 tasks): M-16, M-17b, M-18, M-20, M-22, M-23, M-24, M-33, M-40. All in parallel. Status on 2026-10-10: M-18 (via #12, plus 0009 in #15) and M-33 (#18) are on main. M-16, M-17b and M-40 are in progress. M-20, M-22, M-23 and M-24 wait on M-13, and also on M-14 (M-22) or M-19 (M-24), per their Depends on lists. M-20, M-23 and M-24 append routes (parallel-safe).
 
-**Wave 4** (5 tasks): M-21, M-25, M-26, M-28, M-31. All in parallel. M-21 and M-28 append routes.
+**Wave 4** (5 tasks): M-21, M-25, M-26, M-28, M-31. All in parallel. M-21 and M-28 append routes. Status on 2026-10-10: M-21 and M-26 started early, because all their prerequisites are on main.
 
 **Wave 5** (3 tasks): M-27, M-29, M-30. All in parallel.
 
@@ -214,53 +222,54 @@ A wave is the dependency depth: a task sits one wave after the latest task it de
   - D-03, D-12 and D-20: M-54a and the pilot gates (D-12 also gates M-40 and M-46).
   Settle them in that order.
 - **Update 2026-10-08 (later):** the owner settled the open decisions. D-03, D-07, D-15, D-17, D-20, D-21 and D-22 are Decided. D-10 is deferred, with placeholders until the first store build. D-12 runs on working assumptions, with counsel review as a gate before the pilot starts. No open decision now blocks Waves 2–10.
+- **Update 2026-10-10:** O-01, M-04, M-06, M-17a, M-18 and M-33 are done, so the critical path now runs from M-26 (in design): M-26 → M-27 → M-32 → M-37 (D-01's device check) → M-44 → M-47 → M-50 → M-51 → M-54b.
 
 ## Dependency graph
 
-Arrows point from a task to the tasks that need it. Solid arrows are artifact dependencies. Dashed arrows are zone-order edges, which keep two PRs off the same file, or labeled merge-order constraints. Edges implied by a longer path are omitted. Owner decisions are listed on each card instead of in the graph. Status as of 2026-10-08 is in the node labels.
+Arrows point from a task to the tasks that need it. Solid arrows are artifact dependencies. Dashed arrows are zone-order edges, which keep two PRs off the same file, or labeled merge-order constraints. Edges implied by a longer path are omitted. Owner decisions are listed on each card instead of in the graph. Status as of 2026-10-10 is in the node labels.
 
 ```mermaid
 flowchart TD
-  O01["O-01 sign-in branch merged"]
+  O01["O-01 sign-in branch merged (done)"]
   subgraph wave0["Wave 0"]
     M01["M-01 Map/routing research (done)"]
     M02["M-02 Verification research (closed: note under D-06)"]
   end
   subgraph wave1["Wave 1"]
-    M03["M-03 CI guardrails"]
-    M04["M-04 First Ride DB (PR #5)"]
-    M05["M-05 Vehicles/commutes RLS (PR #6)"]
-    M06["M-06 Blocks/reports DB (PR #7)"]
-    M07["M-07 resolveConnection (PR #8)"]
-    M08["M-08 Date helpers (PR #9)"]
-    M10["M-10 Safe areas"]
-    M11["M-11 Data inventory (PR #10)"]
-    M12["M-12 Sign-in readiness"]
+    M03["M-03 CI guardrails (done)"]
+    M04["M-04 First Ride DB (done)"]
+    M05["M-05 Vehicles/commutes RLS (done)"]
+    M06["M-06 Blocks/reports DB (done)"]
+    M07["M-07 resolveConnection (done)"]
+    M08["M-08 Date helpers (done)"]
+    M10["M-10 Safe areas (done)"]
+    M11["M-11 Data inventory (done)"]
+    M12["M-12 Sign-in readiness (done)"]
   end
   subgraph wave2["Wave 2"]
-    M09["M-09 Product docs"]
-    M13["M-13 FR one-date UI"]
-    M14["M-14 EAS + app config"]
-    M15["M-15 Time picker"]
-    M17a["M-17a Deletion policy DB"]
-    M19["M-19 Data layer"]
-    M56["M-56 Member status + public name"]
+    M09["M-09 Product docs (done)"]
+    M13["M-13 FR one-date UI (in progress)"]
+    M14["M-14 EAS + app config (in progress)"]
+    M15["M-15 Time picker (done)"]
+    M17a["M-17a Deletion policy DB (done)"]
+    M19["M-19 Data layer (in design)"]
+    M56["M-56 Member status + public name (done)"]
   end
   subgraph wave3["Wave 3"]
-    M16["M-16 Profile cards DB"]
-    M17b["M-17b Delete-account fn + UI"]
-    M18["M-18 Commute privacy DB (PR #11)"]
+    M16["M-16 Profile cards DB (in design)"]
+    M17b["M-17b Delete-account fn + UI (in progress)"]
+    M18["M-18 Commute privacy DB (done)"]
     M20["M-20 FR post-ride UI"]
     M22["M-22 Real map"]
     M23["M-23 Trips tab"]
     M24["M-24 Block/report UI"]
-    M33["M-33 Detour estimate DB"]
-    M40["M-40 Legal pages"]
+    M33["M-33 Detour estimate DB (done)"]
+    M40["M-40 Legal pages (in progress)"]
   end
   subgraph wave4["Wave 4"]
-    M21["M-21 Vehicle form"]
+    M21["M-21 Vehicle form (in progress)"]
     M25["M-25 Release mode guard"]
-    M26["M-26 Matching DB"]
+    M26["M-26 Matching DB (in design)"]
     M28["M-28 FR Ride Again/Crew UI"]
     M31["M-31 Error boundary"]
   end
@@ -572,6 +581,7 @@ When done, open a PR to main and stop. The owner records the decision as D-06.
 
 ### M-03 · CI guardrails: lockfile, ESLint, types from migrations, migration order, contributor docs
 
+- **Status:** Done. Merged to main in PR #26 (`b8697e0`) on 2026-10-09. Don't dispatch it again.
 - **Wave:** 1
 - **Kind:** build
 - **Size:** M
@@ -645,7 +655,7 @@ When done, open a PR to main and stop.
 
 ### M-04 · First Ride: migration 0003 and SQL tests
 
-- **Status:** Done. PR #5 (https://github.com/ethanterrero/merge/pull/5), head `6352a2f`, migration 0003; CI run 37840177058 passed the database and typecheck jobs. PR #5 was merged into the sign-in branch on 2026-10-08 (`b6d67d0`), so it reaches main with O-01. Don't dispatch it again.
+- **Status:** Done. Merged to main in PR #12 (`704503d`). PR #5 (https://github.com/ethanterrero/merge/pull/5), head `6352a2f`, migration 0003, was merged into the sign-in branch on 2026-10-08 (`b6d67d0`); CI run 37840177058 passed the database and typecheck jobs. Don't dispatch it again.
   - **First Ride rule 1 fix:** ordering by `ride_feedback.updated_at` let an edit to `experience` or `dismissed_at` on an older ride bring back that ride's stale answer. A new server-set column `ride_feedback.ride_again_at` (set with `clock_timestamp()` only when `ride_again` changes) now orders `resolve_connection`. The PR also updated the First Ride spec (rule 1 wording and the `ride_again_at` row).
   - **Left for M-17a:** the Crew pair FKs (`user_low`, `user_high`, `proposed_by` → profiles) have no on-delete action, and the `ride_feedback` trigger fires only on insert and update, so cascaded deletes don't recompute connections.
 - **Wave:** 1
@@ -724,7 +734,7 @@ When done, open a PR to main and stop.
 
 ### M-05 · Owner-only RLS for vehicles and commutes
 
-- **Status:** Done, not merged. PR #6 (https://github.com/ethanterrero/merge/pull/6), head `bb153bb`, migration 0004, targets the sign-in branch; CI run 37839281112 passed (the first real run of the DB harness). 0004 has a composite FK `(vehicle_id, owner_id)` → `vehicles(id, owner_id)` with `on delete set null (vehicle_id)` (PG 15+; hosted runs 17.11), so a commute's vehicle always belongs to the same owner, and it revokes all anon privileges on vehicles and commutes. Retarget to main after O-01. Don't dispatch it again.
+- **Status:** Done. Merged to main in PR #12 (`704503d`). PR #6 (https://github.com/ethanterrero/merge/pull/6), head `bb153bb`, migration 0004, was merged into the sign-in branch on 2026-10-08 (`f4a6990`); CI run 37839281112 passed (the first real run of the DB harness). 0004 has a composite FK `(vehicle_id, owner_id)` → `vehicles(id, owner_id)` with `on delete set null (vehicle_id)` (PG 15+; hosted runs 17.11), so a commute's vehicle always belongs to the same owner, and it revokes all anon privileges on vehicles and commutes. Don't dispatch it again.
 - **Wave:** 1
 - **Kind:** build
 - **Size:** S
@@ -792,7 +802,7 @@ When done, open a PR to main and stop.
 
 ### M-06 · Blocks and safety reports: schema, RLS, tests
 
-- **Status:** Done, not merged. PR #7 (https://github.com/ethanterrero/merge/pull/7), stacked on M-04's branch (PR #5), migration `0005_blocks_reports.sql`, spec `docs/superpowers/specs/2026-10-08-blocks-reports-design.md`. Retarget to the sign-in branch or main once M-04's branch is gone; it merges after M-04 and M-05. Don't dispatch it again. Owner decisions settled on 2026-10-08:
+- **Status:** Done. Merged to main in PR #12 (`704503d`). PR #7 (https://github.com/ethanterrero/merge/pull/7), migration `0005_blocks_reports.sql`, spec `docs/superpowers/specs/2026-10-08-blocks-reports-design.md`, was built stacked on M-04's branch and merged into the sign-in branch on 2026-10-08 (`e45df18`). Don't dispatch it again. Owner decisions settled on 2026-10-08:
   - Reports are insert-only for the reporter, with no read-back (not even their own). The owner reads them in the dashboard.
   - Five categories: `unsafe_driving`, `harassment`, `no_show`, `vehicle_identity_mismatch`, `other`.
   - A new block deletes the pair's `connections` row and sets any open (proposed, active or paused) Crew to `ended`. A `before insert or update` trigger on `connections` (`connections_skip_blocked`) silently skips writes for a blocked pair, so `resolve_connection` can't re-create the connection; `resolve_connection` itself isn't redefined.
@@ -890,7 +900,7 @@ When done, open a PR to main and stop.
 
 ### M-07 · First Ride: pure resolveConnection rules
 
-- **Status:** Done, not merged. PR #8 (https://github.com/ethanterrero/merge/pull/8), commit `09fcf95`, targets the sign-in branch; retarget to main after O-01. `connection.ts` exports `RideAgainAnswer`, `ConnectionOutcome`, `CrewStatus`, `resolveConnection` and `crewStatusAfter`, with table tests over all 16 answer pairs and all 15 outcome × Crew-status pairs. Checked against this card on 2026-10-08: nothing missing. Don't dispatch it again.
+- **Status:** Done. Merged to main in PR #12 (`704503d`). PR #8 (https://github.com/ethanterrero/merge/pull/8), commit `09fcf95`, was merged into the sign-in branch on 2026-10-08 (`b9925e2`). `connection.ts` exports `RideAgainAnswer`, `ConnectionOutcome`, `CrewStatus`, `resolveConnection` and `crewStatusAfter`, with table tests over all 16 answer pairs and all 15 outcome × Crew-status pairs. Checked against this card on 2026-10-08: nothing missing. Don't dispatch it again.
 - **Wave:** 1
 - **Kind:** build
 - **Size:** S
@@ -941,7 +951,7 @@ When done, open a PR to main and stop.
 
 ### M-08 · Date, time and weekday helpers
 
-- **Status:** Done, not merged. PR #9 (https://github.com/ethanterrero/merge/pull/9), commit `9c627c3`, targets the sign-in branch; retarget to main after O-01. `dates.ts` exports `weekdayToIso`, `isoToWeekday`, `toIsoWeekdays`, `fromIsoWeekdays`, `formatDays`, `parseTime`, `formatTime`, `departureWindow`, `formatRideDate`, `addDays`, `nextRideDates`, `earliestRequestDate`, `isPastCutoff`, `REPLY_CUTOFF_MINUTES` (20:00 LA, driver reply and request cutoff) and `CANCEL_CUTOFF_MINUTES` (21:00 LA), and throws `RangeError` on bad input. It owns D-02's cutoff helpers: M-35 and every later task use them instead of reimplementing cutoffs. Checked against this card on 2026-10-08: nothing missing (the constants carry D-02's decided values). Don't dispatch it again.
+- **Status:** Done. Merged to main in PR #12 (`704503d`). PR #9 (https://github.com/ethanterrero/merge/pull/9), commit `9c627c3`, was merged into the sign-in branch on 2026-10-08 (`9c43e13`). `dates.ts` exports `weekdayToIso`, `isoToWeekday`, `toIsoWeekdays`, `fromIsoWeekdays`, `formatDays`, `parseTime`, `formatTime`, `departureWindow`, `formatRideDate`, `addDays`, `nextRideDates`, `earliestRequestDate`, `isPastCutoff`, `REPLY_CUTOFF_MINUTES` (20:00 LA, driver reply and request cutoff) and `CANCEL_CUTOFF_MINUTES` (21:00 LA), and throws `RangeError` on bad input. It owns D-02's cutoff helpers: M-35 and every later task use them instead of reimplementing cutoffs. Checked against this card on 2026-10-08: nothing missing (the constants carry D-02's decided values). Don't dispatch it again.
 - **Wave:** 1
 - **Kind:** build
 - **Size:** S
@@ -998,6 +1008,7 @@ When done, open a PR to main and stop.
 
 ### M-10 · Safe areas and Android edge-to-edge
 
+- **Status:** Done. Merged to main in PR #28 (`5e839f7`) on 2026-10-09. Don't dispatch it again.
 - **Wave:** 1
 - **Kind:** build
 - **Size:** M
@@ -1061,7 +1072,7 @@ When done, open a PR to main and stop.
 
 ### M-11 · Data inventory and processor map
 
-- **Status:** Done, not merged. PR #10 (https://github.com/ethanterrero/merge/pull/10), commit `26dfa8f` (`docs/privacy/data-inventory.md`), targets the sign-in branch; retarget to main after O-01. Don't dispatch it again. Its findings are on the cards they affect (M-05, M-17a, M-17b, M-40, D-03, D-06), and its owner questions Q1–Q12 (§15) are attached to D-03, D-05 (Q7, closed), D-06, D-12, D-13, D-15, D-17, M-17a, M-39/M-50, M-40 and M-45.
+- **Status:** Done. Merged to main in PR #12 (`704503d`). PR #10 (https://github.com/ethanterrero/merge/pull/10), commit `26dfa8f` (`docs/privacy/data-inventory.md`), was merged into the sign-in branch on 2026-10-08 (`f529322`). Don't dispatch it again. Its findings are on the cards they affect (M-05, M-17a, M-17b, M-40, D-03, D-06), and its owner questions Q1–Q12 (§15) are attached to D-03, D-05 (Q7, closed), D-06, D-12, D-13, D-15, D-17, M-17a, M-39/M-50, M-40 and M-45.
   - **Follow-ups owed in the inventory** (on PR #10 before it merges, otherwise as a small docs PR in the privacy-inventory zone before M-31): D-01's ride mode (on-device location during a ride the driver starts; the server stores only `picked_up_at` and `arrived_at`, never coordinates), the Play foreground-service location use (O-10), and M-18's data: areas are stored once as random-offset circles, not recomputed; add the area labels, `vehicles.plate`, `seats_offered`, `brings_scooter`, `profiles.ride_prefs` and `place_boundaries` with its sources; close Q7 (no gender data).
 - **Wave:** 1
 - **Kind:** build (docs)
@@ -1114,6 +1125,7 @@ When done, open a PR to main and stop.
 
 ### M-12 · Pilot sign-in readiness: code email templates and invited-only errors
 
+- **Status:** Done. Merged to main in PR #27 (`23647e0`) on 2026-10-09. The owner's dashboard steps are in `docs/pilot/sign-in.md` (O-04, O-05). Don't dispatch it again.
 - **Wave:** 1
 - **Kind:** build
 - **Size:** S
@@ -1166,6 +1178,7 @@ When done, open a PR to main and stop.
 
 ### M-09 · Product docs: First Ride and pilot acceptance criteria
 
+- **Status:** Done. Merged to main in PR #29 (`670d6ae`) on 2026-10-09. Don't dispatch it again.
 - **Wave:** 2
 - **Kind:** build
 - **Size:** S
@@ -1226,6 +1239,7 @@ When done, open a PR to main and stop.
 
 ### M-13 · First Ride: one-date requests in existing screens
 
+- **Status:** In progress. Dispatched 2026-10-10 on branch `feat/m-13-first-ride-requests`, in its own worktree; no PR yet. Don't dispatch it again.
 - **Wave:** 2
 - **Kind:** build (from the approved First Ride spec)
 - **Size:** M
@@ -1289,6 +1303,7 @@ When done, open a PR to main and stop.
 
 ### M-14 · EAS build profiles, release app config, icon and splash
 
+- **Status:** In progress. Dispatched 2026-10-10 on branch `chore/m-14-eas-config`, in its own worktree; no PR yet. Don't dispatch it again.
 - **Wave:** 2
 - **Kind:** build
 - **Size:** M
@@ -1362,6 +1377,7 @@ When done, open a PR to main and stop.
 
 ### M-15 · Departure time picker
 
+- **Status:** Done. Merged to main in PR #19 (`25353a5`) on 2026-10-08. Don't dispatch it again.
 - **Wave:** 2
 - **Kind:** build
 - **Size:** S
@@ -1424,6 +1440,7 @@ When done, open a PR to main and stop.
 
 ### M-17a · Account deletion: data policy, schema fixes, tests
 
+- **Status:** Done. Merged to main in PR #20 (`b1fc69e`) on 2026-10-08, migration `0010_account_deletion.sql` (planned 0006). Don't dispatch it again.
 - **Wave:** 2
 - **Kind:** design-then-build
 - **Size:** M
@@ -1495,6 +1512,7 @@ When done, open a PR to main and stop.
 
 ### M-19 · Typed data layer with mock and Supabase backends
 
+- **Status:** In design. Dispatched 2026-10-10 on branch `feat/m-19-data-layer`, in its own worktree; the spec awaits the owner's approval, and there's no PR yet. Don't dispatch it again.
 - **Wave:** 2
 - **Kind:** design-then-build
 - **Size:** M
@@ -1558,6 +1576,7 @@ When done, open a PR to main and stop.
 
 ### M-56 · Member status flags and the public-name helper
 
+- **Status:** Done. Merged to main in PR #21 (`e84282a`) on 2026-10-08, migration `0011_member_status.sql` (planned 0007). Don't dispatch it again.
 - **Wave:** 2
 - **Kind:** design-then-build
 - **Size:** M
@@ -1629,13 +1648,14 @@ When done, open a PR to main and stop.
 
 ### M-16 · Limited profile cards for related users
 
+- **Status:** In design. Dispatched 2026-10-10 on branch `feat/m-16-profile-cards`, in its own worktree; the spec awaits the owner's approval, and there's no PR yet. Don't dispatch it again.
 - **Wave:** 3
 - **Kind:** design-then-build
 - **Size:** M
 - **Depends on:** M-04, M-06, M-56
 - **Blocks:** M-27, M-42, M-44, M-49, M-52
-- **Conflict zones:** migrations (planned 0009)
-- **Touches:** `docs/superpowers/specs/YYYY-MM-DD-profile-cards-design.md`, `supabase/migrations/0009_profile_cards.sql`, `supabase/tests/profile_cards_test.sql`
+- **Conflict zones:** migrations (planned 0014)
+- **Touches:** `docs/superpowers/specs/YYYY-MM-DD-profile-cards-design.md`, `supabase/migrations/0014_profile_cards.sql`, `supabase/tests/profile_cards_test.sql`
 - **Source:** `0002_profiles_rls.sql:1` (each person reads only their own row); `PreferencesScreen.tsx:86` ("Matching commuters see your first name and approximate areas"); `docs/mvp.md:23-25`
 - **Done when:** the spec is approved. A security definer `profile_cards(ids uuid[])` returns only `id`, `public.public_name(display_name)` (from M-56, never the raw name), `role` and the vetted flag for users the caller has a legitimate relationship with, and nothing for blocked pairs, suspended members, anon or unrelated users. CI tests prove each of these.
 
@@ -1663,11 +1683,11 @@ Decisions already made:
 
 Out of scope: app changes, trust stats (M-49), discovery, the name rule itself (M-56).
 
-Files you may change: the spec (slug profile-cards), supabase/migrations/0009_profile_cards.sql, supabase/tests/profile_cards_test.sql, apps/mobile/src/lib/database.types.ts (CI artifact only).
+Files you may change: the spec (slug profile-cards), supabase/migrations/0014_profile_cards.sql, supabase/tests/profile_cards_test.sql, apps/mobile/src/lib/database.types.ts (CI artifact only).
 
 Tests must cover: the returned name is public_name's output ('Priya Sharma' comes back as 'Priya S.'); each relationship type returns the card; an unrelated user gets zero rows; a blocked pair gets zero rows both ways; a suspended member's card isn't returned and a suspended caller gets nothing; anon gets nothing; only the allowed columns come back, and none is the raw display_name.
 
-Your migration: supabase/migrations/0009_profile_cards.sql (planned number 0009; final number per the Database rules).
+Your migration: supabase/migrations/0014_profile_cards.sql (planned number 0014; final number per the Database rules).
 
 Process: run the superpowers brainstorming skill to settle the design with the owner. Write the spec to docs/superpowers/specs/YYYY-MM-DD-<slug>-design.md (the slug is named in this prompt), then stop for the owner's approval. After approval, use writing-plans to write docs/superpowers/plans/YYYY-MM-DD-<branch name after the slash>.md (for example 2026-10-12-m-27-invitations.md), and implement it with subagent-driven-development and test-driven-development. Spec, plan and code ship in one PR unless the owner asks to see the spec first. Your spec and plan files are always in your allowed files.
 
@@ -1700,6 +1720,7 @@ When done, open a PR to main and stop.
 
 ### M-17b · Account deletion: Edge Function, CI Deno checks, in-app entry
 
+- **Status:** In progress. Dispatched 2026-10-10 on branch `feat/m-17b-account-deletion`, in its own worktree; no PR yet. Don't dispatch it again.
 - **Wave:** 3
 - **Kind:** build (from M-17a's account-deletion spec)
 - **Size:** M
@@ -1763,7 +1784,7 @@ When done, open a PR to main and stop.
 
 ### M-18 · Commute and vehicle privacy design and schema
 
-- **Status:** Built, not merged. PR #11 (https://github.com/ethanterrero/merge/pull/11), branch `feat/m-18-commute-privacy` stacked on M-05's PR #6, migration `0008_commute_privacy.sql`, spec `docs/superpowers/specs/2026-10-08-commute-privacy-design.md` (owner-approved 2026-10-08); CI passes. It merges once its Depends on list has merged. Don't dispatch it again. Before the owner's hosted push of 0008 (O-02), confirm `public.commutes` is empty: 0008 aborts otherwise. Owner-approved design:
+- **Status:** Done. Merged to main in PR #12 (`704503d`). PR #11 (https://github.com/ethanterrero/merge/pull/11), branch `feat/m-18-commute-privacy` stacked on M-05's PR #6, migration `0008_commute_privacy.sql`, spec `docs/superpowers/specs/2026-10-08-commute-privacy-design.md` (owner-approved 2026-10-08), was merged into the sign-in branch on 2026-10-08 (`84ac073`). Don't dispatch it again. The hand-drawn East Bay neighborhood labels followed as `0009_east_bay_neighborhoods.sql` (M-18b, PR #15, `61f035e`), which also revokes client execute on the area helpers. Owner-approved design:
   - **Areas:** a stored random-offset circle. The center is drawn uniformly within 0.25 mi of the pin (pgcrypto's `extensions.gen_random_bytes`), the circle is ~0.5 mi wide, and it's stable and reused (a moved pin inside the circle keeps it; a matching place on another commute reuses it).
   - **Area labels** come from open boundary data loaded into `place_boundaries` by `scripts/boundaries/build`, labelled from the circle's **center**, never the pin: DataSF Analysis Neighborhoods (PDDL 1.0) for San Francisco, US Census TIGER/Line 2025 city limits for 9 cities, and hand-drawn approximate East Bay neighborhoods for Alameda, Oakland and Berkeley (CC0, by Merge). No geocoding.
   - **Ride preferences** (`profiles.ride_prefs`: quiet, smoke_free) are preferred, rank-only, and never filter. `docs/mvp.md` must change (M-09).
@@ -2093,7 +2114,7 @@ When done, open a PR to main and stop.
 
 ### M-33 · Detour estimate (PostGIS, no routing provider)
 
-- **Status:** Rescoped 2026-10-08 by D-08 (tiles only, no routing provider). It was "Routed detour minutes", a routing-provider design with a server function, a key and a cache; all of that is dropped, and the estimate now lives entirely in SQL.
+- **Status:** Done. Merged to main in PR #18 (`c72a916`), migration `0012_detour_estimate.sql`. Don't dispatch it again. Rescoped 2026-10-08 by D-08 (tiles only, no routing provider). It was "Routed detour minutes", a routing-provider design with a server function, a key and a cache; all of that is dropped, and the estimate now lives entirely in SQL.
 - **Wave:** 3
 - **Kind:** build
 - **Size:** S
@@ -2164,6 +2185,7 @@ When done, open a PR to main and stop.
 
 ### M-40 · Legal and support web pages
 
+- **Status:** In progress. Dispatched 2026-10-10 on branch `feat/m-40-legal-pages`, in its own worktree; no PR yet. Don't dispatch it again.
 - **Wave:** 3
 - **Kind:** build
 - **Size:** M
@@ -2219,6 +2241,7 @@ When done, open a PR to main and stop.
 
 ### M-21 · Vehicle setup form (prototype)
 
+- **Status:** In progress. Dispatched 2026-10-10 on branch `feat/m-21-vehicle-form`, in its own worktree; no PR yet. Don't dispatch it again.
 - **Wave:** 4
 - **Kind:** build
 - **Size:** M
@@ -2339,13 +2362,14 @@ When done, open a PR to main and stop.
 
 ### M-26 · Server-side matching RPC
 
+- **Status:** In design. Dispatched 2026-10-10 on branch `feat/m-26-matching-rpc`, in its own worktree; the spec awaits the owner's approval, and there's no PR yet. Don't dispatch it again.
 - **Wave:** 4
 - **Kind:** design-then-build
 - **Size:** L
 - **Depends on:** M-06, M-17a, M-18, M-33, M-56; decisions: D-05, D-06, D-08, D-14 (all Decided)
 - **Blocks:** M-27, M-42, M-52
-- **Conflict zones:** migrations (planned 0010; renames above M-33's 0012 at merge)
-- **Touches:** `docs/superpowers/specs/YYYY-MM-DD-matching-design.md`, `supabase/migrations/0010_matching.sql`, `supabase/tests/matching_test.sql`
+- **Conflict zones:** migrations (planned 0015)
+- **Touches:** `docs/superpowers/specs/YYYY-MM-DD-matching-design.md`, `supabase/migrations/0015_matching.sql`, `supabase/tests/matching_test.sql`
 - **Source:** `docs/mvp.md:14-20` (matching rules), `:24` (server-side matching); `README.md:12, :60`; `docs/ui.md` ("explains why each match fits"); `mock.ts:10-28` (fields the UI needs); `DiscoverScreen.tsx:34` (static `MATCHES`); `docs/research/2026-10-08-m01-map-provider.md` (detour estimate method)
 - **Done when:** the spec is approved. `find_matches(ride_date, role_filter)` applies every hard filter (including blocks, suspension, M-33's `estimate_detour_minutes <= 5` and, if the owner confirms D-06's vetting gate, the vetted flag) and ranks by detour, then departure-time gap, then shared ride preferences. It returns only allowed fields: `public_name`, generalized areas, reasons, seats open and cargo fit, and no vehicle make, model, color or plate. Tests prove the returned area equals the commute privacy function's output for that commute, that no `commutes.origin` or `commutes.destination` value is returned, and that repeated calls return identical areas. Detour comes only from M-33's functions.
 
@@ -2385,11 +2409,11 @@ Decisions already made: nothing beyond name, role, approximate areas, ride prefe
 
 Out of scope: AI matching, multi-stop grouping, calling a routing API, app wiring. Also rate-limiting discovery queries, unless brainstorming decides a simple per-user counter belongs here; record the decision in the spec.
 
-Files you may change: the spec (slug matching), supabase/migrations/0010_matching.sql, supabase/tests/matching_test.sql, apps/mobile/src/lib/database.types.ts (CI artifact only).
+Files you may change: the spec (slug matching), supabase/migrations/0015_matching.sql, supabase/tests/matching_test.sql, apps/mobile/src/lib/database.types.ts (CI artifact only).
 
 Tests must cover: each hard filter; preferences change rank but never exclude; window overlap with asymmetric flexibility; blocked, suspended, unvetted-driver (if gated) and opted-out exclusion; an opted-out caller can still browse; a caller with no commute gets zero rows; anon is refused; a pair over 5 detour minutes is excluded and results are ordered by detour then departure gap; the returned name is public_name's output; and, for the area, structural checks: the returned center and radius equal the commute privacy function's output for that commute, no result column holds a commutes.origin or commutes.destination value, and two calls return identical areas.
 
-Your migration: supabase/migrations/0010_matching.sql (planned number 0010; final number per the Database rules).
+Your migration: supabase/migrations/0015_matching.sql (planned number 0015; final number per the Database rules).
 
 Process: run the superpowers brainstorming skill to settle the design with the owner. Write the spec to docs/superpowers/specs/YYYY-MM-DD-<slug>-design.md (the slug is named in this prompt), then stop for the owner's approval. After approval, use writing-plans to write docs/superpowers/plans/YYYY-MM-DD-<branch name after the slash>.md (for example 2026-10-12-m-27-invitations.md), and implement it with subagent-driven-development and test-driven-development. Spec, plan and code ship in one PR unless the owner asks to see the spec first. Your spec and plan files are always in your allowed files.
 
@@ -2555,8 +2579,8 @@ When done, open a PR to main and stop.
 - **Size:** L
 - **Depends on:** M-04, M-06, M-08, M-16, M-17a, M-18, M-26, M-56; decisions: D-02, D-16 (Decided), D-22 (open)
 - **Blocks:** M-32, M-35, M-36, M-38, M-44, M-48, M-52
-- **Conflict zones:** migrations (planned 0011; renames above M-33's 0012 at merge)
-- **Touches:** `docs/superpowers/specs/YYYY-MM-DD-booking-design.md` (covers this task and M-32), `supabase/migrations/0011_invitations.sql`, `supabase/tests/invitations_test.sql`, `supabase/tests/account_deletion_invitations_test.sql`
+- **Conflict zones:** migrations (planned 0017)
+- **Touches:** `docs/superpowers/specs/YYYY-MM-DD-booking-design.md` (covers this task and M-32), `supabase/migrations/0017_invitations.sql`, `supabase/tests/invitations_test.sql`, `supabase/tests/account_deletion_invitations_test.sql`
 - **Source:** `docs/mvp.md:10-11` (request, mutually accept, confirm transactionally), `:24` (rate-limited invitations), `:25`; `docs/ui.md` ("Requesting is not booking"); First Ride spec lines 18 (Ride Again means both are open to future invitations), 35–36, 51; `0001_initial.sql:39-47`; `RequestRideScreen.tsx:63-70` (copy that names "decline"); `MatchDetailScreen.tsx:50-51` (driver invite disabled); `DriverRequestScreen.tsx:21-27`
 - **Done when:** the booking spec (request lifecycle, both directions, and confirmation) is approved. The migration implements the invitation half: send in either direction, accept (driver invites only), decline, withdraw, expiry fields, rate limits, block, suspension and visibility checks, participant-only RLS. A declined request is indistinguishable from an expired one to the requester. CI passes.
 - **Advisor findings (hosted, after 0008):** `invitations.commute_id`, `crew_id`, `recipient_id` and `sender_id` have no indexes. Add them in this task's migration. `invitations` also has RLS with no policies (default-deny) until this task adds them.
@@ -2600,9 +2624,9 @@ Decisions already made: requesting is not booking; exact pickup instructions unl
 
 Out of scope: the confirm, cancel and can't-drive RPCs and the pickup reveal (M-32 builds them from your spec), app wiring, notifications.
 
-Files you may change: the spec (slug booking), supabase/migrations/0011_invitations.sql, supabase/tests/invitations_test.sql, supabase/tests/account_deletion_invitations_test.sql, apps/mobile/src/lib/database.types.ts (CI artifact only).
+Files you may change: the spec (slug booking), supabase/migrations/0017_invitations.sql, supabase/tests/invitations_test.sql, supabase/tests/account_deletion_invitations_test.sql, apps/mobile/src/lib/database.types.ts (CI artifact only).
 
-Your migration: supabase/migrations/0011_invitations.sql (planned number 0011; final number per the Database rules).
+Your migration: supabase/migrations/0017_invitations.sql (planned number 0017; final number per the Database rules).
 
 Process: run the superpowers brainstorming skill to settle the design with the owner. Write the spec to docs/superpowers/specs/YYYY-MM-DD-<slug>-design.md (the slug is named in this prompt), then stop for the owner's approval. After approval, use writing-plans to write docs/superpowers/plans/YYYY-MM-DD-<branch name after the slash>.md (for example 2026-10-12-m-27-invitations.md), and implement it with subagent-driven-development and test-driven-development. Spec, plan and code ship in one PR unless the owner asks to see the spec first. Your spec and plan files are always in your allowed files.
 
@@ -2768,8 +2792,8 @@ When done, open a PR to main and stop.
 - **Size:** L
 - **Depends on:** M-06, M-17a, M-27, M-56; decisions: D-02, D-06, D-16 (all Decided)
 - **Blocks:** M-36, M-37, M-39, M-43, M-45, M-52, M-55a, M-57
-- **Conflict zones:** migrations (planned 0013)
-- **Touches:** `supabase/migrations/0013_booking.sql`, `supabase/tests/booking_test.sql`, `supabase/tests/account_deletion_booking_test.sql`, `docs/superpowers/plans/YYYY-MM-DD-m-32-booking.md`
+- **Conflict zones:** migrations (planned 0018)
+- **Touches:** `supabase/migrations/0018_booking.sql`, `supabase/tests/booking_test.sql`, `supabase/tests/account_deletion_booking_test.sql`, `docs/superpowers/plans/YYYY-MM-DD-m-32-booking.md`
 - **Source:** `docs/mvp.md:11` (confirm seat and cargo transactionally), `:18` (blocks are a hard filter), `:25` (reveal after confirmation); First Ride spec line 51 (ride writes come with the booking API); `DriverConfirmScreen.tsx:21-22` (local `acceptedRequests` only); `BookedScreen.tsx:57, :61` (placeholders); `DriverRequestsScreen.tsx:124` ("Can't drive" with no action)
 - **Done when:** confirmation atomically books seat and cargo, creates the ride and stores the exact pickup details, for both a pending passenger request and an accepted driver invite. A person holds at most one confirmed ride per date, and confirming withdraws their other pending invitations for that date. Cancel and can't-drive work, with cutoff handling. The driver's exact spot is refused unless it's inside the passenger's area (`public.within_area`, D-16). A block or suspension cancels the pair's (or the person's) future confirmed rides as safety cancellations (M-06's block trigger left them). Tests show overbooking refused, and zero pickup-detail rows for pending requesters, third parties, cancelled rides, blocked pairs and suspended members.
 
@@ -2799,7 +2823,7 @@ Decisions already made: every booking is for one date; Crew rides are separate d
 
 Out of scope: ride completion (M-37), notifications, app wiring.
 
-Files you may change: supabase/migrations/0013_booking.sql, supabase/tests/booking_test.sql, supabase/tests/account_deletion_booking_test.sql, apps/mobile/src/lib/database.types.ts (CI artifact only).
+Files you may change: supabase/migrations/0018_booking.sql, supabase/tests/booking_test.sql, supabase/tests/account_deletion_booking_test.sql, apps/mobile/src/lib/database.types.ts (CI artifact only).
 
 Tests must cover:
 - a second confirmation for the last seat is refused (true concurrency can't run in the harness, so test it sequentially and explain the locking in the plan);
@@ -2813,7 +2837,7 @@ Tests must cover:
 - cancel before and after the cutoff;
 - cant_drive cancels only that driver's rides on that date.
 
-Your migration: supabase/migrations/0013_booking.sql (planned number 0013; final number per the Database rules).
+Your migration: supabase/migrations/0018_booking.sql (planned number 0018; final number per the Database rules).
 
 Process: the design is already approved. Use writing-plans to write docs/superpowers/plans/YYYY-MM-DD-<branch name after the slash>.md (for example 2026-10-12-m-20-first-ride-post-ride.md). That file is always in your allowed files. Then implement it with subagent-driven-development and test-driven-development.
 
@@ -2997,8 +3021,8 @@ When done, open a PR to main and stop.
 - **Size:** M
 - **Depends on:** M-14, M-17a, M-27; zone order: M-25, M-29 (app config), M-31; decisions: D-13 (Decided); owner: O-07 and O-08 for the device check
 - **Blocks:** M-41, M-45, M-51, M-52, M-53
-- **Conflict zones:** migrations (planned 0014); App root providers; launch gate and auth (`AuthGate`/`Router` in `App.tsx`, `state/auth.tsx`); app config; dependencies
-- **Touches:** `docs/superpowers/specs/YYYY-MM-DD-push-notifications-design.md` (covers M-45 too), `supabase/migrations/0014_push_tokens.sql`, `supabase/tests/push_tokens_test.sql`, `supabase/tests/account_deletion_push_tokens_test.sql`, `src/lib/push.ts` (new), `src/lib/pushRoutes.ts` and test (new), `App.tsx` (`App()`, `AuthGate`, `Router`), `src/state/auth.tsx` (pre-sign-out hook), `apps/mobile/app.json`, `apps/mobile/package.json`
+- **Conflict zones:** migrations (planned 0019); App root providers; launch gate and auth (`AuthGate`/`Router` in `App.tsx`, `state/auth.tsx`); app config; dependencies
+- **Touches:** `docs/superpowers/specs/YYYY-MM-DD-push-notifications-design.md` (covers M-45 too), `supabase/migrations/0019_push_tokens.sql`, `supabase/tests/push_tokens_test.sql`, `supabase/tests/account_deletion_push_tokens_test.sql`, `src/lib/push.ts` (new), `src/lib/pushRoutes.ts` and test (new), `App.tsx` (`App()`, `AuthGate`, `Router`), `src/state/auth.tsx` (pre-sign-out hook), `apps/mobile/app.json`, `apps/mobile/package.json`
 - **Source:** `DriverRequestsScreen.tsx:59` ("You'll get a notification when someone asks to ride"); `BookedScreen.tsx:74` ("you're notified right away"); First Ride spec line 25 (no notification when someone says no), line 157; plan `2026-10-08-supabase-auth.md:1385-1437` (`App` renders `AuthProvider > CommuteProvider > AuthGate > NavigationProvider`)
 - **Done when:** the push spec is approved (events, permission timing, lock-screen copy, tap targets). `push_tokens` has owner-only RLS. Tokens register after sign-in and are deleted before sign-out (while the session is still valid) and on account deletion. Tapping a notification opens its target screen through a handler inside `AuthGate`/`Router`. The permission prompt appears at the agreed moment. Push is a no-op in prototype mode and on web.
 
@@ -3031,9 +3055,9 @@ Owner decision: notification scope (D-13, Decided 2026-10-08). Events: new reque
 
 Out of scope: sending notifications (M-45), email notifications, a notification settings UI.
 
-Files you may change: the spec (slug push-notifications), supabase/migrations/0014_push_tokens.sql, supabase/tests/push_tokens_test.sql, supabase/tests/account_deletion_push_tokens_test.sql, src/lib/push.ts (new), src/lib/pushRoutes.ts and src/lib/pushRoutes.test.ts (new), App.tsx (App(), AuthGate and Router only), src/state/auth.tsx (the pre-sign-out hook only), apps/mobile/app.json, apps/mobile/package.json, package-lock.json, apps/mobile/src/lib/database.types.ts (CI artifact only).
+Files you may change: the spec (slug push-notifications), supabase/migrations/0019_push_tokens.sql, supabase/tests/push_tokens_test.sql, supabase/tests/account_deletion_push_tokens_test.sql, src/lib/push.ts (new), src/lib/pushRoutes.ts and src/lib/pushRoutes.test.ts (new), App.tsx (App(), AuthGate and Router only), src/state/auth.tsx (the pre-sign-out hook only), apps/mobile/app.json, apps/mobile/package.json, package-lock.json, apps/mobile/src/lib/database.types.ts (CI artifact only).
 
-Your migration: supabase/migrations/0014_push_tokens.sql (planned number 0014; final number per the Database rules).
+Your migration: supabase/migrations/0019_push_tokens.sql (planned number 0019; final number per the Database rules).
 
 Process: run the superpowers brainstorming skill to settle the design with the owner. Write the spec to docs/superpowers/specs/YYYY-MM-DD-<slug>-design.md (the slug is named in this prompt), then stop for the owner's approval. After approval, use writing-plans to write docs/superpowers/plans/YYYY-MM-DD-<branch name after the slash>.md (for example 2026-10-12-m-27-invitations.md), and implement it with subagent-driven-development and test-driven-development. Spec, plan and code ship in one PR unless the owner asks to see the spec first. Your spec and plan files are always in your allowed files.
 
@@ -3156,8 +3180,8 @@ When done, open a PR to main and stop.
 - **Size:** M
 - **Depends on:** M-14 (a dev build for the real-device check), M-32 (and through it M-33's `estimate_trip_minutes`); decisions: D-01, D-02 (both Decided)
 - **Blocks:** M-44, M-45, M-47, M-49, M-52, M-53, M-55a (its 24 h contact gate needs completion timestamps)
-- **Conflict zones:** migrations (planned 0018)
-- **Touches:** `docs/superpowers/specs/YYYY-MM-DD-ride-lifecycle-design.md`, `supabase/migrations/0018_ride_lifecycle.sql`, `supabase/tests/ride_lifecycle_test.sql`, `docs/pilot/scheduled-jobs.md` (only if the owner schedules anything)
+- **Conflict zones:** migrations (planned 0023)
+- **Touches:** `docs/superpowers/specs/YYYY-MM-DD-ride-lifecycle-design.md`, `supabase/migrations/0023_ride_lifecycle.sql`, `supabase/tests/ride_lifecycle_test.sql`, `docs/pilot/scheduled-jobs.md` (only if the owner schedules anything)
 - **Source:** First Ride spec lines 47–51 (ride status), line 64 (feedback requires `completed`); `0001_initial.sql:44` (`'expired'` exists but nothing sets it); `DriverRequestsScreen.tsx:61` ("Requests expire if you don't reply"); `docs/mvp.md:12`
 - **Done when:** the real-device check passed and the spec is approved. Rides gain `picked_up_at` and `arrived_at`; they become `completed` (setting `completed_at`) on a reported arrival or at the fallback time, and invitations become `expired` at the D-02 reply cutoff. RPCs exist for "Picked up", arrival and "This ride didn't happen". Tests call the functions with a fixed `now`. Nothing requires pg_cron in the migration.
 
@@ -3194,9 +3218,9 @@ Owner decisions (Decided 2026-10-08):
 
 Out of scope: notifications, app UI (the "Picked up" button and ride-in-progress state are M-43 and M-47), trust stats, any location data on the server.
 
-Files you may change: the spec (slug ride-lifecycle), supabase/migrations/0018_ride_lifecycle.sql, supabase/tests/ride_lifecycle_test.sql, docs/pilot/scheduled-jobs.md (new, only if needed), apps/mobile/src/lib/database.types.ts (CI artifact only).
+Files you may change: the spec (slug ride-lifecycle), supabase/migrations/0023_ride_lifecycle.sql, supabase/tests/ride_lifecycle_test.sql, docs/pilot/scheduled-jobs.md (new, only if needed), apps/mobile/src/lib/database.types.ts (CI artifact only).
 
-Your migration: supabase/migrations/0018_ride_lifecycle.sql (planned number 0018; final number per the Database rules).
+Your migration: supabase/migrations/0023_ride_lifecycle.sql (planned number 0023; final number per the Database rules).
 
 Process: run the superpowers brainstorming skill to settle the design with the owner. Write the spec to docs/superpowers/specs/YYYY-MM-DD-<slug>-design.md (the slug is named in this prompt), then stop for the owner's approval. After approval, use writing-plans to write docs/superpowers/plans/YYYY-MM-DD-<branch name after the slash>.md (for example 2026-10-12-m-27-invitations.md), and implement it with subagent-driven-development and test-driven-development. Spec, plan and code ship in one PR unless the owner asks to see the spec first. Your spec and plan files are always in your allowed files.
 
@@ -3234,8 +3258,8 @@ When done, open a PR to main and stop.
 - **Size:** M
 - **Depends on:** M-06, M-17a, M-32, M-56; decisions: D-13
 - **Blocks:** M-45, M-50, M-52
-- **Conflict zones:** migrations (planned 0015)
-- **Touches:** `docs/superpowers/specs/YYYY-MM-DD-ride-messages-design.md` (covers M-50 too), `supabase/migrations/0015_messages.sql`, `supabase/tests/messages_test.sql`, `supabase/tests/account_deletion_messages_test.sql`
+- **Conflict zones:** migrations (planned 0020)
+- **Touches:** `docs/superpowers/specs/YYYY-MM-DD-ride-messages-design.md` (covers M-50 too), `supabase/migrations/0020_messages.sql`, `supabase/tests/messages_test.sql`, `supabase/tests/account_deletion_messages_test.sql`
 - **Source:** `BookedScreen.tsx:65` ("Message {first}" with no action), `:76` ("No live tracking during the pilot. Use messages to coordinate."); `DriverRequestsScreen.tsx:123` ("Message riders"); `docs/ui.md` "Not built yet" (messaging); `docs/mvp.md:12`
 - **Done when:** the spec is approved. Messages are ride-scoped and text-only, readable and writable only by participants of a confirmed ride within the allowed window. Blocked pairs and suspended members can't read or send, a rate limit applies, retention is defined, and Realtime setup is guarded so the test harness works. CI passes.
 
@@ -3264,9 +3288,9 @@ Decisions already made: no location sharing; no attachments; safety reports stay
 
 Out of scope: the chat UI, push, moderation tools.
 
-Files you may change: the spec (slug ride-messages), supabase/migrations/0015_messages.sql, supabase/tests/messages_test.sql, supabase/tests/account_deletion_messages_test.sql, apps/mobile/src/lib/database.types.ts (CI artifact only).
+Files you may change: the spec (slug ride-messages), supabase/migrations/0020_messages.sql, supabase/tests/messages_test.sql, supabase/tests/account_deletion_messages_test.sql, apps/mobile/src/lib/database.types.ts (CI artifact only).
 
-Your migration: supabase/migrations/0015_messages.sql (planned number 0015; final number per the Database rules).
+Your migration: supabase/migrations/0020_messages.sql (planned number 0020; final number per the Database rules).
 
 Process: run the superpowers brainstorming skill to settle the design with the owner. Write the spec to docs/superpowers/specs/YYYY-MM-DD-<slug>-design.md (the slug is named in this prompt), then stop for the owner's approval. After approval, use writing-plans to write docs/superpowers/plans/YYYY-MM-DD-<branch name after the slash>.md (for example 2026-10-12-m-27-invitations.md), and implement it with subagent-driven-development and test-driven-development. Spec, plan and code ship in one PR unless the owner asks to see the spec first. Your spec and plan files are always in your allowed files.
 
@@ -3371,8 +3395,8 @@ When done, open a PR to main and stop.
 - **Size:** M
 - **Depends on:** M-12, M-17b, M-57; zone order: M-25, M-38; decisions: D-11; owner: O-05, O-09 and O-14 for the connected check
 - **Blocks:** M-46, M-49, M-51, M-52, M-53; O-10
-- **Conflict zones:** Edge Functions; launch gate and auth (`auth.tsx`); migrations (planned 0016, only if needed); CLI config (`[functions.review-sign-in]`, append-only)
-- **Touches:** `docs/superpowers/specs/YYYY-MM-DD-review-sign-in-design.md`, `supabase/functions/review-sign-in/index.ts`, `src/state/auth.tsx`, `supabase/config.toml`, and if needed `supabase/migrations/0016_review_cohort.sql` with `supabase/tests/review_cohort_test.sql`
+- **Conflict zones:** Edge Functions; launch gate and auth (`auth.tsx`); migrations (planned 0021, only if needed); CLI config (`[functions.review-sign-in]`, append-only)
+- **Touches:** `docs/superpowers/specs/YYYY-MM-DD-review-sign-in-design.md`, `supabase/functions/review-sign-in/index.ts`, `src/state/auth.tsx`, `supabase/config.toml`, and if needed `supabase/migrations/0021_review_cohort.sql` with `supabase/tests/review_cohort_test.sql`
 - **Source:** auth spec lines 78–96 (email-code-only flow); `README.md:58-60` (no exposure of personal movement data); App Store and Play review require a working sign-in for reviewers
 - **Done when:** the owner approves an approach. Store reviewers can sign in without access to a Merge mailbox. Reviewers see only the labeled demo commuters from the dev fixtures (M-57), never real pilot users. The path is rate-limited and can be switched off. Tests pass, and the owner can deploy it.
 
@@ -3397,9 +3421,9 @@ Owner decision this needs: pilot distribution (D-11). Play internal testing need
 
 Out of scope: password sign-in, SMS, Google or Apple sign-in (declined by the owner), store console entries (owner).
 
-Files you may change: the spec (slug review-sign-in), supabase/functions/review-sign-in/index.ts, src/state/auth.tsx, supabase/config.toml (append [functions.review-sign-in]), and only if needed supabase/migrations/0016_review_cohort.sql, supabase/tests/review_cohort_test.sql, supabase/seed/dev-fixtures.sql (to label the reviewer cohort), apps/mobile/src/lib/database.types.ts (CI artifact only).
+Files you may change: the spec (slug review-sign-in), supabase/functions/review-sign-in/index.ts, src/state/auth.tsx, supabase/config.toml (append [functions.review-sign-in]), and only if needed supabase/migrations/0021_review_cohort.sql, supabase/tests/review_cohort_test.sql, supabase/seed/dev-fixtures.sql (to label the reviewer cohort), apps/mobile/src/lib/database.types.ts (CI artifact only).
 
-Your migration, only if you need SQL: supabase/migrations/0016_review_cohort.sql (planned number 0016; final number per the Database rules). With no SQL, add no file.
+Your migration, only if you need SQL: supabase/migrations/0021_review_cohort.sql (planned number 0021; final number per the Database rules). With no SQL, add no file.
 
 Process: run the superpowers brainstorming skill to settle the design with the owner. Write the spec to docs/superpowers/specs/YYYY-MM-DD-<slug>-design.md (the slug is named in this prompt), then stop for the owner's approval. After approval, use writing-plans to write docs/superpowers/plans/YYYY-MM-DD-<branch name after the slash>.md (for example 2026-10-12-m-27-invitations.md), and implement it with subagent-driven-development and test-driven-development. Spec, plan and code ship in one PR unless the owner asks to see the spec first. Your spec and plan files are always in your allowed files.
 
@@ -3663,8 +3687,8 @@ When done, open a PR to main and stop.
 - **Size:** M
 - **Depends on:** M-17b, M-32, M-37, M-38, M-39; decisions: D-13; owner: O-08, O-09 for the connected check
 - **Blocks:** M-52, M-53
-- **Conflict zones:** Edge Functions; migrations (planned 0019, only if needed); CLI config (`[functions.notify]`, append-only)
-- **Touches:** `supabase/functions/notify/index.ts`, `supabase/functions/notify/events.ts` and `events_test.ts`, `supabase/config.toml`, `docs/pilot/notifications.md`, and if needed `supabase/migrations/0019_notification_triggers.sql` with tests
+- **Conflict zones:** Edge Functions; migrations (planned 0024, only if needed); CLI config (`[functions.notify]`, append-only)
+- **Touches:** `supabase/functions/notify/index.ts`, `supabase/functions/notify/events.ts` and `events_test.ts`, `supabase/config.toml`, `docs/pilot/notifications.md`, and if needed `supabase/migrations/0024_notification_triggers.sql` with tests
 - **Source:** push spec from M-38; `DriverRequestsScreen.tsx:124` ("Tells riders right away"); `BookedScreen.tsx:74`; First Ride spec line 25 (never notify on "no")
 - **Done when:** `notify` sends the spec's events through the Expo Push API, follows the lock-screen copy rules, never sends on a decline or any "no", and prunes invalid tokens. Its trigger (Database Webhooks the owner configures, or calls from RPCs) is documented, and it authenticates callers with a shared-secret header. `deno check`, `deno test` (copy and event mapping) and DB tests pass in CI.
 
@@ -3692,9 +3716,9 @@ Owner decision: notification scope (D-13, Decided 2026-10-08), as recorded in th
 
 Out of scope: in-app notification settings, email notifications, client registration (done in part 1).
 
-Files you may change: supabase/functions/notify/index.ts, supabase/functions/notify/events.ts, supabase/functions/notify/events_test.ts, supabase/config.toml (append [functions.notify]), docs/pilot/notifications.md (new), and only if needed supabase/migrations/0019_notification_triggers.sql, supabase/tests/notification_triggers_test.sql, apps/mobile/src/lib/database.types.ts (CI artifact only).
+Files you may change: supabase/functions/notify/index.ts, supabase/functions/notify/events.ts, supabase/functions/notify/events_test.ts, supabase/config.toml (append [functions.notify]), docs/pilot/notifications.md (new), and only if needed supabase/migrations/0024_notification_triggers.sql, supabase/tests/notification_triggers_test.sql, apps/mobile/src/lib/database.types.ts (CI artifact only).
 
-Your migration, only if you need SQL: supabase/migrations/0019_notification_triggers.sql (planned number 0019; final number per the Database rules). With no SQL, add no file.
+Your migration, only if you need SQL: supabase/migrations/0024_notification_triggers.sql (planned number 0024; final number per the Database rules). With no SQL, add no file.
 
 Process: the design is already approved. Use writing-plans to write docs/superpowers/plans/YYYY-MM-DD-<branch name after the slash>.md (for example 2026-10-12-m-20-first-ride-post-ride.md). That file is always in your allowed files. Then implement it with subagent-driven-development and test-driven-development.
 
@@ -3735,8 +3759,8 @@ When done, open a PR to main and stop.
 - **Size:** M
 - **Depends on:** M-04, M-06, M-17a, M-32, M-37 (the ≤ 24 h-after-completion gate needs its completion timestamps), M-56; zone order: M-31; decisions: D-19 (Decided)
 - **Blocks:** M-52, M-55b
-- **Conflict zones:** migrations (planned 0021); privacy docs (`docs/privacy/data-inventory.md`, one section)
-- **Touches:** `docs/superpowers/specs/YYYY-MM-DD-contact-sharing-design.md` (covers M-55b too), `supabase/migrations/0021_contact_sharing.sql`, `supabase/tests/contact_sharing_test.sql`, `supabase/tests/account_deletion_contact_sharing_test.sql`, `docs/privacy/data-inventory.md`
+- **Conflict zones:** migrations (planned 0026); privacy docs (`docs/privacy/data-inventory.md`, one section)
+- **Touches:** `docs/superpowers/specs/YYYY-MM-DD-contact-sharing-design.md` (covers M-55b too), `supabase/migrations/0026_contact_sharing.sql`, `supabase/tests/contact_sharing_test.sql`, `supabase/tests/account_deletion_contact_sharing_test.sql`, `docs/privacy/data-inventory.md`
 - **Source:** D-19 (Decided 2026-10-08); `docs/mvp.md:23-25` (privacy); First Ride spec Safeguard 1 (a "no" stays private)
 - **Done when:** the spec is approved. Contact details live in an owner-only table, readable by the other person only through a security definer function that checks the gate: both people have offered, and either a confirmed ride between them is no more than 24 h past completion or they share a connection, and neither has blocked the other or is suspended. Tests cover the gate, revocation by block, loss of the connection, deletion, nothing visible before both offer, and no direct client access. The data inventory lists the new data.
 
@@ -3762,9 +3786,9 @@ Owner decision: D-19 (Decided; its fields and window are in the row).
 
 Out of scope: app UI (M-55b), verifying phone numbers, push.
 
-Files you may change: the spec (slug contact-sharing), supabase/migrations/0021_contact_sharing.sql, supabase/tests/contact_sharing_test.sql, supabase/tests/account_deletion_contact_sharing_test.sql, docs/privacy/data-inventory.md (one new section), apps/mobile/src/lib/database.types.ts (CI artifact only).
+Files you may change: the spec (slug contact-sharing), supabase/migrations/0026_contact_sharing.sql, supabase/tests/contact_sharing_test.sql, supabase/tests/account_deletion_contact_sharing_test.sql, docs/privacy/data-inventory.md (one new section), apps/mobile/src/lib/database.types.ts (CI artifact only).
 
-Your migration: supabase/migrations/0021_contact_sharing.sql (planned number 0021; final number per the Database rules). The security audit (M-52) runs after you.
+Your migration: supabase/migrations/0026_contact_sharing.sql (planned number 0026; final number per the Database rules). The security audit (M-52) runs after you.
 
 Process: run the superpowers brainstorming skill to settle the design with the owner. Write the spec to docs/superpowers/specs/YYYY-MM-DD-<slug>-design.md (the slug is named in this prompt), then stop for the owner's approval. After approval, use writing-plans to write docs/superpowers/plans/YYYY-MM-DD-<branch name after the slash>.md (for example 2026-10-12-m-27-invitations.md), and implement it with subagent-driven-development and test-driven-development. Spec, plan and code ship in one PR unless the owner asks to see the spec first. Your spec and plan files are always in your allowed files.
 
@@ -3805,8 +3829,8 @@ When done, open a PR to main and stop.
 - **Size:** S
 - **Depends on:** M-30, M-40; zone order: M-34, M-41; decisions: D-12; owner: O-03 (published pages)
 - **Blocks:** M-51, M-52, M-54a
-- **Conflict zones:** screens SignIn, Profile; launch gate and auth (only if D-12 requires a recorded acceptance); migrations (planned 0017, only then)
-- **Touches:** `src/screens/SignInScreen.tsx`, `src/screens/ProfileScreen.tsx`, `src/lib/links.ts`; only if D-12 requires a recorded acceptance: `src/state/auth.tsx`, `App.tsx` (`Router`), `src/screens/TermsUpdateScreen.tsx` (new), `supabase/migrations/0017_terms_acceptance.sql`, `supabase/tests/terms_acceptance_test.sql`
+- **Conflict zones:** screens SignIn, Profile; launch gate and auth (only if D-12 requires a recorded acceptance); migrations (planned 0022, only then)
+- **Touches:** `src/screens/SignInScreen.tsx`, `src/screens/ProfileScreen.tsx`, `src/lib/links.ts`; only if D-12 requires a recorded acceptance: `src/state/auth.tsx`, `App.tsx` (`Router`), `src/screens/TermsUpdateScreen.tsx` (new), `supabase/migrations/0022_terms_acceptance.sql`, `supabase/tests/terms_acceptance_test.sql`
 - **Source:** auth spec lines 78–96 (Sign in screen, account sheet); App Store guideline 5.1.1(i) (an in-app privacy policy link; it doesn't require a stored acceptance record); `docs/mvp.md:26`
 - **Done when:** Sign in shows the consent line, with links to the Terms and Privacy Policy and an 18+ statement, as counsel advises. Profile shows real Privacy, Terms, Support and Report links and the version. Only if D-12 requires a recorded acceptance: `saveProfile` records `terms_accepted_at` and `terms_version`, tests show users set only their own terms columns, and a version change asks existing users to accept again.
 
@@ -3830,9 +3854,9 @@ Owner decision this needs: the legal review outcome (D-12), which sets the wordi
 
 Out of scope: the legal text itself, analytics.
 
-Files you may change: src/screens/SignInScreen.tsx, src/screens/ProfileScreen.tsx (links and version only), src/lib/links.ts; and only for the recorded-acceptance path: src/state/auth.tsx (saveProfile only), App.tsx (Router only), src/screens/TermsUpdateScreen.tsx (new), supabase/migrations/0017_terms_acceptance.sql, supabase/tests/terms_acceptance_test.sql, apps/mobile/src/lib/database.types.ts (CI artifact only).
+Files you may change: src/screens/SignInScreen.tsx, src/screens/ProfileScreen.tsx (links and version only), src/lib/links.ts; and only for the recorded-acceptance path: src/state/auth.tsx (saveProfile only), App.tsx (Router only), src/screens/TermsUpdateScreen.tsx (new), supabase/migrations/0022_terms_acceptance.sql, supabase/tests/terms_acceptance_test.sql, apps/mobile/src/lib/database.types.ts (CI artifact only).
 
-Your migration, only on the recorded-acceptance path: supabase/migrations/0017_terms_acceptance.sql (planned number 0017; final number per the Database rules).
+Your migration, only on the recorded-acceptance path: supabase/migrations/0022_terms_acceptance.sql (planned number 0022; final number per the Database rules).
 
 Process: this prompt sets the scope. Write a short plan with writing-plans. Keep it in the PR description if it's under a page; otherwise write docs/superpowers/plans/YYYY-MM-DD-<branch name after the slash>.md, which is always allowed. Then implement it, using test-driven-development for any logic.
 
@@ -4018,8 +4042,8 @@ When done, open a PR to main and stop.
 - **Size:** M
 - **Depends on:** M-16, M-36, M-37, M-42, M-44, M-56; zone order: M-41; decisions: D-03 (open), D-06 (Decided; M-02 closed into it); owner: O-02 and O-14 for connected checks
 - **Blocks:** M-51, M-52, M-54a, M-55b
-- **Conflict zones:** migrations (planned 0020); screens MatchDetail, DriverRequest; data layer (`matches.ts`, `inbox.ts`)
-- **Touches:** `supabase/migrations/0020_trust_signals.sql`, `supabase/tests/trust_signals_test.sql`, `src/screens/MatchDetailScreen.tsx`, `src/screens/DriverRequestScreen.tsx`, `src/lib/data/matches.ts`, `src/lib/data/inbox.ts`
+- **Conflict zones:** migrations (planned 0025); screens MatchDetail, DriverRequest; data layer (`matches.ts`, `inbox.ts`)
+- **Touches:** `supabase/migrations/0025_trust_signals.sql`, `supabase/tests/trust_signals_test.sql`, `src/screens/MatchDetailScreen.tsx`, `src/screens/DriverRequestScreen.tsx`, `src/lib/data/matches.ts`, `src/lib/data/inbox.ts`
 - **Source:** `docs/ui.md` (trust signals: rides, on-time, member since, ID / work email / vehicle verification; reliability metrics are open); `mock.ts:50` (`[N]`, `[X]%`, `[Mon YY]`); `MatchDetailScreen.tsx:56-64`; `DriverRequestScreen.tsx:43-44`
 - **Done when:** profile cards and matching return only D-03 aggregates (counting completed rides only, so rides marked "didn't happen" are excluded) and the vetting flag from M-56. No individual ride dates or partners leak. Match detail and the driver request show only backed signals, with the D-06 badge wording and "New to Merge" at zero.
 
@@ -4045,9 +4069,9 @@ Owner decisions this needs: D-03 (metrics; open) and D-06 (Decided 2026-10-08: o
 
 Out of scope: vendor integrations, photos, employer, reviews or ratings.
 
-Files you may change: supabase/migrations/0020_trust_signals.sql, supabase/tests/trust_signals_test.sql, src/screens/MatchDetailScreen.tsx (trust card only), src/screens/DriverRequestScreen.tsx (badges and stats only), src/lib/data/matches.ts, src/lib/data/inbox.ts, apps/mobile/src/lib/database.types.ts (CI artifact only).
+Files you may change: supabase/migrations/0025_trust_signals.sql, supabase/tests/trust_signals_test.sql, src/screens/MatchDetailScreen.tsx (trust card only), src/screens/DriverRequestScreen.tsx (badges and stats only), src/lib/data/matches.ts, src/lib/data/inbox.ts, apps/mobile/src/lib/database.types.ts (CI artifact only).
 
-Your migration: supabase/migrations/0020_trust_signals.sql (planned number 0020; final number per the Database rules).
+Your migration: supabase/migrations/0025_trust_signals.sql (planned number 0025; final number per the Database rules).
 
 Process: this prompt sets the scope. Write a short plan with writing-plans. Keep it in the PR description if it's under a page; otherwise write docs/superpowers/plans/YYYY-MM-DD-<branch name after the slash>.md, which is always allowed. Then implement it, using test-driven-development for any logic.
 
@@ -4224,10 +4248,10 @@ When done, open a PR to main and stop.
 - **Size:** M
 - **Depends on:** M-04, M-05, M-06, M-16, M-17a, M-18, M-26, M-27, M-32, M-33, M-37, M-38, M-39, M-41, M-45, M-46, M-49, M-55a, M-56, M-57
 - **Blocks:** the pilot (O-11)
-- **Conflict zones:** migrations (planned 0022, always the last before the pilot)
-- **Touches:** `supabase/migrations/0022_security_fixes.sql`, `supabase/tests/security_audit_test.sql`, `docs/research/YYYY-MM-DD-rls-audit.md`
+- **Conflict zones:** migrations (planned 0027, always the last before the pilot)
+- **Touches:** `supabase/migrations/0027_security_fixes.sql`, `supabase/tests/security_audit_test.sql`, `docs/research/YYYY-MM-DD-rls-audit.md`
 - **Source:** `0001_initial.sql:1` ("Review and test RLS before connecting production users"); `docs/mvp.md:22-25`; auth spec lines 52–54 (Security Advisor via the read-only MCP), line 119
-- **Done when:** every table, view and function has been reviewed against the checklist. Fixes and negative tests land in this task's migration (planned 0022). The owner has run the Security Advisor and the results are recorded in the audit doc.
+- **Done when:** every table, view and function has been reviewed against the checklist. Fixes and negative tests land in this task's migration (planned 0027). The owner has run the Security Advisor and the results are recorded in the audit doc.
 - **Advisor findings (hosted, after 0008):** `propose_crew`, `respond_to_crew` and `set_crew_status` are client RPCs by design, and check `auth.uid()`. Confirm their tests cover that. `area_label` and the 0008 area helpers are being revoked from clients in 0009 (M-18 follow-up), so verify that. Run `npx supabase db advisors --linked --type all` from a linked worktree and resolve every WARN.
 
 **Agent prompt**
@@ -4256,9 +4280,9 @@ Read first: supabase/migrations/* (all); supabase/tests/* (all); every design sp
 
 Out of scope: app code, new features.
 
-Files you may change: supabase/migrations/0022_security_fixes.sql, supabase/tests/security_audit_test.sql, docs/research/YYYY-MM-DD-rls-audit.md (new), apps/mobile/src/lib/database.types.ts (CI artifact only).
+Files you may change: supabase/migrations/0027_security_fixes.sql, supabase/tests/security_audit_test.sql, docs/research/YYYY-MM-DD-rls-audit.md (new), apps/mobile/src/lib/database.types.ts (CI artifact only).
 
-Your migration: supabase/migrations/0022_security_fixes.sql (planned number 0022; final number per the Database rules). Every other migration task has merged before you start, so yours is the highest.
+Your migration: supabase/migrations/0027_security_fixes.sql (planned number 0027; final number per the Database rules). Every other migration task has merged before you start, so yours is the highest.
 
 Process: this prompt sets the scope. Write a short plan with writing-plans. Keep it in the PR description if it's under a page; otherwise write docs/superpowers/plans/YYYY-MM-DD-<branch name after the slash>.md, which is always allowed. Then implement it, using test-driven-development for any logic.
 
@@ -4585,6 +4609,13 @@ The drafter proposed these, not the owner. They stay proposals until the owner c
 Schedule it only if pilot feedback shows bad detour estimates. Bay water crossings are the known weak spot. Replace the body of M-33's `estimate_detour_minutes` (and `estimate_trip_minutes`) with routed minutes from a self-hosted Valhalla, per `docs/research/2026-10-08-m01-map-provider.md`, keeping the same signatures, the whole-minutes-only output and the no-client-execute grants, so matching (M-26) and the lifecycle (M-37) don't change. It needs a new owner decision on hosting and any cache, a new migration above the highest on main, and its own design-then-build card.
 
 ## Revision notes
+
+**Refresh of 2026-10-10.** Status brought up to date with main at `670d6ae`:
+- **Merged:** #12 (`704503d`, O-01's merge commit) carried M-04, M-05, M-06, M-07, M-08, M-11 and M-18 (PRs #5–#11) plus the fixtures fix #13. #25 (`25970cd`) finished O-01 with the fix round, Task 9 (web support) and code-only templates. Then M-15 (#19), M-17a (#20), M-56 (#21), M-33 (#18), M-03 (#26), M-12 (#27), M-10 (#28) and M-09 (#29). #14, #16 and #23 regenerated the database types. Every card that's done now has a Status line naming its PR.
+- **Not backlog tasks:** #15 (0009, M-18b's hand-drawn East Bay neighborhood labels, a follow-up to M-18), #17 (`bd39f92`, Forest theme, animated Welcome and the Role step; a design pivot), #22 (errors in a deep red) and #24 (0013, the daily pg_cron safety-report purge, a follow-up).
+- **Migration numbers:** main has 0001–0005 and 0008–0013, with 0006 and 0007 as unused gaps, and the hosted project is current through 0013. Every unbuilt migration was renumbered to start at 0014 (M-16) and end at 0027 (M-52), in the same order, with M-17b's optional 0016 added. The cards' planned numbers match the table, and the final number is still set at merge.
+- **In flight (dispatched 2026-10-10, no PRs yet):** M-13, M-14, M-17b, M-21 and M-40 are building; M-16, M-19 and M-26 are in design, with specs awaiting the owner's approval. M-21 and M-26 (Wave 4) started early, because their prerequisites are all on main.
+- **Owner ops:** O-01 is done and O-02 is current through 0013. O-04 (custom SMTP and pasting the templates) and O-05's sign-ups-off step are still owed; the steps are in `docs/pilot/sign-in.md`. D-10 stays Deferred.
 
 **Fold-in of 2026-10-08.** Owner decisions and execution status were folded in after the owner confirmed the relayed decisions directly:
 - **Decisions:** D-01 (ride mode), D-02, D-04, D-05, D-06, D-08, D-09, D-11, D-13, D-14, D-16, D-18 and D-19 are Decided; the R1–R8 markers are resolved. D-22 (decline timing) is new and open; it took the next free number because D-20 already names the pilot cuts. Where a decided text left out part of the old suggested default (D-02's one-ride-per-date rule, D-06's driving gate), that part stays marked as a suggestion for the building task to confirm.
