@@ -107,16 +107,41 @@ export function profileRetryDelayMs(attempt: number): number {
   return Math.min(PROFILE_RETRY_BASE_MS * 2 ** failures, PROFILE_RETRY_MAX_MS);
 }
 
-export type AuthStatus = 'loading' | 'signedOut' | 'needsProfile' | 'ready' | 'prototype';
+/**
+ * `EXPO_PUBLIC_APP_ENV` values that mean a local or development build. eas.json
+ * sets 'development', 'preview' or 'production' per profile; `expo start` leaves it
+ * unset. Anything else counts as a release build, so a typo in a profile fails closed.
+ */
+const DEVELOPMENT_APP_ENVS: readonly (string | undefined)[] = [undefined, '', 'development'];
+
+/** True for preview and production builds (and any APP_ENV eas.json doesn't define). */
+export function isReleaseBuild(appEnv: string | undefined): boolean {
+  return !DEVELOPMENT_APP_ENVS.includes(appEnv);
+}
+
+/**
+ * 'prototype' is the click-through app on mock data, 'connected' signs in to Supabase,
+ * and 'misconfigured' is a release build missing its Supabase config: it must refuse to
+ * start rather than show testers fake people.
+ */
+export type AppMode = 'prototype' | 'connected' | 'misconfigured';
+
+/** `configured` means both Supabase variables are set (src/lib/supabase.ts made a client). */
+export function appMode(input: { appEnv: string | undefined; configured: boolean }): AppMode {
+  if (input.configured) return 'connected';
+  return isReleaseBuild(input.appEnv) ? 'misconfigured' : 'prototype';
+}
+
+export type AuthStatus = 'loading' | 'signedOut' | 'needsProfile' | 'ready' | 'prototype' | 'misconfigured';
 
 export function deriveStatus(input: {
-  configured: boolean;
+  mode: AppMode;
   sessionLoaded: boolean;
   hasSession: boolean;
   profileLoaded: boolean;
   hasProfile: boolean;
 }): AuthStatus {
-  if (!input.configured) return 'prototype';
+  if (input.mode !== 'connected') return input.mode;
   if (!input.sessionLoaded) return 'loading';
   if (!input.hasSession) return 'signedOut';
   if (!input.profileLoaded) return 'loading';

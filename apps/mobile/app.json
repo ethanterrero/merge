@@ -51,7 +51,8 @@
           "backgroundColor": "#14301C"
         }
       ],
-      "expo-font"
+      "expo-font",
+      "@maplibre/maplibre-react-native"
     ]
   }
 }

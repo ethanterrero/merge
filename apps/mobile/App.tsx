@@ -21,6 +21,10 @@ import { DriverRequestScreen } from './src/screens/DriverRequestScreen';
 import { DriverConfirmScreen } from './src/screens/DriverConfirmScreen';
 import { RoleScreen } from './src/screens/RoleScreen';
 import { VehicleScreen } from './src/screens/VehicleScreen';
+import { ConfigErrorScreen } from './src/screens/ConfigErrorScreen';
+import { FirstRideProvider } from './src/state/firstRide';
+import { PostRideScreen } from './src/screens/PostRideScreen';
+import { PostRideThanksScreen } from './src/screens/PostRideThanksScreen';
 import { ReportScreen } from './src/screens/ReportScreen';
 import { BlockedPeopleScreen } from './src/screens/BlockedPeopleScreen';
 
@@ -29,7 +33,9 @@ export default function App() {
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <AuthProvider>
         <CommuteProvider>
-          <AuthGate />
+          <FirstRideProvider>
+            <AuthGate />
+          </FirstRideProvider>
         </CommuteProvider>
       </AuthProvider>
     </SafeAreaProvider>
@@ -79,6 +85,9 @@ function Router() {
     if (mustLeaveRoute(status, nav.route.name)) nav.reset({ name: 'welcome' });
   }, [status, nav]);
 
+  // A preview or production build without Supabase config must never fall back to
+  // the mock prototype: block every route instead.
+  if (status === 'misconfigured') return <ConfigErrorScreen />;
   return renderRoute(nav.route);
 }
 
@@ -114,6 +123,10 @@ function renderRoute(route: Route): React.ReactElement {
       return <RoleScreen />;
     case 'vehicle':
       return <VehicleScreen />;
+    case 'postRide':
+      return <PostRideScreen matchId={route.matchId} />;
+    case 'postRideThanks':
+      return <PostRideThanksScreen matchId={route.matchId} />;
     case 'report':
       return <ReportScreen personId={route.personId} personName={route.personName} rideId={route.rideId} rideLabel={route.rideLabel} />;
     case 'blockedPeople':

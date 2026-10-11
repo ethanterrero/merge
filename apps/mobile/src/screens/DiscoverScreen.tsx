@@ -15,7 +15,8 @@ import { useNav } from '../navigation';
 import { useCommute } from '../state/commute';
 import { useAuth } from '../state/auth';
 import { Match, MATCHES } from '../data/mock';
-import { BayMap, Zone } from '../components/BayMap';
+import { AreaMap } from '../components/map/AreaMap';
+import type { AreaMapItem } from '../components/map/types';
 import { AccountSheet } from '../components/AccountSheet';
 import { TabBar } from '../components/TabBar';
 import { Icon } from '../components/Icon';
@@ -32,6 +33,7 @@ export function DiscoverScreen() {
   const [accountOpen, setAccountOpen] = useState(false);
   const insets = useSafeAreaInsets();
   const [area, setArea] = useState({ width: 390, height: 700 });
+  const [headerHeight, setHeaderHeight] = useState(140);
 
   const matches = MATCHES.filter((m) => filter === 'all' || m.role === filter);
 
@@ -41,6 +43,17 @@ export function DiscoverScreen() {
   const top = useRef(new Animated.Value(collapsedTop)).current;
   const [expanded, setExpanded] = useState(false);
   const lastTop = useRef(collapsedTop);
+
+  // One generalized circle per match, around their origin area's center (never an exact point).
+  const mapAreas: AreaMapItem[] = matches.map((m, i) => ({
+    id: m.id,
+    center: { lat: m.originArea.lat, lng: m.originArea.lng },
+    tone: m.role === 'driver' ? 'primary' : 'deep',
+    emphasis: i === 0,
+    badge: <MapBadge match={m} highlighted={i === 0} />,
+    accessibilityLabel: `${m.name}, ${m.role}`,
+    onPress: () => nav.push({ name: 'match', matchId: m.id }),
+  }));
 
   const snap = (open: boolean) => {
     const to = open ? expandedTop : collapsedTop;
@@ -79,18 +92,25 @@ export function DiscoverScreen() {
           top.setValue(lastTop.current);
         }}
       >
-        <BayMap height={area.height} style={StyleSheet.absoluteFillObject}>
-          {matches.map((m) => (
-            <MapMarker key={m.id} match={m} width={area.width} height={collapsedTop} onPress={() => nav.push({ name: 'match', matchId: m.id })} />
-          ))}
-          <View style={[styles.privacyTag, { top: collapsedTop - 44 }, shadow.sm]}>
-            <Icon name="lock-closed" size={13} color={colors.textSecondary} />
-            <Text style={[type.caption, { color: colors.textSecondary, fontWeight: '600' }]}>Circles show approximate areas</Text>
-          </View>
-        </BayMap>
+        <AreaMap
+          areas={mapAreas}
+          style={StyleSheet.absoluteFillObject}
+          // The header cards and the sheet cover the map; keep the circles clear of the privacy tag too.
+          insets={{ top: headerHeight, bottom: area.height - collapsedTop }}
+          fitPadding={{ bottom: 64 }}
+          accessibilityLabel="Map of approximate areas for your matches"
+        />
+        <View style={[styles.privacyTag, { top: collapsedTop - 64 }, shadow.sm]} pointerEvents="none">
+          <Icon name="lock-closed" size={13} color={colors.textSecondary} />
+          <Text style={[type.caption, { color: colors.textSecondary, fontWeight: '600' }]}>Circles show approximate areas</Text>
+        </View>
 
         <View style={styles.overlay} pointerEvents="box-none">
-          <View style={{ paddingTop: insets.top + space.sm, paddingHorizontal: space.lg, gap: 10 }} pointerEvents="box-none">
+          <View
+            style={{ paddingTop: insets.top + space.sm, paddingHorizontal: space.lg, gap: 10 }}
+            pointerEvents="box-none"
+            onLayout={(e) => setHeaderHeight(Math.round(e.nativeEvent.layout.height))}
+          >
             <View style={[styles.searchCard, shadow.md]}>
               <Icon name="time" size={20} color={colors.chili} />
               <View style={{ flex: 1 }}>
@@ -149,16 +169,10 @@ export function DiscoverScreen() {
   );
 }
 
-function MapMarker({ match, width, height, onPress }: { match: Match; width: number; height: number; onPress: () => void }) {
+/** Initials at the center of a match's area. The map makes it tappable. */
+function MapBadge({ match, highlighted }: { match: Match; highlighted: boolean }) {
   const driver = match.role === 'driver';
-  const top = match.id === 'priya';
-  return (
-    <Zone x={width * match.marker.x} y={height * match.marker.y} size={match.marker.size} tone={driver ? 'chili' : 'maroon'} emphasis={top}>
-      <Pressable accessibilityRole="button" accessibilityLabel={`${match.name}, ${match.role}`} onPress={onPress} hitSlop={8}>
-        <Avatar initials={match.initials} size={34} variant={top ? 'solid' : driver ? 'outline' : 'dark'} />
-      </Pressable>
-    </Zone>
-  );
+  return <Avatar initials={match.initials} size={34} variant={highlighted ? 'solid' : driver ? 'outline' : 'dark'} />;
 }
 
 function MatchCard({ match, highlighted, onPress }: { match: Match; highlighted: boolean; onPress: () => void }) {
