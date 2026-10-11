@@ -607,6 +607,36 @@ export type Database = {
         Args: { dest: unknown; origin: unknown }
         Returns: number
       }
+      find_matches: {
+        Args: { ride_date: string; role_filter?: string }
+        Returns: {
+          area_radius_m: number
+          brings_scooter: boolean
+          connected: boolean
+          departure_gap_minutes: number
+          departure_time: string
+          destination_area_label: string
+          destination_area_lat: number
+          destination_area_lng: number
+          detour_band: string
+          name: string
+          origin_area_label: string
+          origin_area_lat: number
+          origin_area_lng: number
+          other_id: string
+          rank: number
+          reasons: Json
+          ride_prefs: string[]
+          role: string
+          scooter_fits: boolean
+          seats_offered: number
+          seats_open: number
+          shared_weekdays: number[]
+          vetted: boolean
+          window_end: string
+          window_start: string
+        }[]
+      }
       is_active: { Args: { uid: string }; Returns: boolean }
       is_blocked: { Args: { a: string; b: string }; Returns: boolean }
       is_detour_within_limit: {
@@ -619,6 +649,35 @@ export type Database = {
         Returns: boolean
       }
       is_vetted: { Args: { uid: string }; Returns: boolean }
+      match_candidates: {
+        Args: { me: string; ride_date: string }
+        Returns: {
+          connected: boolean
+          departure_gap_minutes: number
+          detour_minutes: number
+          my_commute_id: string
+          other_commute_id: string
+          other_id: string
+          pax_brings_scooter: boolean
+          reaches_hov: boolean
+          role: string
+          scooter_fits: boolean
+          seats_offered: number
+          seats_open: number
+          shared_prefs: string[]
+          shared_weekdays: number[]
+        }[]
+      }
+      match_days_label: { Args: { days: number[] }; Returns: string }
+      match_prefilter: {
+        Args: {
+          driver_dest: unknown
+          driver_origin: unknown
+          pax_dest_area: unknown
+          pax_origin_area: unknown
+        }
+        Returns: boolean
+      }
       propose_crew: {
         Args: { departure_time: string; other: string; weekdays: number[] }
         Returns: string
