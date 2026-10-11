@@ -26,6 +26,8 @@ D-10 (app identity) is deferred, so `app.json` carries placeholders. The `.inval
 
 Both IDs become permanent once a build is uploaded to App Store Connect or Play, so set the final values before the first `production` build. Development and preview builds can use the placeholders. Changing the IDs later only means reinstalling those builds.
 
+`apps/mobile/app.config.js` enforces this. It reads `app.json` and throws "Production build blocked: app.json still has placeholder app IDs …" when either ID still contains `invalid.placeholder` and the config is resolved for production: the `production` EAS profile (`EAS_BUILD_PROFILE`) or `EXPO_PUBLIC_APP_ENV=production`. Development, preview and local `expo start` are unaffected. The check lives in `src/lib/releaseIdentity.js`, with unit tests beside it. To try it: `EXPO_PUBLIC_APP_ENV=production npx expo config` (from `apps/mobile`) fails until the IDs are replaced.
+
 The icon, adaptive icon and splash (see [Artwork](#artwork)) are placeholder art awaiting the owner's approval.
 
 ## Owner steps (O-07)
@@ -48,11 +50,22 @@ Run these from `apps/mobile`, after the Expo, Apple and Google accounts exist (O
    eas device:create                                      # once per iPhone, for internal iOS builds
    eas build --profile development --platform all
    eas build --profile preview --platform all
-   eas build --profile production --platform all          # only after D-10's final IDs are in app.json
+   eas build --profile production --platform all          # fails until D-10's final IDs are in app.json
    ```
 
    EAS asks to create signing credentials on the first build. Let it manage them, and back up the Android upload keystore (`eas credentials`).
-5. `eas submit --profile production` once the store records exist (O-06, O-10).
+5. `eas submit --profile production` once the store records exist (O-06, O-10). Read [Background location and App Review](#background-location-and-app-review) first.
+
+## Background location and App Review
+
+`app.json` declares the iOS `location` background mode now, but no code uses it until M-37 adds ride mode (D-01). Apple rejects builds that declare a background mode they don't use (App Review Guideline 2.5.4), so:
+
+- **Don't submit a build to TestFlight external testing (Beta App Review) or the App Store before M-37 has merged** and that build contains it. Development and preview builds, and TestFlight builds for internal testers only, aren't reviewed and are fine.
+- The same applies on Android: hold the Play foreground-service (location) declaration (O-10) until M-37 is in the build, because Play asks for a video of the feature in use.
+
+When you submit, put this in the App Review notes (TestFlight "Beta App Review Information", and App Store "Notes"), adjusted to the shipped UI. Add the review sign-in details from M-41.
+
+> Merge is a carpool app. It uses location only while a ride is in progress, with "While Using the App" permission; it never asks for "Always". When the driver taps "Picked up" at the pickup, the app starts location updates. They keep running if the driver locks the phone or switches to a navigation app, which is why the app declares the location background mode, and iOS shows the blue location indicator. The phone checks whether the car has reached the drop-off area. When it has, the app marks the ride as arrived and stops location updates. Only "arrived" and a timestamp are sent to our server, never coordinates, and other members never see anyone's location. If location is off, the ride completes on a timer instead. To see it: sign in with the review account, open the booked ride under Trips, tap "Picked up", then put the app in the background.
 
 ## Running a dev build
 
@@ -67,7 +80,7 @@ npm --workspace apps/mobile run dev-client     # same as: npx expo start --dev-c
 ## What the release config sets
 
 - **iPhone only:** `ios.supportsTablet: false` (D-10).
-- **Light mode only:** `userInterfaceStyle: "light"`, because `src/theme.ts` has no dark palette.
+- **Light mode only:** `userInterfaceStyle: "light"`, because `src/theme.ts` has no dark palette. On Android this needs `expo-system-ui`, which is installed; without it, date pickers, keyboards and dialogs follow the system dark theme.
 - **Export compliance:** `ios.config.usesNonExemptEncryption: false`, because the app only uses HTTPS. App Store Connect then skips the encryption question.
 - **Location for D-01's ride mode:** the `expo-location` plugin with a "while using" usage string only. The "Always" strings are removed (`false`), iOS gets the `location` background mode (the blue indicator), and Android gets `FOREGROUND_SERVICE` and `FOREGROUND_SERVICE_LOCATION` for the "Ride in progress" notification. `ACCESS_BACKGROUND_LOCATION` is in `android.blockedPermissions`, so no library can add it. No geofencing. Play needs a foreground-service declaration for this (O-10).
 - **Blocked Android permissions** the app doesn't use: background location, external storage, overlay (`SYSTEM_ALERT_WINDOW`) and microphone.
