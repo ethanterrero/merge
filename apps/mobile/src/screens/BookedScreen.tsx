@@ -6,6 +6,8 @@ import { useNav } from '../navigation';
 import { PROTOTYPE_RIDE_DATE, findMatch } from '../data/mock';
 import { formatRideDate } from '../lib/dates';
 import { useCommute } from '../state/commute';
+import { useFirstRide } from '../state/firstRide';
+import { postRideRoute } from '../lib/firstRide';
 import { IconButton, Screen } from '../components/Screen';
 import { Button } from '../components/Button';
 import { Icon, IconName } from '../components/Icon';
@@ -14,10 +16,18 @@ import { Badge, Card } from '../components/primitives';
 export function BookedScreen({ matchId }: { matchId: string }) {
   const nav = useNav();
   const { commute } = useCommute();
+  const { relationship, completeRide } = useFirstRide();
   const m = findMatch(matchId);
   const first = m.name.split(' ')[0];
   const insets = useSafeAreaInsets();
   const rideDay = formatRideDate(PROTOTYPE_RIDE_DATE);
+
+  // Prototype: stands in for the ride ending (D-01's arrival or fallback timer).
+  const simulateCompleted = () => {
+    const next = postRideRoute(relationship(m.id));
+    completeRide(m.id);
+    nav.push({ name: next, matchId: m.id });
+  };
 
   return (
     <Screen
@@ -43,7 +53,16 @@ export function BookedScreen({ matchId }: { matchId: string }) {
         </View>
       }
       footer={
-        <Button label="Cancel ride" variant="destructive" size="md" accessibilityHint={`Cancels only this ride with ${first}, on ${rideDay}`} />
+        <View style={{ gap: space.sm }}>
+          <Button
+            label="Prototype: simulate ride completed"
+            variant="tinted"
+            size="md"
+            onPress={simulateCompleted}
+            accessibilityHint={`Opens the post-ride questions for your ride with ${first}`}
+          />
+          <Button label="Cancel ride" variant="destructive" size="md" accessibilityHint={`Cancels only this ride with ${first}, on ${rideDay}`} />
+        </View>
       }
     >
       <Card raised style={{ padding: space.lg, gap: space.md }}>

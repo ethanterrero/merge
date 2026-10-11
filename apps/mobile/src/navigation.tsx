@@ -21,6 +21,8 @@ export type Route =
   | { name: 'driverConfirm'; requestId: string }
   | { name: 'role' }
   | { name: 'vehicle' }
+  | { name: 'postRide'; matchId: string }
+  | { name: 'postRideThanks'; matchId: string }
 ;
 
 export type RouteName = Route['name'];
