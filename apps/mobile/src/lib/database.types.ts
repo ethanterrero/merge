@@ -231,35 +231,77 @@ export type Database = {
       }
       invitations: {
         Row: {
+          accepted_at: string | null
+          brings_scooter: boolean
+          cancel_reason: string | null
+          closed_at: string | null
           commute_id: string | null
           created_at: string
           crew_id: string | null
+          direction: string
+          expires_at: string
+          held_until: string | null
           id: string
+          kind: string
+          pickup_area: unknown
+          pickup_area_label: string | null
+          pickup_time: string
           recipient_id: string | null
           ride_date: string
+          seats: number
           sender_id: string | null
           status: string
+          updated_at: string
+          waiting_closed_at: string | null
         }
         ComputedFields: never
         Insert: {
+          accepted_at?: string | null
+          brings_scooter?: boolean
+          cancel_reason?: string | null
+          closed_at?: string | null
           commute_id?: string | null
           created_at?: string
           crew_id?: string | null
+          direction: string
+          expires_at: string
+          held_until?: string | null
           id?: string
+          kind: string
+          pickup_area?: unknown
+          pickup_area_label?: string | null
+          pickup_time: string
           recipient_id?: string | null
           ride_date: string
+          seats?: number
           sender_id?: string | null
           status?: string
+          updated_at?: string
+          waiting_closed_at?: string | null
         }
         Update: {
+          accepted_at?: string | null
+          brings_scooter?: boolean
+          cancel_reason?: string | null
+          closed_at?: string | null
           commute_id?: string | null
           created_at?: string
           crew_id?: string | null
+          direction?: string
+          expires_at?: string
+          held_until?: string | null
           id?: string
+          kind?: string
+          pickup_area?: unknown
+          pickup_area_label?: string | null
+          pickup_time?: string
           recipient_id?: string | null
           ride_date?: string
+          seats?: number
           sender_id?: string | null
           status?: string
+          updated_at?: string
+          waiting_closed_at?: string | null
         }
         Relationships: [
           {
@@ -577,8 +619,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invitation: { Args: { invitation_id: string }; Returns: undefined }
       area_label: { Args: { center: unknown }; Returns: string }
       area_radius_m: { Args: Record<PropertyKey, never>; Returns: number }
+      cancel_cutoff_minutes: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      close_invitations: {
+        Args: { ids: string[]; reason: string }
+        Returns: undefined
+      }
       commute_area_for: {
         Args: {
           for_owner: string
@@ -587,6 +638,10 @@ export type Database = {
           sibling: unknown
         }
         Returns: unknown
+      }
+      decline_invitation: {
+        Args: { invitation_id: string }
+        Returns: undefined
       }
       detour_limit_minutes: {
         Args: Record<PropertyKey, never>
@@ -637,6 +692,75 @@ export type Database = {
           window_start: string
         }[]
       }
+      invitation_counterpart_visible: {
+        Args: {
+          inv: Omit<
+            Database["public"]["Tables"]["invitations"]["Row"],
+            Database["public"]["Tables"]["invitations"]["ComputedFields"]
+          >
+          viewer: string
+        }
+        Returns: boolean
+      }
+      invitation_for_action: {
+        Args: { invitation_id: string; me: string }
+        Returns: {
+          accepted_at: string | null
+          brings_scooter: boolean
+          cancel_reason: string | null
+          closed_at: string | null
+          commute_id: string | null
+          created_at: string
+          crew_id: string | null
+          direction: string
+          expires_at: string
+          held_until: string | null
+          id: string
+          kind: string
+          pickup_area: unknown
+          pickup_area_label: string | null
+          pickup_time: string
+          recipient_id: string | null
+          ride_date: string
+          seats: number
+          sender_id: string | null
+          status: string
+          updated_at: string
+          waiting_closed_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "invitations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      invitation_open_for: {
+        Args: {
+          as_of: string
+          inv: Omit<
+            Database["public"]["Tables"]["invitations"]["Row"],
+            Database["public"]["Tables"]["invitations"]["ComputedFields"]
+          >
+          viewer: string
+        }
+        Returns: boolean
+      }
+      invitation_state: {
+        Args: {
+          as_of: string
+          inv: Omit<
+            Database["public"]["Tables"]["invitations"]["Row"],
+            Database["public"]["Tables"]["invitations"]["ComputedFields"]
+          >
+          viewer: string
+        }
+        Returns: string
+      }
+      invitation_unavailable: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       is_active: { Args: { uid: string }; Returns: boolean }
       is_blocked: { Args: { a: string; b: string }; Returns: boolean }
       is_detour_within_limit: {
@@ -649,25 +773,49 @@ export type Database = {
         Returns: boolean
       }
       is_vetted: { Args: { uid: string }; Returns: boolean }
-      match_candidates: {
-        Args: { me: string; ride_date: string }
-        Returns: {
-          connected: boolean
-          departure_gap_minutes: number
-          detour_minutes: number
-          my_commute_id: string
-          other_commute_id: string
-          other_id: string
-          pax_brings_scooter: boolean
-          reaches_hov: boolean
-          role: string
-          scooter_fits: boolean
-          seats_offered: number
-          seats_open: number
-          shared_prefs: string[]
-          shared_weekdays: number[]
-        }[]
-      }
+      match_candidates:
+        | {
+            Args: { me: string; ride_date: string }
+            Returns: {
+              connected: boolean
+              departure_gap_minutes: number
+              detour_minutes: number
+              my_commute_id: string
+              other_commute_id: string
+              other_id: string
+              pax_brings_scooter: boolean
+              reaches_hov: boolean
+              role: string
+              scooter_fits: boolean
+              seats_offered: number
+              seats_open: number
+              shared_prefs: string[]
+              shared_weekdays: number[]
+            }[]
+          }
+        | {
+            Args: {
+              me: string
+              ride_date: string
+              skip_opt_in_if_connected: boolean
+            }
+            Returns: {
+              connected: boolean
+              departure_gap_minutes: number
+              detour_minutes: number
+              my_commute_id: string
+              other_commute_id: string
+              other_id: string
+              pax_brings_scooter: boolean
+              reaches_hov: boolean
+              role: string
+              scooter_fits: boolean
+              seats_offered: number
+              seats_open: number
+              shared_prefs: string[]
+              shared_weekdays: number[]
+            }[]
+          }
       match_days_label: { Args: { days: number[] }; Returns: string }
       match_prefilter: {
         Args: {
@@ -677,6 +825,29 @@ export type Database = {
           pax_origin_area: unknown
         }
         Returns: boolean
+      }
+      my_invitations: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          area_radius_m: number
+          brings_scooter: boolean
+          created_at: string
+          crew_id: string
+          direction: string
+          id: string
+          kind: string
+          my_role: string
+          other_id: string
+          pickup_area_label: string
+          pickup_area_lat: number
+          pickup_area_lng: number
+          pickup_time: string
+          reply_by: string
+          ride_date: string
+          ride_id: string
+          seats: number
+          state: string
+        }[]
       }
       profile_cards: {
         Args: { ids: string[] }
@@ -702,14 +873,38 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      reply_cutoff: { Args: { ride_date: string }; Returns: string }
+      reply_cutoff_minutes: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       resolve_connection: { Args: { a: string; b: string }; Returns: undefined }
       respond_to_crew: {
         Args: { accept: boolean; crew_id: string }
         Returns: undefined
       }
+      ride_cutoff: {
+        Args: { minutes: number; ride_date: string }
+        Returns: string
+      }
       road_minutes: { Args: { meters: number }; Returns: number }
+      send_invitation: {
+        Args: {
+          brings_scooter?: boolean
+          crew_id?: string
+          other_role: string
+          pickup_time?: string
+          recipient: string
+          ride_date: string
+        }
+        Returns: string
+      }
       set_crew_status: {
         Args: { crew_id: string; status: string }
+        Returns: undefined
+      }
+      withdraw_invitation: {
+        Args: { invitation_id: string }
         Returns: undefined
       }
       withdraw_member: { Args: { uid: string }; Returns: undefined }
