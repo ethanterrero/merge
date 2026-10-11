@@ -178,7 +178,7 @@ The structured columns in section 3 carry the same facts, so a later UI can rend
 
 - **Scale assumption:** at most 100 members and 200 commutes in the pilot. One call does at most about 100 pair evaluations, each with a few primary-key lookups and one detour estimate. That's well under 10 ms. No caching.
 - **New indexes:** GiST on `commutes (origin_area)` and `commutes (destination_area)`. 0008 created neither, and the card asks for them. They support the prefilter below, and later area queries such as M-29's picker.
-- **Area prefilter (when the caller drives).** A passenger can only be within the limit if both of their points lie inside the ellipse with foci at the driver's origin and destination and major axis `L + D`, where:
+- **Area prefilter.** It's applied to every pair, and the index can serve it when the caller drives. A passenger can only be within the limit if both of their points lie inside the ellipse with foci at the driver's origin and destination and major axis `L + D`, where:
   - `L` is the driver's direct distance;
   - `D = (detour_limit_minutes() + 0.5) × detour_speed_mph() × 1609.344 / 60 / detour_road_factor()`, about 2,732 m. That's the largest insertion cost that still rounds to 5 minutes, derived from M-33's constants, never hard-coded.
 
@@ -217,7 +217,7 @@ The test shim grants execute on every new function by default, so the revokes ar
 
 ## 10. Tests: `supabase/tests/matching_test.sql`
 
-Sixteen groups, in the same harness and style as `member_status_test.sql` and `detour_estimate_test.sql`: one transaction, `DO` blocks that `raise exception`, and identity switched with `tests.as_user`, `tests.as_anon` and `tests.as_admin`. Commutes are saved as their owner, so the area trigger's owner check passes. `vetted_at`, `suspended_at`, blocks set up as admin and rides are written as admin. Ride dates are relative to today in America/Los_Angeles, using the next date whose ISO weekday is in the fixture's schedules. Places reuse the detour test's Bay Area points: Park St and Webster St in Alameda, Montgomery and Fremont in the Financial District, Rockridge and Lake Merritt in Oakland.
+Sixteen groups, in the same harness and style as `member_status_test.sql` and `detour_estimate_test.sql`: one transaction, `DO` blocks that `raise exception`, and identity switched with `tests.as_user`, `tests.as_anon` and `tests.as_admin`. Commutes are saved as admin: the area trigger's owner check applies only when `auth.uid()` is set, and the trigger still draws the areas. `vetted_at`, `suspended_at`, blocks set up as admin and rides are written as admin. Ride dates are relative to today in America/Los_Angeles, using the next date whose ISO weekday is in the fixture's schedules. Places reuse the detour test's Bay Area points: Park St and Webster St in Alameda, Montgomery and Fremont in the Financial District, Rockridge and Lake Merritt in Oakland.
 
 **Fixture:** a passenger caller (Ada, Webster St → Montgomery, 7:45, flex 15, brings a scooter), a vetted driver who matches (Bea, Park St → Fremont, 7:40, vehicle fits a scooter, a 2-minute detour), and one driver per filter, each failing exactly one rule: opted out, suspended, blocked by Ada, blocked Ada, unvetted, no vehicle, wrong weekday, window just outside, detour too long (Lake Merritt → FiDi, 8 minutes), wrong direction (FiDi → Alameda), a `max_detour_minutes` below the estimate, seats full on the date, a trunk with no scooter room, and a driver with a confirmed ride as a passenger that date. Plus a "Both" member with two commutes, a driver caller with passenger candidates, and a connected pair.
 
@@ -231,11 +231,11 @@ Sixteen groups, in the same harness and style as `member_status_test.sql` and `d
    - Each row's area lat/lng equals the stored `origin_area` and `destination_area` of that commute, and its labels equal the stored labels and `area_label(center)`.
    - No returned number equals an exact `origin` or `destination` coordinate.
    - The JSON text of every row contains none of these: the raw `display_name` surname, the vehicle's make, model, color or plate, an email, or a `vetted_at` or `suspended_at` value.
-8. **Stability.** Two calls in a row return identical rows (compared as `jsonb`). Editing only the other person's `departure_time` keeps their areas.
+8. **Stability.** Two calls in a row return identical rows (compared as `jsonb`). (That areas survive a `departure_time` edit is already covered by `commute_privacy_test.sql` test 3.)
 9. **Date effects.** A confirmed ride lowers the driver's `seats_open` by one, and the driver disappears at 0. A passenger with a confirmed ride that date disappears. A driver with a confirmed ride as a passenger that date disappears as a driver.
 10. **Ranking.** Fixture drivers that differ in one key at a time come back in section 5's order, and `rank` is 1..n with no gaps.
 11. **Reasons.** Exact `{code, label, ok}` arrays for Bea, for a driver 10 minutes later (`time` with ok false), and for the connected pair (`connected`). There's no reason whose code or label mentions vetting, HOV or carpool lanes.
-12. **Connections.** `connected` is true only with a `connections` row. A pair where one person answered "no" and a pair where nobody answered return identical rows.
+12. **Connections.** `connected` is true only with a `connections` row, and it's read from nothing else, so a "no" and an unanswered prompt (both: no row) can't differ. The test asserts the flag and its reason for a connected pair, and its absence elsewhere.
 13. **No exact minutes leave the function (Q8).** `find_matches`'s output columns are exactly the list in section 3, none is named like `detour_minutes`, `detour_band` only takes `under_3` and `3_to_5`, and every `detour` reason label is one of the two band labels.
 14. **The prefilter is a superset.** As admin, over a grid of passenger points around several driver routes, every pair where `estimate_detour_minutes` passes rule 13 also passes the prefilter predicate.
 15. **Deletion.** Deleting Bea's `auth.users` row removes her from Ada's results, and the call still succeeds.
