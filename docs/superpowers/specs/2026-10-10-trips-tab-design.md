@@ -463,6 +463,10 @@ follow, neither of which alters an approved answer:
    with Booked's prototype simulator moves to Past. (`withSessionBooking` in the test
    plan becomes `bookedRides`.)
 
+Past rows say "You drove" / "You rode" for a completed ride and "Driving" / "Riding"
+for a cancelled one, so a cancelled row never claims the ride happened (found in the
+web walkthrough).
+
 Two smaller build notes: `Button` has no accessibility-label prop, so a row button's
 context ("to Marcus L., Wed, Oct 14") goes in its `accessibilityHint`; and
 `Segmented` takes no per-option accessibility label, so the Requests segment is read

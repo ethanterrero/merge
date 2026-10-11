@@ -379,7 +379,9 @@ export function rideStatusCopy(ride: TripRide): string {
   return `Pickup ${ride.pickupTime}`;
 }
 
+/** 'You drove' / 'You rode' for a completed ride; 'Driving' / 'Riding' when it was cancelled. */
 export function pastRoleLine(ride: TripRide): string {
+  if (ride.status === 'cancelled') return ride.myRole === 'driver' ? 'Driving' : 'Riding';
   return ride.myRole === 'driver' ? 'You drove' : 'You rode';
 }
 

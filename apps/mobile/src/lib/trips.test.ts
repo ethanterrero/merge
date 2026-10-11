@@ -32,6 +32,7 @@ import {
   needsReplyCount,
   nextDrivingDay,
   onSides,
+  pastRoleLine,
   replyByLabel,
   rideLabel,
   rideSide,
@@ -385,6 +386,14 @@ test('bookedRides turns this session bookings into passenger rides on the ride d
     },
   ]);
   assert.deepEqual(bookedRides([], '2026-10-12'), []);
+});
+
+test('past role line: completed rides say what happened, cancelled ones do not claim a ride', () => {
+  assert.equal(pastRoleLine(ride({ status: 'completed', myRole: 'driver' })), 'You drove');
+  assert.equal(pastRoleLine(ride({ status: 'completed' })), 'You rode');
+  assert.equal(pastRoleLine(ride({ status: 'cancelled', myRole: 'driver' })), 'Driving');
+  assert.equal(pastRoleLine(ride({ status: 'cancelled' })), 'Riding');
+  assert.equal(rideLabel(ride({ status: 'cancelled', rideDate: '2026-10-06' }), 'past'), 'Riding with Kai O., Tue, Oct 6, First Ride. Ride cancelled.');
 });
 
 test('a cancelled ride never names a cause (D-07)', () => {
