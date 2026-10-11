@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-10
 **Task:** M-26
-**Status:** Draft, waiting for the owner's approval. Eight questions are open in [Owner questions](#owner-questions); each has a recommended answer, and the design below assumes it.
+**Status:** Approved by the owner on 2026-10-10. Q1–Q7 were approved as recommended. Q8 was changed: the detour leaves the function only as a band (`under_3` or `3_to_5`), never as whole minutes. See [Owner questions](#owner-questions).
 **Scope:** `supabase/migrations/0015_matching.sql`, `supabase/tests/matching_test.sql`, `apps/mobile/src/lib/database.types.ts` (CI artifact only)
 **Builds on:** `0001_initial.sql` and `0004_vehicles_commutes_rls.sql` (owner-only `commutes` and `vehicles`), `0003_first_ride.sql` (`rides`, `connections`), `0005_blocks_reports.sql` (`is_blocked`), `0008_commute_privacy.sql` and `0009_east_bay_neighborhoods.sql` (stored areas and labels, seats, cargo, ride preferences), `0010_account_deletion.sql`, `0011_member_status.sql` (`is_active`, `is_vetted`, `public_name`), `0012_detour_estimate.sql` (`estimate_detour_minutes` and its constants)
 **Consumers:** M-27 (invitations re-check eligibility), M-42 (Discover and Match detail), M-49 (adds trust stats to the result), M-41 (may add a cohort filter), M-52 (security audit)
@@ -23,7 +23,7 @@ Discover reads the static `MATCHES` array. `profiles`, `commutes` and `vehicles`
 | D-14 (Decided) | Only people with `discovery_opt_in = true` are returned to others. The caller doesn't need to be opted in to browse. |
 | D-04 (Decided) | A passenger who brings a scooter matches only a driver whose vehicle fits one. |
 | D-16, D-02, D-22 | Matching doesn't touch requests. M-27 re-checks eligibility through the same helper (section 4). |
-| Commute privacy spec #1, #4, #5, #7, #10, #12 | Exact points are owner-only. Preferences rank and never filter. Seats use `least(seats_offered, passenger_seats)`. Discovery never returns make, model, color or plate. Detour returns whole minutes only. Probing by repeated pin edits is an accepted pilot risk. |
+| Commute privacy spec #1, #4, #5, #7, #10, #12 | Exact points are owner-only. Preferences rank and never filter. Seats use `least(seats_offered, passenger_seats)`. Discovery never returns make, model, color or plate. M-33 returns whole minutes, and since Q8 matching narrows that further to a band. Probing by repeated pin edits is an accepted pilot risk. |
 | Member status spec | Every place two people meet filters with `public.is_active(other)` and `not public.is_blocked(me, other)` inside its own `security definer` code. Names go out only as `public.public_name(display_name)`. |
 | Backlog privacy invariants | Before confirmation, others see only first name and last initial, role, approximate (~0.5 mi) areas, ride preferences and verification flags. Blocked pairs and suspended members never appear to each other. |
 
@@ -33,7 +33,7 @@ Discover reads the static `MATCHES` array. `profiles`, `commutes` and `vehicles`
 2. **A precomputed `matches` table, kept current by triggers on commutes, profiles, blocks and rides.** It's faster at scale, but it stores cross-user derived data, multiplies the places blocks and suspensions must be honored, and goes stale between trigger runs. Not worth it at pilot size.
 3. **An Edge Function using the service role.** It would move exact points out of Postgres into a function runtime and its logs, add a deploy (O-09) and a secret, and need its own block and suspension logic. Rejected.
 
-A variant of approach 1 was also rejected: computing detour from the other person's **area centers** instead of exact points. That would make the result depend only on public data. But an area center sits up to 402 m from the pin, and four such offsets move the estimate by up to about 3 minutes, which is too coarse for a 5-minute limit. The result would also be asymmetric (A sees B but B doesn't see A). Commute privacy decision 12 already accepted exact-point detour with whole-minute output.
+A variant of approach 1 was also rejected: computing detour from the other person's **area centers** instead of exact points. That would make the result depend only on public data. But an area center sits up to 402 m from the pin, and four such offsets move the estimate by up to about 3 minutes, which is too coarse for a 5-minute limit. The result would also be asymmetric (A sees B but B doesn't see A). Commute privacy decision 12 already accepted exact-point detour with whole-minute output. Q8 narrows what leaves matching to a two-value band.
 
 ## 1. The RPC
 
@@ -97,7 +97,7 @@ Notes:
 
 ## 3. What each row returns
 
-No column has type `geography` or `geometry`, and none is computed from an exact point other than `detour_minutes`, which is a whole number.
+No column has type `geography` or `geometry`. The only column computed from exact points is `detour_band`, which has two values. Exact detour minutes are used inside the function for filtering and ranking, and never appear in any returned column (Q8).
 
 | Column | Type | Value |
 | --- | --- | --- |
@@ -114,7 +114,7 @@ No column has type `geography` or `geometry`, and none is computed from an exact
 | `departure_time` | `time` | The other person's departure time ([Q4](#owner-questions)) |
 | `window_start`, `window_end` | `time` | The other person's departure time ± their flex, clamped to the day ([Q4](#owner-questions)) |
 | `departure_gap_minutes` | `integer` | Their departure minus mine, signed. The card shows "Departs, 5 min early". |
-| `detour_minutes` | `integer` | From rule 13: the driver's extra minutes. When the caller is the driver, it's the caller's own detour. |
+| `detour_band` | `text` | From rule 13's whole minutes `d`: `under_3` when `d` ≤ 2 (under 3 minutes), `3_to_5` when `d` is 3–5. When the caller is the driver, it's the caller's own detour. A driver whose `max_detour_minutes` is below 5 needs no special case: rule 13 has already dropped every pair above their limit, so the band only says which range the surviving estimate falls in. A limit of 0–2 yields only `under_3`; 3 or 4 yields both bands, and `3_to_5` then means "3 up to their limit". The band never shows the limit itself. |
 | `seats_offered` | `integer` | Driver rows: `least(seats_offered, passenger_seats)`. Passenger rows: null. Used for "N of M seats open". |
 | `seats_open` | `integer` | Driver rows: rule 10's value. Passenger rows: null. |
 | `brings_scooter` | `boolean` | Passenger rows: whether they bring one. Driver rows: null. |
@@ -123,7 +123,7 @@ No column has type `geography` or `geometry`, and none is computed from an exact
 | `reasons` | `jsonb` | An array of `{code, label, ok}` objects (section 6) |
 | `rank` | `integer` | 1..n in the order of section 5, so the client never re-sorts |
 
-**Never returned:** exact `origin` or `destination` (or anything computed from them except whole detour minutes), `display_name`, email, `vetted_at` and `suspended_at` timestamps, `profiles.role`, commute ids, vehicle id, make, model, model year, color, plate, `max_detour_minutes`, `departure_flex_minutes` as a separate field, the other person's full weekday list, and any distance.
+**Never returned:** exact `origin` or `destination`, anything computed from them except the two-value detour band, exact detour minutes, `display_name`, email, `vetted_at` and `suspended_at` timestamps, `profiles.role`, commute ids, vehicle id, make, model, model year, color, plate, `max_detour_minutes`, `departure_flex_minutes` as a separate field, the other person's full weekday list, and any distance.
 
 The result is capped at **50 rows** after ranking. That's more than one screen of cards, and it bounds the work a single call can ask for.
 
@@ -133,7 +133,9 @@ Two functions, both `set search_path = ''`, with every name schema-qualified (`e
 
 | Function | Kind | Who can execute | Purpose |
 | --- | --- | --- | --- |
-| `public.match_candidates(me uuid, ride_date date)` | `stable`, **invoker**, returns a table | Nobody (revoked from `public`, `anon`, `authenticated`) | Section 2's rules for any member. Returns raw pair fields: `my_commute_id`, `other_commute_id`, `other_id`, `role`, `detour_minutes`, `departure_gap_minutes`, `shared_weekdays`, `seats_offered`, `seats_open`, `brings_scooter`, `scooter_fits`, `shared_prefs`, `connected`, `reaches_hov`. |
+| `public.match_candidates(me uuid, ride_date date)` | `stable`, **invoker**, returns a table | Nobody (revoked from `public`, `anon`, `authenticated`) | Section 2's rules for any member. Returns raw pair fields: `my_commute_id`, `other_commute_id`, `other_id`, `role`, `detour_minutes` (exact whole minutes, internal only), `departure_gap_minutes`, `shared_weekdays`, `seats_offered`, `seats_open`, `pax_brings_scooter`, `scooter_fits`, `shared_prefs`, `connected`, `reaches_hov`. Seat and scooter fields are filled for every row; `find_matches` nulls the ones that don't apply to the other person's role. |
+| `public.match_prefilter(driver_origin, driver_dest, pax_origin_area, pax_dest_area)` | `immutable` SQL, returns boolean | Nobody | Section 7's area prefilter, factored out so a test can check it on its own |
+| `public.match_days_label(days integer[])` | `immutable` SQL, returns text | Nobody | Section 6's `days` label |
 | `public.find_matches(ride_date date, role_filter text)` | `stable`, **security definer** | `authenticated` only (revoked from `public`, `anon`) | Caller checks (section 1), `match_candidates(auth.uid(), ride_date)`, the role filter, presentation columns (section 3), reasons, ranking and the cap |
 
 Why the split:
@@ -146,7 +148,7 @@ Why the split:
 
 Sort keys, in order:
 
-1. `detour_minutes` ascending
+1. Exact `detour_minutes` ascending. This is computed internally and never returned (Q8). The rank order shows which of two candidates is the shorter detour, but not by how much.
 2. `abs(departure_gap_minutes)` ascending
 3. `connected` first ([Q3](#owner-questions): recommended here, as a tie-breaker, not pinned to the top)
 4. Number of shared ride preferences, descending
@@ -160,10 +162,10 @@ Built in SQL from the pair's fields, in this order. Labels follow the prototype'
 
 | Code | When | Label | ok |
 | --- | --- | --- | --- |
-| `detour` | Always | "About N min detour"; "Less than 1 min detour" when N = 0 | true |
+| `detour` | Always | "Under 3 min detour" (`under_3`) or "3–5 min detour" (`3_to_5`) | true |
 | `time` | \|gap\| ≤ 5 | "Same departure window" | true |
 | `time` | \|gap\| > 5 | "Leaves N min earlier" or "Leaves N min later" | **false** (still a match, just a looser fit) |
-| `days` | Always | "{days} overlap": "Every weekday" for Mon–Fri, a range for 3 or more consecutive days ("Mon–Thu"), otherwise a list ("Mon, Wed") | true |
+| `days` | Always | "Every weekday" for Mon–Fri. Otherwise "{days} overlap": a range for 3 or more consecutive days, otherwise a list, with pieces joined by commas ("Mon–Thu overlap", "Mon, Wed overlap", "Mon–Wed, Fri overlap") | true |
 | `cargo` | The caller is the passenger and brings a scooter | "Your scooter fits" | true |
 | `cargo` | The caller is the driver and the passenger brings a scooter | "Brings a foldable scooter" | true |
 | `pref_quiet` | Both list `quiet` | "Both prefer quiet rides" | true |
@@ -193,12 +195,12 @@ The structured columns in section 3 carry the same facts, so a later UI can rend
 
 ## 8. Privacy and safety
 
-- **Exact points stay inside the function.** Only areas, labels and whole detour minutes leave it. A test asserts that no returned value equals an exact coordinate, and that the returned centers equal the stored areas.
+- **Exact points stay inside the function.** Only areas, labels and the two-value detour band leave it. A test asserts that no returned value equals an exact coordinate, and that the returned centers equal the stored areas.
 - **Stable areas.** The areas are the stored columns (commute privacy section 2), so repeated calls return identical circles. A test asserts this.
 - **Blocks and suspension both ways.** If A blocked B, neither sees the other in any role. A suspended member appears to nobody, and their own calls return nothing. Both checks run inside the definer code, and `is_blocked`, `is_active` and `is_vetted` stay non-executable for clients.
 - **No error carries data.** Only the fixed errors in section 1 are raised. Nothing that touches an exact point can raise with a value in its message.
 - **Accepted residual risks**, all inside decisions already taken:
-  - *Probing by pin edits* (commute privacy decision 12). A member can move their own pins and watch another person's whole detour minutes, or whether they're in or out of the results, to narrow down that person's exact point. Invite-only and at most 100 testers; revisit before a wider launch. Options then: an edit cool-down on commute points, or banded detours ("under 3 min" / "3–5 min").
+  - *Probing by pin edits* (commute privacy decision 12, narrowed by Q8). A member can move their own pins and watch another person's detour band, their rank, or whether they're in or out of the results, to narrow down that person's exact point. Banding cuts each observation from about 6 values (0–5 minutes) to 2, so it takes many more pin edits to learn the same amount. Invite-only and at most 100 testers. **Revisit before a wider launch:** an edit cool-down on commute points, coarser or noisier bands, or a per-caller call budget.
   - *Date inference* ([Q2](#owner-questions)). `seats_open` shows how many seats a driver has filled that date, and a passenger who disappears for one date probably has a ride that day.
   - *Schedule fields* ([Q4](#owner-questions)). The other person's departure time and window, and the days you share, are visible before confirmation.
 - **No new tables or foreign keys**, so there's nothing new for the deletion policy. `supabase/tests/account_deletion_matching_test.sql` isn't needed. `matching_test.sql` still checks that a deleted member disappears from results.
@@ -215,13 +217,13 @@ The test shim grants execute on every new function by default, so the revokes ar
 
 ## 10. Tests: `supabase/tests/matching_test.sql`
 
-Same harness and style as `member_status_test.sql` and `detour_estimate_test.sql`: one transaction, `DO` blocks that `raise exception`, and identity switched with `tests.as_user`, `tests.as_anon` and `tests.as_admin`. Commutes are saved as their owner, so the area trigger's owner check passes. `vetted_at`, `suspended_at`, blocks set up as admin and rides are written as admin. Ride dates are relative to today in America/Los_Angeles, using the next date whose ISO weekday is in the fixture's schedules. Places reuse the detour test's Bay Area points: Park St and Webster St in Alameda, Montgomery and Fremont in the Financial District, Rockridge and Lake Merritt in Oakland.
+Sixteen groups, in the same harness and style as `member_status_test.sql` and `detour_estimate_test.sql`: one transaction, `DO` blocks that `raise exception`, and identity switched with `tests.as_user`, `tests.as_anon` and `tests.as_admin`. Commutes are saved as their owner, so the area trigger's owner check passes. `vetted_at`, `suspended_at`, blocks set up as admin and rides are written as admin. Ride dates are relative to today in America/Los_Angeles, using the next date whose ISO weekday is in the fixture's schedules. Places reuse the detour test's Bay Area points: Park St and Webster St in Alameda, Montgomery and Fremont in the Financial District, Rockridge and Lake Merritt in Oakland.
 
-**Fixture:** a passenger caller (Ada, Park St → Montgomery, 7:45, flex 15, brings a scooter), a vetted driver who matches (Bea, Webster → Fremont, 7:40, vehicle fits a scooter), and one driver per filter, each failing exactly one rule: opted out, suspended, blocked by Ada, blocked Ada, unvetted, no vehicle, wrong weekday, window just outside, detour too long (Rockridge → FiDi), wrong direction (FiDi → Alameda), a `max_detour_minutes` below the estimate, seats full on the date, a trunk with no scooter room, and a driver with a confirmed ride as a passenger that date. Plus a "Both" member with two commutes, a driver caller with passenger candidates, and a connected pair.
+**Fixture:** a passenger caller (Ada, Webster St → Montgomery, 7:45, flex 15, brings a scooter), a vetted driver who matches (Bea, Park St → Fremont, 7:40, vehicle fits a scooter, a 2-minute detour), and one driver per filter, each failing exactly one rule: opted out, suspended, blocked by Ada, blocked Ada, unvetted, no vehicle, wrong weekday, window just outside, detour too long (Lake Merritt → FiDi, 8 minutes), wrong direction (FiDi → Alameda), a `max_detour_minutes` below the estimate, seats full on the date, a trunk with no scooter room, and a driver with a confirmed ride as a passenger that date. Plus a "Both" member with two commutes, a driver caller with passenger candidates, and a connected pair.
 
 1. **Privileges and shape.** `anon` can't execute `find_matches` (42501). `authenticated` can. Neither can execute `match_candidates`. `find_matches` is `security definer` with `search_path=""`, and `match_candidates` is invoker. No output column of either has type `geography` or `geometry`.
 2. **Caller checks.** No `auth.uid()` raises 42501. A null or past `ride_date` raises 22023. A bad `role_filter` raises 22023. These return empty: a Saturday, a caller with no profile, a caller with no commute on that weekday, a suspended caller. A caller who isn't opted in still gets results.
-3. **The match.** Ada sees Bea once, as a driver. `detour_minutes` equals `estimate_detour_minutes` on the same exact points, computed as admin. Seats, `scooter_fits`, `shared_weekdays`, `departure_gap_minutes`, the window and `name = 'Bea B.'` are as expected.
+3. **The match.** Ada sees Bea once, as a driver, with `detour_band = 'under_3'`. A driver from near Laney College, Oakland, gets `3_to_5` (4 minutes). A driver whose `max_detour_minutes` is 2 on a 2-minute pair is included, and one whose limit is 3 on the 4-minute pair is excluded. Seats, `scooter_fits`, `shared_weekdays`, `departure_gap_minutes`, the window and `name = 'Bea B.'` are as expected.
 4. **Each hard filter.** Every one-rule-failing driver is absent, and Bea is present in the same call. The window check also includes the boundary: a gap equal to the sum of the flexes is included, and one minute more is excluded.
 5. **Both directions.** Blocked pairs (either blocker) are invisible to each other in both roles. A suspended member is invisible as a driver and as a passenger. The driver caller sees Ada and the other passengers through the same rules.
 6. **Role filter.** `'driver'` returns only drivers. `'passenger'` returns only passengers. `'all'` and null return both. The "Both" member appears once per role when both rows match.
@@ -234,14 +236,15 @@ Same harness and style as `member_status_test.sql` and `detour_estimate_test.sql
 10. **Ranking.** Fixture drivers that differ in one key at a time come back in section 5's order, and `rank` is 1..n with no gaps.
 11. **Reasons.** Exact `{code, label, ok}` arrays for Bea, for a driver 10 minutes later (`time` with ok false), and for the connected pair (`connected`). There's no reason whose code or label mentions vetting, HOV or carpool lanes.
 12. **Connections.** `connected` is true only with a `connections` row. A pair where one person answered "no" and a pair where nobody answered return identical rows.
-13. **The prefilter is a superset.** As admin, over a grid of passenger points around several driver routes, every pair where `estimate_detour_minutes` passes rule 13 also passes the prefilter predicate.
-14. **Deletion.** Deleting Bea's `auth.users` row removes her from Ada's results, and the call still succeeds.
-15. **Other suites.** Every earlier suite still passes. Nothing here redefines an existing function.
+13. **No exact minutes leave the function (Q8).** `find_matches`'s output columns are exactly the list in section 3, none is named like `detour_minutes`, `detour_band` only takes `under_3` and `3_to_5`, and every `detour` reason label is one of the two band labels.
+14. **The prefilter is a superset.** As admin, over a grid of passenger points around several driver routes, every pair where `estimate_detour_minutes` passes rule 13 also passes the prefilter predicate.
+15. **Deletion.** Deleting Bea's `auth.users` row removes her from Ada's results, and the call still succeeds.
+16. **Other suites.** Every earlier suite still passes. Nothing here redefines an existing function.
 
 ## 11. For the tasks that consume this
 
 - **M-27:** re-check with `public.match_candidates(sender, ride_date)` inside `send_invitation`. It returns no commute ids, so the invitation picks its own commute rows server-side. Copy the definition before adding a parameter.
-- **M-42:** the row key is `(other_id, role)`. Draw circles from `*_area_lat`, `*_area_lng` and `area_radius_m`. Show `reasons` as given. The vehicle card is "{seats_open} of {seats_offered} seats open · cargo fits" from `scooter_fits` (D-04). There's no make, model or color anywhere. The rows come back in `rank` order.
+- **M-42:** the row key is `(other_id, role)`. Draw circles from `*_area_lat`, `*_area_lng` and `area_radius_m`. Show `reasons` as given; the detour shows as its band ("Under 3 min detour" / "3–5 min detour"), never as minutes. The vehicle card is "{seats_open} of {seats_offered} seats open · cargo fits" from `scooter_fits` (D-04). There's no make, model or color anywhere. The rows come back in `rank` order.
 - **M-49:** add stats columns to `find_matches`'s output (copy the latest definition first). `vetted` is already there.
 
 ## Out of scope
@@ -256,7 +259,7 @@ Same harness and style as `member_status_test.sql` and `detour_estimate_test.sql
 
 ## Owner questions
 
-Each has a recommendation, and the design above assumes it. Q1 and Q2 close suggestions that the D-06 and D-02 rows left open. Please mark those rows when you decide.
+Owner review, 2026-10-10: Q1–Q7 approved as recommended; Q8 changed to banded detours. Q1 and Q2 close suggestions that the D-06 and D-02 rows left open, and the coordinator records them on those rows.
 
 | # | Question | Recommendation | Alternative |
 | --- | --- | --- | --- |
@@ -267,4 +270,4 @@ Each has a recommendation, and the design above assumes it. Q1 and Q2 close sugg
 | Q5 | **Window rule.** | **The windows overlap:** \|gap\| ≤ my flex + their flex, so 30 minutes apart at the default ±15. A time exists that's inside both people's flex. | Stricter: \|gap\| ≤ min(flexes), at most 15 minutes apart by default. Fewer matches in a 100-person pool. |
 | Q6 | **Reason copy lives in SQL.** | **Yes:** `{code, label, ok}` with the labels in section 6, reusing the prototype's wording. The card asks for server reasons, and the codes let the UI replace labels later. | Return only codes and structured fields, and have M-42 write the copy. |
 | Q7 | **Carpool-occupancy tie-breaker.** | **Yes, internal only:** favor a pairing that brings the car to 3 or more people, as a late tie-breaker. It's never displayed, so nothing claims eligibility or time savings. | Drop it. The ranking loses a key that mvp.md asks for, but nothing visible changes. |
-| Q8 | **Probing by pin edits** (commute privacy decision 12, accepted at M-18). `find_matches` is now the real, unthrottled channel. | **Keep accepting it for the pilot**, with no call rate limit, and revisit before any wider launch: an edit cool-down on commute points, or banded detours. | Add a per-caller call budget now (for example 60 calls an hour) in a small table. That adds a table and a write on a read path. |
+| Q8 | **Probing by pin edits** (commute privacy decision 12, accepted at M-18). `find_matches` is now the real, unthrottled channel. | Recommended: keep accepting it for the pilot with whole minutes. **Owner's answer (2026-10-10): keep accepting it for the pilot, but return the detour only as a band** (`under_3`, `3_to_5`). Exact minutes may drive filtering and ranking inside the function, and never appear in a returned column. No call rate limit. Revisit before a wider launch (section 8). | Add a per-caller call budget now (for example 60 calls an hour) in a small table. That adds a table and a write on a read path. |
