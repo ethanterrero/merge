@@ -604,8 +604,8 @@ begin
     raise exception 'A vehicle detail, surname or email reached the result';
   end if;
   if exists (
-    select 1 from jsonb_array_elements(res) e, jsonb_object_keys(e) key
-    where key in ('origin', 'destination', 'display_name', 'email', 'vetted_at', 'suspended_at',
+    select 1 from jsonb_array_elements(res) as x(item), jsonb_object_keys(x.item) as k(key)
+    where k.key in ('origin', 'destination', 'display_name', 'email', 'vetted_at', 'suspended_at',
                   'make', 'model', 'color', 'plate', 'vehicle_id', 'detour_minutes',
                   'max_detour_minutes', 'departure_flex_minutes', 'weekdays')
   ) then
