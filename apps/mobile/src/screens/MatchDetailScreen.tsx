@@ -9,7 +9,7 @@ import { IconButton, Screen, TopBar } from '../components/Screen';
 import { Button } from '../components/Button';
 import { Icon } from '../components/Icon';
 import { Avatar, Card, InfoNote, Stat, VerifiedRow } from '../components/primitives';
-import { BlockReportMenu, UnblockSheet } from '../components/BlockReportMenu';
+import { BlockReportMenu, UnblockSheet, useCanBlockOrReport } from '../components/BlockReportMenu';
 import { useBlockedIds } from '../lib/data/blocks';
 
 export function MatchDetailScreen({ matchId }: { matchId: string }) {
@@ -22,6 +22,8 @@ export function MatchDetailScreen({ matchId }: { matchId: string }) {
   const insets = useSafeAreaInsets();
   const blocked = useBlockedIds();
   const [menuOpen, setMenuOpen] = useState(false);
+  // Hidden in connected mode until M-42 gives Match detail real profile ids.
+  const canBlockOrReport = useCanBlockOrReport(m.id);
 
   if (blocked.isBlocked(m.id)) return <BlockedMatch personId={m.id} />;
 
@@ -33,7 +35,9 @@ export function MatchDetailScreen({ matchId }: { matchId: string }) {
           <View style={{ paddingTop: insets.top }}>
             <View style={styles.headerBar}>
               <IconButton icon="chevron-back" label="Back to discover" color={colors.onDark} onPress={nav.back} />
-              <IconButton icon="ellipsis-vertical" label="Block or report" color={colors.onDark} onPress={() => setMenuOpen(true)} />
+              {canBlockOrReport ? (
+                <IconButton icon="ellipsis-vertical" label="Block or report" color={colors.onDark} onPress={() => setMenuOpen(true)} />
+              ) : null}
             </View>
             <View style={styles.identity}>
               <View style={styles.avatarRing}>
@@ -103,7 +107,7 @@ export function MatchDetailScreen({ matchId }: { matchId: string }) {
         </View>
       </Card>
 
-      <BlockReportMenu visible={menuOpen} onClose={() => setMenuOpen(false)} personId={m.id} firstName={first} />
+      <BlockReportMenu visible={menuOpen && canBlockOrReport} onClose={() => setMenuOpen(false)} personId={m.id} firstName={first} />
     </Screen>
   );
 }

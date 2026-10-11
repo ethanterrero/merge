@@ -3,9 +3,21 @@ import { Text, View } from 'react-native';
 import { colors, space, type } from '../theme';
 import { useNav } from '../navigation';
 import { useAuth } from '../state/auth';
-import { useBlockActions } from '../lib/data/blocks';
+import { isPersonId, useBlockActions } from '../lib/data/blocks';
 import { ActionSheet } from './ActionSheet';
 import { Button } from './Button';
+
+/**
+ * Whether to offer Block or report for this id. Connected mode needs a real profile id
+ * (a uuid): the screens not yet wired to Supabase still pass prototype ids ('priya',
+ * 'req-jordan'), which the database would reject with a generic error. Prototype mode
+ * accepts any id. Once M-42 (Match detail) and M-36 (driver inbox) pass real ids, this
+ * is always true in connected mode.
+ */
+export function useCanBlockOrReport(personId: string | null | undefined): boolean {
+  const { status } = useAuth();
+  return status === 'prototype' ? Boolean(personId) : isPersonId(personId);
+}
 
 /**
  * The "Block or report" menu for another member. Reusable: Match detail and a driver's
