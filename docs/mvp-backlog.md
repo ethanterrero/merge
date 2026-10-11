@@ -32,11 +32,11 @@ Only the owner can do these. Agents stop and ask when they reach one. Decisions 
 | ID | Decision or action | Status | Blocks | Suggested default |
 | --- | --- | --- | --- | --- |
 | D-01 | **Ride-completion rule.** How a confirmed ride becomes `completed` or `cancelled`, whether a no-show counts, which participant actions exist, and when the post-ride prompt appears. It has to work without live tracking. | **Decided (2026-10-08)** (ride mode) | M-37, and through it M-44, M-45, M-47, M-49, M-55a and the rest of the critical path | Ride mode with the "while using" location permission. At pickup the driver taps "Picked up {first}", which records `picked_up_at` and starts foreground location updates. They keep running in the background: on iOS through the location background mode (blue indicator), on Android through a location foreground service with a "Ride in progress" notification. No "Always" permission, no `ACCESS_BACKGROUND_LOCATION`, no geofencing. The check against the destination area runs on the device, and the server only ever receives `arrived` and a timestamp (`arrived_at`), never coordinates. On arrival the ride becomes `completed`, tracking stops, and the post-ride prompt shows at once. Fallback (location denied, nobody tapped, phone died): the ride auto-completes at `pickup_time` + `estimate_trip_minutes` (M-33) + 30 min, or at `pickup_time` + 2 h when there's no estimate. Status is computed when read (no cron). Either rider can mark "didn't happen" within 24 h, which cancels the ride and discards its feedback. `picked_up_at` and `arrived_at` give D-03 a data source for on-time stats. Before M-37 relies on this, verify on a real iOS and Android device (a dev build from M-14) that background updates run with "while using" only; Expo's docs don't say so explicitly. Cards changed: M-14 and M-22 (expo-location plugin, iOS background mode, Android foreground-service permissions), M-29 (shares the permission; joins the app-config zone after M-31), M-37 (the two columns, the device check), M-43 and M-47 ("Picked up" button, ride-in-progress state), M-11 and O-10 (location-use copy, Play foreground-service declaration). Copy keeps "live tracking" out of scope, reworded: others never see your location, during a ride or otherwise (BookedScreen and WelcomeScreen in M-13, `docs/ui.md` in M-09). |
-| D-02 | **Request timing and limits.** The driver's reply cutoff, when pending requests expire, the cancellation cutoff, what a late cancel or "Can't drive" means, the invitation rate limits, and how many confirmed rides a person can hold per date. | **Decided (2026-10-08)** | M-27, M-32, M-35, M-37, M-47, M-54a | Drivers reply by 8 PM the evening before, and pending requests expire then. Riders cancel by 9 PM the evening before. All cutoffs use America/Los_Angeles. After 8 PM no one can request a ride for the next day, and the UI states the earliest date that can be requested (M-08's `earliestRequestDate`, `isPastCutoff`, `REPLY_CUTOFF_MINUTES`, `CANCEL_CUTOFF_MINUTES`). Cancellations after the cutoff are allowed and recorded privately, with no penalty in the pilot. Limits: 10 requests sent per day, 5 pending at once, 1 pending per recipient. Not part of the decision, still a suggestion for M-27/M-32 to confirm with the owner: at most one confirmed ride per person per date, and confirming withdraws that person's other pending invitations for the date, which the other people see as "This ride isn't available anymore". |
+| D-02 | **Request timing and limits.** The driver's reply cutoff, when pending requests expire, the cancellation cutoff, what a late cancel or "Can't drive" means, the invitation rate limits, and how many confirmed rides a person can hold per date. | **Decided (2026-10-08)** | M-27, M-32, M-35, M-37, M-47, M-54a | Drivers reply by 8 PM the evening before, and pending requests expire then. Riders cancel by 9 PM the evening before. All cutoffs use America/Los_Angeles. After 8 PM no one can request a ride for the next day, and the UI states the earliest date that can be requested (M-08's `earliestRequestDate`, `isPastCutoff`, `REPLY_CUTOFF_MINUTES`, `CANCEL_CUTOFF_MINUTES`). Cancellations after the cutoff are allowed and recorded privately, with no penalty in the pilot. Limits: 10 requests sent per day, 5 pending at once, 1 pending per recipient. Not part of the decision, still a suggestion for M-27/M-32 to confirm with the owner: at most one confirmed ride per person per date, and confirming withdraws that person's other pending invitations for the date, which the other people see as "This ride isn't available anymore". Update 2026-10-10 (M-26 Q2): matching hides the other person on a date they are already booked or full; `seats_open` is net of confirmed rides. |
 | D-03 | **Trust metrics** on Match detail and driver request: which stats show, how each is computed, and the minimum sample. | **Decided (2026-10-08)** | M-49, M-54a | Show completed rides given and taken (rides marked "didn't happen" don't count) and "Member since" (month). Drop the on-time rate, which has no data source without tracking. Show "New to Merge" at zero rides. Revisit when M-49 starts: D-01 now records `picked_up_at` and `arrived_at`, so the on-time rate has a data source. Owner question: M-11's Q6 (which prototype trust fields ship before confirmation). **Decided:** rides given and taken plus "Member since" and "New to Merge". No on-time rate in the pilot: most rides complete by the fallback timer without arrival data, so the rate would be sparse and unfair. |
 | D-04 | **Cargo limits.** What "medium foldable scooter" means (folded size and weight), what drivers declare about trunk space, and how approval works. | **Decided (2026-10-08)** | M-18, M-21, M-35, M-43, M-54a | One scooter per passenger, folded within 120 × 50 × 60 cm and 20 kg (44 lb). The driver declares whether the trunk fits one, and approves each request at confirmation. M-18 stores it as `commutes.brings_scooter` (passenger) and `vehicles.accepts_foldable_scooters` (driver). |
 | D-05 | **Women-only preference.** Whether it ships in the pilot. If it does: who may set it, how it's attested and stored, and the legal review it needs. | **Decided (2026-10-08)** | M-18, M-26, M-34, M-54a | Hidden for the pilot. No gender data is stored. Revisit after D-12. (Closes M-11's Q7.) |
-| D-06 | **Verification and vetting.** What the pilot checks, for which role, the badge wording, what's displayed, and **whether vetting gates anything**: may an unvetted person appear in discovery as a driver, or confirm a ride as one? M-02 provides input. | **Decided (2026-10-08)** | M-26, M-32, M-49, M-54a, M-56 | No ID vendor. The owner vets each driver (license and insurance, seen in person or on video) and sets the vetted flag (`profiles.vetted_at`, M-56). Only the server (service role) can write it; clients never can. Badge: "License & insurance checked by Merge", approved over "Vetted by the Merge pilot team", which reads like a safety guarantee. Hide the ID, work email and vehicle rows. Passengers are covered because the owner adds every tester by hand (D-11). Not part of the decision, still a suggestion for M-26 and M-32 to confirm with the owner: an unvetted person can't appear as a driver in discovery or confirm a ride as the driver. Owner question for D-12/M-40: M-11's Q5 (keep no license or insurance copies). **M-02 is reduced to this note:** no separate research is needed, and M-02 is closed. |
+| D-06 | **Verification and vetting.** What the pilot checks, for which role, the badge wording, what's displayed, and **whether vetting gates anything**: may an unvetted person appear in discovery as a driver, or confirm a ride as one? M-02 provides input. | **Decided (2026-10-08)** | M-26, M-32, M-49, M-54a, M-56 | No ID vendor. The owner vets each driver (license and insurance, seen in person or on video) and sets the vetted flag (`profiles.vetted_at`, M-56). Only the server (service role) can write it; clients never can. Badge: "License & insurance checked by Merge", approved over "Vetted by the Merge pilot team", which reads like a safety guarantee. Hide the ID, work email and vehicle rows. Passengers are covered because the owner adds every tester by hand (D-11). Not part of the decision, still a suggestion for M-26 and M-32 to confirm with the owner: an unvetted person can't appear as a driver in discovery or confirm a ride as the driver. Owner question for D-12/M-40: M-11's Q5 (keep no license or insurance copies). **M-02 is reduced to this note:** no separate research is needed, and M-02 is closed. Update 2026-10-10 (M-26 Q1): unvetted members are hidden as drivers in matching but can still ride and browse; M-27 and M-32 refuse their driver invitations and confirmations. |
 | D-07 | **Safety report handling and member removal.** Who reads reports, how quickly, what leads to removal, the removal steps, and what reporters are told. | **Decided (2026-10-08)** | M-24, M-53, M-56 | The owner checks reports daily (dashboard plus a safety@ alias) and replies within 24 hours. Reporters first see "In immediate danger? Call 911." Removal: set `profiles.suspended_at`. Its trigger (M-56, M-32) hides the person everywhere, withdraws their pending invitations, cancels their future rides (the other rider sees only "Ride cancelled"), and ends their Crews. Then ban the user in Supabase Auth so they can't sign in again. A ban alone isn't enough: the app's existing session keeps working until it expires. **Decided as above.** |
 | D-08 | **Map, geocoding and routing provider**, chosen after reading M-01. The owner creates the keys. | **Decided (2026-10-08)** | M-22, M-29, M-33 | Tiles only, no geocoding or routing provider for the pilot. Map: MapLibre (`@maplibre/maplibre-react-native`, needs a dev build) on native, and `BayMap.web.tsx` on `maplibre-gl` for the web build. Tiles: Stadia Maps, tiles only; the plan tier is to be confirmed (check whether a tier below Standard allows this use, since no geocoding storage rights are needed). People set commute points by placing a pin or area on the map (M-29); coordinates from the user's own tap aren't vendor content. Address search is out for the pilot; adding it later needs a provider that permits storing results (for example Stadia Standard Place Lookup or Geocode Earth). Detour is M-33's PostGIS estimate (`estimate_detour_minutes`, ×1.35 circuity at 25 mph), with real routing left as an optional post-pilot task. Area labels come from open boundary data (M-18), not geocoding. Attribution on every map: "© Stadia Maps © OpenMapTiles © OpenStreetMap contributors". Research: `docs/research/2026-10-08-m01-map-provider.md` (`dc5e650`). |
 | D-09 | **Lockfile policy.** Commit `package-lock.json` and switch CI to `npm ci`. This reverses the in-flight plan's "don't commit it" rule; the lockfile is untracked today. | **Decided (2026-10-08)** | M-03, and every PR that adds a dependency | Commit `package-lock.json` and switch CI to `npm ci`. This reverses the in-flight plan's "don't commit it" rule. M-03 owns the change: O-01 leaves the lockfile untracked as planned, and M-03 generates and commits it from main after O-01, switching CI at the same time. |
@@ -105,7 +105,7 @@ Several tasks touch the same files. A **serialized** zone allows one open PR at 
 | Test-shim helpers | `scripts/db-test/auth-shim.sql` | Append-only; keep both sides. A migration must never depend on a shim-only object. |
 | Route registry | the `Route` union in `src/navigation.tsx`; the `renderRoute` switch and the import block in `App.tsx` | Append at the end and keep both sides. M-10 moves the union's closing `;` onto its own line first, so appends never collide on the last member. Only the task named here changes an existing route's params: M-28 (`request` gets `kind`), M-35 (`request` gets optional `rideDate`, including its `renderRoute` case), M-34 (`commute` and `preferences` get `mode`, including their cases). Route adders: M-20, M-21, M-23, M-24, M-28, M-30, M-34, M-50. |
 | Dependencies | root `package.json`, `apps/mobile/package.json`, `package-lock.json` | Keep both dependency (or script) lines in a `package.json`. For the lockfile, take main's and re-run `npm install`; never hand-merge it. Adders: M-03 (creates the lockfile; M-10 merges after it), M-10, M-14, M-15, M-19 (only if it adds a library), M-22, M-29 (only if it adds a library), M-31, M-38, M-47 (only if ride mode needs a library). |
-| Data-layer index | `src/lib/data/` index and shared type files (created by M-19) | Append-only; keep both sides. Each wiring task adds its own `lib/data/<feature>.ts`. |
+| Data-layer index | `src/lib/data/` index and shared type files (created by M-19) | Append-only; keep both sides. Each wiring task adds its own `lib/data/<feature>.ts`. A feature's sibling files (`<feature>.api.ts`, `.map.ts`, `.mock.ts`, `.supabase.ts`, `.test.ts`) follow the same task order as its `<feature>.ts` (owner, 2026-10-10). |
 | CLI config functions | `[functions.<name>]` sections at the end of `supabase/config.toml` | Append-only; keep both. M-12 is the only task that edits other sections (the email templates). Appenders: M-17b, M-41, M-45. |
 | Edge Functions | `supabase/functions/<name>/` | One directory per task. The owner deploys and sets secrets (O-09). |
 | Theme tokens | `src/theme.ts` | Any task may append a new token (keep both sides). Only M-51 changes an existing token's value. |
@@ -1239,7 +1239,7 @@ When done, open a PR to main and stop.
 
 ### M-13 · First Ride: one-date requests in existing screens
 
-- **Status:** In progress. Dispatched 2026-10-10 on branch `feat/m-13-first-ride-requests`, in its own worktree; no PR yet. Don't dispatch it again.
+- **Status:** Done. Merged to main in PR #30 (`1c2e316`) on 2026-10-10. Don't dispatch it again.
 - **Wave:** 2
 - **Kind:** build (from the approved First Ride spec)
 - **Size:** M
@@ -1303,7 +1303,7 @@ When done, open a PR to main and stop.
 
 ### M-14 · EAS build profiles, release app config, icon and splash
 
-- **Status:** In progress. Dispatched 2026-10-10 on branch `chore/m-14-eas-config`, in its own worktree; no PR yet. Don't dispatch it again.
+- **Status:** Done. Merged to main in PR #32 (`eb38ff1`) on 2026-10-10. App IDs are still D-10 placeholders, and `app.config.js` blocks a production build until they're set. Don't dispatch it again.
 - **Wave:** 2
 - **Kind:** build
 - **Size:** M
@@ -1512,7 +1512,7 @@ When done, open a PR to main and stop.
 
 ### M-19 · Typed data layer with mock and Supabase backends
 
-- **Status:** In design. Dispatched 2026-10-10 on branch `feat/m-19-data-layer`, in its own worktree; the spec awaits the owner's approval, and there's no PR yet. Don't dispatch it again.
+- **Status:** Building. Spec `docs/superpowers/specs/2026-10-10-data-layer-design.md` approved by the owner on 2026-10-10 with all eight recommendations (in-house cache, no TanStack Query; Supabase only when status is `ready`; read-only `profile` sample module; refetch on foreground after 30 s; no simulate-error toggle). Branch `feat/m-19-data-layer`. Don't dispatch it again.
 - **Wave:** 2
 - **Kind:** design-then-build
 - **Size:** M
@@ -1648,7 +1648,7 @@ When done, open a PR to main and stop.
 
 ### M-16 · Limited profile cards for related users
 
-- **Status:** In design. Dispatched 2026-10-10 on branch `feat/m-16-profile-cards`, in its own worktree; the spec awaits the owner's approval, and there's no PR yet. Don't dispatch it again.
+- **Status:** Building. Spec `docs/superpowers/specs/2026-10-10-profile-cards-design.md` approved by the owner on 2026-10-10 with all six recommendations (ride preferences on the card, no area labels, every invitation status counts with no expiry, the same card before and after confirmation, empty result for a suspended caller, "Former member" for every missing card). Branch `feat/m-16-profile-cards`, migration 0014; it merges before M-26. Don't dispatch it again.
 - **Wave:** 3
 - **Kind:** design-then-build
 - **Size:** M
@@ -1720,7 +1720,7 @@ When done, open a PR to main and stop.
 
 ### M-17b · Account deletion: Edge Function, CI Deno checks, in-app entry
 
-- **Status:** In progress. Dispatched 2026-10-10 on branch `feat/m-17b-account-deletion`, in its own worktree; no PR yet. Don't dispatch it again.
+- **Status:** Done. Merged to main in PR #33 (`3dbc8b9`) on 2026-10-10. Deploying the function is O-09: `npx supabase functions deploy delete-account --project-ref <ref>`. Don't dispatch it again.
 - **Wave:** 3
 - **Kind:** build (from M-17a's account-deletion spec)
 - **Size:** M
@@ -2185,7 +2185,7 @@ When done, open a PR to main and stop.
 
 ### M-40 · Legal and support web pages
 
-- **Status:** In progress. Dispatched 2026-10-10 on branch `feat/m-40-legal-pages`, in its own worktree; no PR yet. Don't dispatch it again.
+- **Status:** Done. Merged to main in PR #34 (`6638ea4`) on 2026-10-10. Drafts pending counsel review (D-12); 20 placeholders remain (`node site/_tools/check-site.mjs site --placeholders`). Hosting waits on O-03 and the `PAGES_ENABLED` repository variable. Don't dispatch it again.
 - **Wave:** 3
 - **Kind:** build
 - **Size:** M
@@ -2241,7 +2241,7 @@ When done, open a PR to main and stop.
 
 ### M-21 · Vehicle setup form (prototype)
 
-- **Status:** In progress. Dispatched 2026-10-10 on branch `feat/m-21-vehicle-form`, in its own worktree; no PR yet. Don't dispatch it again.
+- **Status:** Done. Merged to main in PR #31 (`c934787`) on 2026-10-10. Don't dispatch it again.
 - **Wave:** 4
 - **Kind:** build
 - **Size:** M
@@ -2362,7 +2362,7 @@ When done, open a PR to main and stop.
 
 ### M-26 · Server-side matching RPC
 
-- **Status:** In design. Dispatched 2026-10-10 on branch `feat/m-26-matching-rpc`, in its own worktree; the spec awaits the owner's approval, and there's no PR yet. Don't dispatch it again.
+- **Status:** Building. Spec `docs/superpowers/specs/2026-10-10-matching-rpc-design.md` approved by the owner on 2026-10-10: Q1–Q7 as recommended (unvetted members hidden as drivers; per-date availability for the other person only; Ride Again as a tie-breaker; departure time, flex and shared weekdays returned; windows overlap within the sum of both flexes; reason labels built in SQL; internal 3+ occupancy key). Q8 changed: pin-edit probing stays an accepted pilot risk, but the detour is returned as a band (under 3 min / 3–5 min), never whole minutes. Branch `feat/m-26-matching-rpc`, migration 0015, merges after M-16. Don't dispatch it again.
 - **Wave:** 4
 - **Kind:** design-then-build
 - **Size:** L
@@ -2573,6 +2573,8 @@ When done, open a PR to main and stop.
 ### Wave 5
 
 ### M-27 · Invitations lifecycle and booking spec
+
+- **Owner notes (2026-10-10):** reject refused requests with a stable error hint the M-19 data layer can map. M-16 makes any invitation, in any status, unlock a profile card, so gate invitation creation (for example, only to people `find_matches` returns, rechecked with M-26's `match_candidates`). Refuse driver invitations from unvetted members (M-26 Q1).
 
 - **Wave:** 5
 - **Kind:** design-then-build
@@ -2786,6 +2788,8 @@ When done, open a PR to main and stop.
 ### Wave 6
 
 ### M-32 · Booking RPCs: confirm, cancel, can't drive, pickup reveal, safety cancellations
+
+- **Owner notes (2026-10-10):** reject refused requests with a stable error hint the M-19 data layer can map. Refuse driver confirmations from unvetted members (M-26 Q1).
 
 - **Wave:** 6
 - **Kind:** build (from M-27's booking spec)
@@ -3252,6 +3256,8 @@ When done, open a PR to main and stop.
 ```
 
 ### M-39 · Ride messages: schema, RLS and tests
+
+- **Owner note (2026-10-10):** reject refused requests with a stable error hint the M-19 data layer can map.
 
 - **Wave:** 7
 - **Kind:** design-then-build
@@ -3752,6 +3758,8 @@ When done, open a PR to main and stop.
 ```
 
 ### M-55a · Contact sharing: design, schema and tests
+
+- **Owner note (2026-10-10):** reject refused requests with a stable error hint the M-19 data layer can map.
 
 - **Status:** Scheduled. D-19 was Decided on 2026-10-08 (mutual contact exchange), so this task is no longer conditional.
 - **Wave:** 8
@@ -4609,6 +4617,8 @@ The drafter proposed these, not the owner. They stay proposals until the owner c
 Schedule it only if pilot feedback shows bad detour estimates. Bay water crossings are the known weak spot. Replace the body of M-33's `estimate_detour_minutes` (and `estimate_trip_minutes`) with routed minutes from a self-hosted Valhalla, per `docs/research/2026-10-08-m01-map-provider.md`, keeping the same signatures, the whole-minutes-only output and the no-client-execute grants, so matching (M-26) and the lifecycle (M-37) don't change. It needs a new owner decision on hosting and any cache, a new migration above the highest on main, and its own design-then-build card.
 
 ## Revision notes
+
+**Update of 2026-10-10 (later).** M-13 (#30), M-21 (#31), M-14 (#32), M-17b (#33) and M-40 (#34) merged; main is green at `6638ea4`. The owner approved the M-16, M-19 and M-26 specs (M-26 with banded detours instead of whole minutes), and all three are building. Owner notes from those approvals are on D-02, D-06, the Data-layer index zone, and the M-27, M-32, M-39 and M-55a cards.
 
 **Refresh of 2026-10-10.** Status brought up to date with main at `670d6ae`:
 - **Merged:** #12 (`704503d`, O-01's merge commit) carried M-04, M-05, M-06, M-07, M-08, M-11 and M-18 (PRs #5–#11) plus the fixtures fix #13. #25 (`25970cd`) finished O-01 with the fix round, Task 9 (web support) and code-only templates. Then M-15 (#19), M-17a (#20), M-56 (#21), M-33 (#18), M-03 (#26), M-12 (#27), M-10 (#28) and M-09 (#29). #14, #16 and #23 regenerated the database types. Every card that's done now has a Status line naming its PR.
