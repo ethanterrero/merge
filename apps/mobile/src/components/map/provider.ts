@@ -13,10 +13,34 @@ export const STADIA_STYLE = 'alidade_smooth';
 
 const KEY_SHAPE = /^[A-Za-z0-9_-]{8,128}$/;
 
+// Stadia doesn't publish its key format (its docs show only "YOUR-API-KEY"),
+// so instead of requiring one, obvious placeholders are refused. Words are
+// long enough that a random key is very unlikely to contain one.
+const PLACEHOLDER_WORDS = /your|change-?me|placeholder|example|replace|insert|todo|dummy|sample|stadia|api[-_]?key|expo_public|key[-_]?here/i;
+const PLACEHOLDER_EXACT = /^(undefined|null|none|nil|false|true)$/i;
+const PLACEHOLDER_PREFIX = /^(test|fake|demo)[-_]/i;
+
+function looksLikePlaceholder(key: string): boolean {
+  const chars = key.replace(/[-_]/g, '');
+  const oneRepeatedChar = /^(.)\1*$/i.test(chars);
+  return PLACEHOLDER_EXACT.test(key) || PLACEHOLDER_PREFIX.test(key) || PLACEHOLDER_WORDS.test(key) || oneRepeatedChar;
+}
+
 /** The key, or null when it's missing, blank or obviously a placeholder. */
 export function readMapKey(raw: string | undefined): string | null {
   const key = raw?.trim() ?? '';
-  return KEY_SHAPE.test(key) ? key : null;
+  return KEY_SHAPE.test(key) && !looksLikePlaceholder(key) ? key : null;
+}
+
+/**
+ * Removes the map key from text before it's logged: every `api_key=` value
+ * (plain or URL-encoded, any case), plus the key itself when given. Map
+ * errors include request URLs, and those carry the key.
+ */
+export function redactKey(text: string, key?: string | null): string {
+  let out = text.replace(/(api_key(?:=|%3D))[^&\s"'<>)]+/gi, '$1[redacted]');
+  if (key) out = out.split(key).join('[redacted]');
+  return out;
 }
 
 export type RendererChoice =

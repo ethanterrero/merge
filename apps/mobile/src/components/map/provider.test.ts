@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MAP_KEY_ENV, chooseRenderer, readMapKey, stadiaStyleUrl, withStadiaKey } from './provider';
+import { MAP_KEY_ENV, chooseRenderer, readMapKey, redactKey, stadiaStyleUrl, withStadiaKey } from './provider';
 
 const KEY = '0f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b';
 
@@ -16,6 +16,39 @@ test('readMapKey treats missing, blank and placeholder values as no key', () => 
   assert.equal(readMapKey('"abc"'), null);
   assert.equal(readMapKey('has space inside'), null);
   assert.equal(readMapKey('short'), null);
+});
+
+test('readMapKey treats obvious placeholders as no key', () => {
+  for (const placeholder of [
+    'undefined',
+    'null',
+    'NULL',
+    'none',
+    'changeme',
+    'changeme123',
+    'change-me',
+    'your-stadia-key',
+    'YOUR-API-KEY',
+    'your_key_here',
+    'stadia-key-here',
+    'placeholder',
+    'my-placeholder-key',
+    'example-key',
+    'test-key-1234',
+    'xxxxxxxxxxxx',
+    'XXXXXXXX-XXXX',
+    '00000000',
+    '00000000-0000-0000-0000-000000000000',
+    'todo-fill-me-in',
+    'replace_me',
+    'insert-key',
+    'api_key',
+    'apikey12',
+    'stadia_key',
+    'EXPO_PUBLIC_STADIA_KEY',
+  ]) {
+    assert.equal(readMapKey(placeholder), null, placeholder);
+  }
 });
 
 test('readMapKey keeps a well-formed key, trimmed', () => {
@@ -80,4 +113,22 @@ test('withStadiaKey never sends the key anywhere else', () => {
 test('withStadiaKey leaves a URL that already carries a key alone', () => {
   const url = `https://tiles.stadiamaps.com/styles/alidade_smooth.json?api_key=${KEY}`;
   assert.equal(withStadiaKey(url, KEY), url);
+});
+
+test('redactKey strips api_key values from URLs and error messages', () => {
+  assert.equal(
+    redactKey(`AJAXError: Unauthorized (401): https://tiles.stadiamaps.com/styles/alidade_smooth.json?api_key=${KEY}`),
+    'AJAXError: Unauthorized (401): https://tiles.stadiamaps.com/styles/alidade_smooth.json?api_key=[redacted]',
+  );
+  assert.equal(
+    redactKey(`https://tiles.stadiamaps.com/fonts/x.pbf?v=2&api_key=${KEY}&z=1 and ?API_KEY=${KEY}`),
+    'https://tiles.stadiamaps.com/fonts/x.pbf?v=2&api_key=[redacted]&z=1 and ?API_KEY=[redacted]',
+  );
+  assert.equal(redactKey(`api_key%3D${KEY}`), 'api_key%3D[redacted]', 'URL-encoded inside another URL');
+  assert.equal(redactKey('no key here'), 'no key here');
+});
+
+test('redactKey also removes the key itself wherever it appears', () => {
+  assert.equal(redactKey(`Stadia-Auth ${KEY} failed`, KEY), 'Stadia-Auth [redacted] failed');
+  assert.equal(redactKey('nothing', null), 'nothing');
 });
