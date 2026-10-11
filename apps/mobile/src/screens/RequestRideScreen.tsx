@@ -1,19 +1,23 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { colors, radius, space, type } from '../theme';
+import { colors, space, type } from '../theme';
 import { useNav } from '../navigation';
-import { findMatch } from '../data/mock';
+import { PROTOTYPE_RIDE_DATE, findMatch } from '../data/mock';
+import { formatRideDate } from '../lib/dates';
+import { rideKindBadge } from '../lib/rideKind';
 import { useCommute } from '../state/commute';
 import { Screen, TopBar } from '../components/Screen';
 import { Button } from '../components/Button';
-import { Card, Row, SettingRow, Toggle } from '../components/primitives';
+import { Badge, Card, Row, SettingRow } from '../components/primitives';
 
 export function RequestRideScreen({ matchId }: { matchId: string }) {
   const nav = useNav();
   const { commute, update } = useCommute();
   const m = findMatch(matchId);
   const first = m.name.split(' ')[0];
-  const [recurring, setRecurring] = useState(true);
+  // Every new match starts with one ride on one date (First Ride spec).
+  const rideDate = PROTOTYPE_RIDE_DATE;
+  const badge = rideKindBadge('first_ride');
 
   const send = () => {
     // Prototype: treat the request as accepted so the booked state can be reviewed.
@@ -22,7 +26,7 @@ export function RequestRideScreen({ matchId }: { matchId: string }) {
   };
 
   return (
-    <Screen header={<TopBar title={`Request a ride with ${first}`} />} footer={<Button label="Send request" onPress={send} />}>
+    <Screen header={<TopBar title={`Request a First Ride with ${first}`} />} footer={<Button label="Send request" onPress={send} />}>
       <Card>
         <View style={styles.miniMap} accessibilityLabel="Proposed pickup spot within your pickup area">
           <View style={[styles.water]} />
@@ -47,11 +51,13 @@ export function RequestRideScreen({ matchId }: { matchId: string }) {
         <Row>
           <View style={{ flex: 1 }}>
             <Text style={[type.caption, { color: colors.textMuted }]}>Pickup time</Text>
-            <Text style={type.subheading}>Mon, Oct 12 · {m.departs} AM</Text>
+            <Text style={type.subheading}>
+              {formatRideDate(rideDate)} · {m.departs} AM
+            </Text>
+            <Text style={[type.caption, { color: colors.textMuted }]}>{first}'s window {m.window}</Text>
           </View>
-          <Text style={[type.caption, { color: colors.textMuted }]}>{first}'s window {m.window}</Text>
+          {badge ? <Badge label={badge} tone="brand" /> : null}
         </Row>
-        <SettingRow divider title="Repeat Mon–Thu" trailing={<Toggle label="Repeat Monday to Thursday" value={recurring} onValueChange={setRecurring} />} />
         <SettingRow
           divider
           title={commute.bringsCargo ? '1 seat + foldable scooter' : '1 seat'}
@@ -67,6 +73,7 @@ export function RequestRideScreen({ matchId }: { matchId: string }) {
         <NextStep n={1} active title={`${first} reviews`} body="your spot, time, and cargo before [cutoff]." />
         <NextStep n={2} title="They accept, suggest a change, or decline." body="If they suggest a different spot, you decide." />
         <NextStep n={3} title="Your seat is booked." body="Exact pickup instructions unlock for both of you." />
+        <Text style={[type.small, { color: colors.textSecondary }]}>This is one ride. No recurring commitment.</Text>
       </Card>
     </Screen>
   );

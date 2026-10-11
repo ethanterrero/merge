@@ -20,6 +20,7 @@ import { DriverRequestsScreen } from './src/screens/DriverRequestsScreen';
 import { DriverRequestScreen } from './src/screens/DriverRequestScreen';
 import { DriverConfirmScreen } from './src/screens/DriverConfirmScreen';
 import { RoleScreen } from './src/screens/RoleScreen';
+import { VehicleScreen } from './src/screens/VehicleScreen';
 
 export default function App() {
   return (
@@ -109,5 +110,7 @@ function renderRoute(route: Route): React.ReactElement {
       return <DriverConfirmScreen requestId={route.requestId} />;
     case 'role':
       return <RoleScreen />;
+    case 'vehicle':
+      return <VehicleScreen />;
   }
 }

@@ -64,6 +64,36 @@ export function sendCodeErrorMessage(error: { status?: number; code?: string; me
   return "Couldn't send the code. Check your connection and try again.";
 }
 
+export const DELETE_ACCOUNT_ERROR = "Couldn't delete your account. Check your connection and try again.";
+export const DELETE_ACCOUNT_SESSION_ERROR = 'Your sign-in has expired. Sign out, sign back in, then try again.';
+export const DELETE_ACCOUNT_UNAVAILABLE_ERROR =
+  "Account deletion isn't available right now. Try again later, or ask your pilot contact to delete your account.";
+export const DELETED_SIGN_OUT_ERROR =
+  "Your account was deleted, but this device couldn't finish signing out. Check your connection and tap Sign out.";
+
+/**
+ * Reads `supabase.functions.invoke('delete-account')`'s result. Accepts supabase-js
+ * `FunctionsError`s directly: a FunctionsHttpError's `context` is the Response.
+ */
+export function deleteAccountResult(result: {
+  data: unknown;
+  error: { name?: string; context?: unknown } | null;
+}): { deleted: true } | { deleted: false; message: string } {
+  const { data, error } = result;
+  if (!error) {
+    const deleted = typeof data === 'object' && data !== null && (data as { deleted?: unknown }).deleted === true;
+    return deleted ? { deleted: true } : { deleted: false, message: DELETE_ACCOUNT_ERROR };
+  }
+  if (error.name === 'FunctionsRelayError') return { deleted: false, message: SERVER_ERROR };
+  const context = error.context as { status?: unknown } | null | undefined;
+  const status = error.name === 'FunctionsHttpError' && typeof context?.status === 'number' ? context.status : null;
+  if (status === 401) return { deleted: false, message: DELETE_ACCOUNT_SESSION_ERROR };
+  // The function isn't deployed yet (owner task O-09).
+  if (status === 404) return { deleted: false, message: DELETE_ACCOUNT_UNAVAILABLE_ERROR };
+  if (status !== null && status >= 500) return { deleted: false, message: SERVER_ERROR };
+  return { deleted: false, message: DELETE_ACCOUNT_ERROR };
+}
+
 const PROFILE_RETRY_BASE_MS = 1000;
 const PROFILE_RETRY_MAX_MS = 30000;
 

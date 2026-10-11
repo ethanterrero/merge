@@ -2,6 +2,8 @@
 // generalized areas, and nothing here is real user data. Replace with
 // server-side matching results once the Supabase API exists.
 
+import type { RideKind } from '../lib/rideKind';
+
 export type Weekday = 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri';
 export const WEEKDAYS: Weekday[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
@@ -94,12 +96,17 @@ export const MATCHES: Match[] = [
 
 export const findMatch = (id: string): Match => MATCHES.find((m) => m.id === id) ?? MATCHES[0];
 
+/** The one date ('YYYY-MM-DD') the prototype requests and books with a match. */
+export const PROTOTYPE_RIDE_DATE = '2026-10-12';
+
 export type RideRequest = {
   id: string;
   name: string;
   initials: string;
   verified: boolean;
-  days: string;
+  /** Every request is for one date, 'YYYY-MM-DD'. */
+  rideDate: string;
+  kind: RideKind;
   addedDetour: string;
   pickupTime: string;
   pickupSpot: string;
@@ -116,7 +123,8 @@ export const REQUESTS: RideRequest[] = [
     name: 'Jordan T.',
     initials: 'JT',
     verified: true,
-    days: 'Mon–Thu',
+    rideDate: '2026-10-12',
+    kind: 'first_ride',
     addedDetour: '+4 min',
     pickupTime: '7:40',
     pickupSpot: 'Park St & Central Ave',
@@ -131,7 +139,8 @@ export const REQUESTS: RideRequest[] = [
     name: 'Alex K.',
     initials: 'AK',
     verified: false,
-    days: 'Tue only',
+    rideDate: '2026-10-13',
+    kind: 'first_ride',
     addedDetour: '+2 min',
     pickupTime: '7:45',
     pickupSpot: '[Pickup spot]',

@@ -7,3 +7,7 @@ build/
 !.env.example
 .DS_Store
 *.log
+
+# Continuous native generation: `expo prebuild` and EAS Build create these from app.json.
+apps/mobile/ios/
+apps/mobile/android/
