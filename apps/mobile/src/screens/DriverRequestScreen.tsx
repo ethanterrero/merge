@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { colors, radius, space, type } from '../theme';
 import { useNav } from '../navigation';
 import { findRequest } from '../data/mock';
+import { rideDateLine } from '../lib/rideKind';
 import { useCommute } from '../state/commute';
 import { Screen, TopBar } from '../components/Screen';
 import { Button } from '../components/Button';
@@ -62,7 +63,7 @@ export function DriverRequestScreen({ requestId }: { requestId: string }) {
           <Text style={type.subheading}>
             {r.pickupSpot} · {r.pickupTime} AM
           </Text>
-          <Text style={[type.small, { color: colors.textMuted }]}>{r.days}, starting Oct 12 · inside your 7:25–7:55 window</Text>
+          <Text style={[type.small, { color: colors.textMuted }]}>{rideDateLine(r.rideDate, r.kind)} · inside your 7:25–7:55 window</Text>
         </View>
       </Card>
 

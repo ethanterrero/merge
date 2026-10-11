@@ -24,6 +24,43 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+  # Edge Functions: one directory per function under supabase/functions, each with its
+  # own deno.json and committed deno.lock. --frozen fails if an import doesn't match the
+  # lockfile. Directories starting with "_" hold shared code, checked through importers.
+  deno:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Supabase CLI 2.120.0 (pinned in package-lock.json) runs Edge Runtime v1.77.4, which
+      # embeds Deno 2.1.4 (supabase/edge-runtime deno/Cargo.toml at that tag). The hosted
+      # runtime isn't published per project; re-check this when the CLI is bumped.
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.1.4
+      - name: deno check
+        run: |
+          shopt -s nullglob
+          status=0
+          for dir in supabase/functions/*/; do
+            case "$(basename "$dir")" in _*) continue ;; esac
+            if [ ! -f "$dir/deno.json" ] || [ ! -f "$dir/deno.lock" ]; then
+              echo "::error file=${dir}::Each function needs a deno.json and a committed deno.lock (see supabase/functions/delete-account)."
+              status=1
+              continue
+            fi
+            (cd "$dir" && deno check --frozen '**/*.ts') || status=1
+          done
+          exit $status
+      # --permit-no-files keeps this green for functions without tests.
+      - name: deno test
+        run: |
+          shopt -s nullglob
+          status=0
+          for dir in supabase/functions/*/; do
+            case "$(basename "$dir")" in _*) continue ;; esac
+            (cd "$dir" && deno test --frozen --permit-no-files) || status=1
+          done
+          exit $status
   migration-order:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest

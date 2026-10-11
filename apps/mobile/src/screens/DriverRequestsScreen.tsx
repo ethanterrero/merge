@@ -6,6 +6,8 @@ import { colors, radius, shadow, space, type } from '../theme';
 import { useNav } from '../navigation';
 import { useCommute } from '../state/commute';
 import { REQUESTS, RideRequest } from '../data/mock';
+import { formatRideDate } from '../lib/dates';
+import { rideDateLine } from '../lib/rideKind';
 import { TabBar } from '../components/TabBar';
 import { Icon } from '../components/Icon';
 import { Button } from '../components/Button';
@@ -85,7 +87,7 @@ function RequestCard({ request: r, highlighted, onPress }: { request: RideReques
             {r.name}
             {r.verified ? <Text style={{ fontSize: 12, fontWeight: '600', color: colors.successText }}> · Verified</Text> : null}
           </Text>
-          <Text style={[type.small, { color: colors.textMuted }]}>Wants to ride {r.days}</Text>
+          <Text style={[type.small, { color: colors.textMuted }]}>Wants to ride {rideDateLine(r.rideDate, r.kind)}</Text>
         </View>
         <Badge label={`Reply by ${r.replyBy}`} tone={highlighted ? 'brand' : 'neutral'} />
       </View>
@@ -98,7 +100,14 @@ function RequestCard({ request: r, highlighted, onPress }: { request: RideReques
   );
 }
 
+// The prototype's two upcoming driving days. Each accepted request is one ride,
+// so it appears only under its own date.
+const MON = '2026-10-12';
+const TUE = '2026-10-13';
+
 function Upcoming({ accepted }: { accepted: RideRequest[] }) {
+  const onMon = accepted.filter((a) => a.rideDate === MON);
+  const tueRiders = 1 + accepted.filter((a) => a.rideDate === TUE).length;
   return (
     <>
       {accepted.length ? (
@@ -109,14 +118,14 @@ function Upcoming({ accepted }: { accepted: RideRequest[] }) {
           </Text>
         </View>
       ) : null}
-      <Eyebrow>Mon, Oct 12</Eyebrow>
+      <Eyebrow>{formatRideDate(MON)}</Eyebrow>
       <Card raised style={{ padding: space.lg, gap: space.md }}>
         <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
           <Text style={type.heading}>Leave 7:35 AM</Text>
           <Text style={[type.small, { color: colors.textMuted }]}>Arrive ~[time]</Text>
         </View>
         <Rider initials="SR" name="Sam R. · 7:38 AM" spot="[Pickup spot]" />
-        {accepted.map((a) => (
+        {onMon.map((a) => (
           <Rider key={a.id} initials={a.initials} name={`${a.name} · ${a.pickupTime} AM`} spot={a.cargo ? `${a.pickupSpot} · scooter in trunk` : a.pickupSpot} highlight />
         ))}
         <View style={{ flexDirection: 'row', gap: space.sm }}>
@@ -124,11 +133,11 @@ function Upcoming({ accepted }: { accepted: RideRequest[] }) {
           <Button label="Can't drive" variant="destructive" size="sm" style={{ flex: 1, height: 44 }} accessibilityHint="Tells riders right away" />
         </View>
       </Card>
-      <Eyebrow>Tue, Oct 13</Eyebrow>
+      <Eyebrow>{formatRideDate(TUE)}</Eyebrow>
       <Card style={{ padding: space.lg, flexDirection: 'row', alignItems: 'center', gap: space.md }}>
         <View style={{ flex: 1 }}>
           <Text style={type.subheading}>Leave 7:35 AM</Text>
-          <Text style={[type.small, { color: colors.textMuted }]}>{1 + accepted.length} riders</Text>
+          <Text style={[type.small, { color: colors.textMuted }]}>{tueRiders === 1 ? '1 rider' : `${tueRiders} riders`}</Text>
         </View>
         <Icon name="chevron-forward" size={20} color={colors.textFaint} />
       </Card>

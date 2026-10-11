@@ -20,6 +20,7 @@ export type Route =
   | { name: 'driverRequest'; requestId: string }
   | { name: 'driverConfirm'; requestId: string }
   | { name: 'role' }
+  | { name: 'vehicle' }
 ;
 
 export type RouteName = Route['name'];
