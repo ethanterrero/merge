@@ -21,6 +21,7 @@ import { DriverRequestScreen } from './src/screens/DriverRequestScreen';
 import { DriverConfirmScreen } from './src/screens/DriverConfirmScreen';
 import { RoleScreen } from './src/screens/RoleScreen';
 import { VehicleScreen } from './src/screens/VehicleScreen';
+import { ConfigErrorScreen } from './src/screens/ConfigErrorScreen';
 import { FirstRideProvider } from './src/state/firstRide';
 import { PostRideScreen } from './src/screens/PostRideScreen';
 import { PostRideThanksScreen } from './src/screens/PostRideThanksScreen';
@@ -82,6 +83,9 @@ function Router() {
     if (mustLeaveRoute(status, nav.route.name)) nav.reset({ name: 'welcome' });
   }, [status, nav]);
 
+  // A preview or production build without Supabase config must never fall back to
+  // the mock prototype: block every route instead.
+  if (status === 'misconfigured') return <ConfigErrorScreen />;
   return renderRoute(nav.route);
 }
 
