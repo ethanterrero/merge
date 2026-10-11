@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, space, type } from '../theme';
 import { useNav } from '../navigation';
 import { findRequest } from '../data/mock';
+import { rideDateLine } from '../lib/rideKind';
 import { useCommute } from '../state/commute';
 import { Screen, TopBar } from '../components/Screen';
 import { Button } from '../components/Button';
@@ -30,7 +31,10 @@ export function DriverConfirmScreen({ requestId }: { requestId: string }) {
     >
       <Card style={{ padding: space.lg, gap: space.md }}>
         <View style={styles.titleRow}>
-          <Text style={type.subheading}>Seats, {r.days}</Text>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={type.subheading}>Seats</Text>
+            <Text style={[type.small, { color: colors.textMuted }]}>{rideDateLine(r.rideDate, r.kind)}</Text>
+          </View>
           <Text style={[type.small, { color: colors.textMuted }]}>{commute.seatsOffered} offered</Text>
         </View>
         <View style={styles.car} accessibilityLabel={`Seat map: you are driving, Sam R. is booked, ${first} takes the last offered seat`}>
