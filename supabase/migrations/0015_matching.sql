@@ -14,13 +14,6 @@
 -- windows, vehicle, seats and the per-date availability, cargo (D-04), and M-33's
 -- estimate_detour_minutes (D-08), which is called, never reimplemented.
 
--- Indexes ------------------------------------------------------------------------
--- The area prefilter below compares candidates' generalized areas against a point
--- derived from the caller's own route. 0008 created neither index.
-
-create index if not exists commutes_origin_area_gist on public.commutes using gist (origin_area);
-create index if not exists commutes_destination_area_gist on public.commutes using gist (destination_area);
-
 -- Area prefilter ---------------------------------------------------------------------
 -- A necessary condition for a detour within the limit, on generalized areas.
 -- If the passenger's exact points are within the limit, both lie inside the ellipse
@@ -31,6 +24,10 @@ create index if not exists commutes_destination_area_gist on public.commutes usi
 -- each exact point is within area_radius_m() of its area center. The 1% covers the
 -- planar approximation at Bay Area distances. It only ever lets more through:
 -- rule 13 (estimate_detour_minutes) still decides.
+-- It's a cheap per-pair reject, not an index search: a function with its own
+-- search_path is never inlined, so no GiST index could serve it, and this migration
+-- adds none. At pilot scale (at most ~200 commutes) the scan is trivial; see the
+-- spec, section 7, for the post-pilot plan.
 
 create function public.match_prefilter(
   driver_origin extensions.geography,
@@ -101,9 +98,11 @@ $$;
 
 -- Candidates ---------------------------------------------------------------------------
 -- Every eligible pair for member `me` on `ride_date` (spec section 2), with raw
--- fields, including EXACT detour minutes. Never client-callable: find_matches and
--- later security definer RPCs (M-27's send_invitation) call it. It's invoker on
--- purpose: run by a client it would see only that client's own commutes under RLS.
+-- fields, including EXACT detour minutes. No client role can execute it (anon and
+-- authenticated are revoked); find_matches and later security definer RPCs (M-27's
+-- send_invitation) call it, and the trusted service_role keeps execute, as with
+-- is_blocked. It's invoker on purpose: run by a client it would see only that
+-- client's own commutes under RLS.
 -- Parameters are qualified as match_candidates.<name>: in a SQL function a column of
 -- the same name (rides.ride_date) would otherwise win.
 -- M-41 (cohort) and M-27 extend this function: copy this definition first.
@@ -249,8 +248,10 @@ $$;
 -- find_matches ---------------------------------------------------------------------------
 -- The client RPC. Caller checks (spec section 1), the role filter, presentation
 -- columns (section 3), reasons (section 6), ranking (section 5) and the 50-row cap.
--- Exact detour minutes are used for ranking and the band only; no returned column
--- carries them (Q8). Output columns are named in RETURNS TABLE, so every column
+-- Exact detour minutes decide the filter and the band only. Ranking starts from the
+-- band, not the minutes, so rank depends only on what's returned and can't be used
+-- to read exact minutes against a known candidate. No returned column carries them
+-- (Q8). Output columns are named in RETURNS TABLE, so every column
 -- reference in the body is qualified, and the parameters are qualified as
 -- find_matches.<name>.
 
@@ -317,7 +318,7 @@ begin
       mc.*,
       row_number() over (
         order by
-          mc.detour_minutes,
+          case when mc.detour_minutes <= 2 then 0 else 1 end,   -- the band (Q8)
           abs(mc.departure_gap_minutes),
           mc.connected desc,
           cardinality(mc.shared_prefs) desc,

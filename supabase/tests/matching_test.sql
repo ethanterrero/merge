@@ -10,7 +10,8 @@
 --
 -- Callers and candidates (ids end in 26xx):
 --   01 Ada   passenger, Webster -> Montgomery 7:45, Mon-Thu, brings a scooter, prefers quiet
---   Included for Ada, in rank order:
+--   Included for Ada, in rank order. Rank starts from the detour BAND (0-2 min, then
+--   3-5 min), never the exact minutes, then the time gap and the other keys:
 --   12 Dee   Webster -> Montgomery 7:45, Wed only        0 min (same trip)
 --   13 Bel   connected with Ada (Ride Again)
 --   14 Ben   prefers quiet and smoke-free
@@ -20,9 +21,13 @@
 --   16 Bry   Mon-Wed (shares 3 days)
 --   17 Bo    "Both": drives Wed and Fri; rides Webster -> Montgomery 7:45 Mon-Fri
 --   18 Gus   7:55 (10 min later)
+--   1c Dex   Webster -> Montgomery 7:55: 0 min, same band as Gus's 2 min, so it
+--            follows Gus on the next keys (id), and ranks after Bea despite fewer minutes
 --   1b Ear   7:20 (25 min earlier)
 --   19 Hal   8:15 (30 min later: the window boundary, included)
 --   1a Cal   from near Laney College, Oakland, 7:45: 4 min (4.02), the 3-5 band
+--   1d Tre   from near Lake Merritt Channel -> Montgomery, 7:45: exactly 3 min (3.00),
+--            the 3-5 band's lower edge; after Cal (4 min) on id, not before it on minutes
 --   Excluded for Ada, one rule each:
 --   20 Opal opted out; 21 Sam suspended (also rides); 22 Bob blocked by Ada;
 --   23 Bix blocked Ada; 24 Uma unvetted (also rides, and is visible as a passenger);
@@ -46,6 +51,7 @@ insert into place values
   ('mont',    extensions.st_geogfromtext('SRID=4326;POINT(-122.4021 37.7894)')),  -- Montgomery St BART, SF
   ('lake',    extensions.st_geogfromtext('SRID=4326;POINT(-122.2575 37.8030)')),  -- Lake Merritt, Oakland
   ('laney',   extensions.st_geogfromtext('SRID=4326;POINT(-122.2560 37.7830)')),  -- near Laney College, Oakland
+  ('tre',     extensions.st_geogfromtext('SRID=4326;POINT(-122.2600 37.7870)')),  -- near Lake Merritt Channel, Oakland
   ('wc',      extensions.st_geogfromtext('SRID=4326;POINT(-122.0652 37.9101)'));  -- Walnut Creek
 
 create function pg_temp.pt(n text) returns extensions.geography
@@ -200,6 +206,8 @@ select pg_temp.member('18', 'Gus Gray');       select pg_temp.driver('18', dep =
 select pg_temp.member('1b', 'Ear Earl');       select pg_temp.driver('1b', dep => '07:20');
 select pg_temp.member('19', 'Hal Hart');       select pg_temp.driver('19', dep => '08:15');
 select pg_temp.member('1a', 'Cal Cole');       select pg_temp.driver('1a', 'laney', 'fremont', '07:45');
+select pg_temp.member('1c', 'Dex Dunn');       select pg_temp.driver('1c', 'webster', 'mont', '07:55');
+select pg_temp.member('1d', 'Tre Tate');       select pg_temp.driver('1d', 'tre', 'mont', '07:45');
 
 select pg_temp.member('20', 'Opal Ortiz', opt_in => false); select pg_temp.driver('20');
 select pg_temp.member('21', 'Sam Stone');      select pg_temp.driver('21');
@@ -379,7 +387,7 @@ declare
   got text[] := pg_temp.keys(pg_temp.matches('01', 'driver'));
   want text[] := array[
     '12:driver', '13:driver', '14:driver', '15:driver', '10:driver', '11:driver',
-    '16:driver', '17:driver', '18:driver', '1b:driver', '19:driver', '1a:driver'];
+    '16:driver', '17:driver', '18:driver', '1c:driver', '1b:driver', '19:driver', '1a:driver', '1d:driver'];
   excluded text;
 begin
   foreach excluded in array array['20', '21', '22', '23', '24', '25', '26', '27', '28', '29',
@@ -397,7 +405,7 @@ begin
   end if;
   if (select array_agg((e ->> 'rank')::integer order by i)
       from jsonb_array_elements(pg_temp.matches('01')) with ordinality x(e, i))
-     is distinct from (select array_agg(g) from generate_series(1, 12) g) then
+     is distinct from (select array_agg(g) from generate_series(1, 14) g) then
     raise exception 'rank should run 1..n with no gaps';
   end if;
 end
@@ -491,6 +499,31 @@ begin
   end if;
   if pg_temp.row_for(ada, '11') ->> 'detour_band' <> 'under_3' then
     raise exception 'Tia should be under_3';
+  end if;
+
+  -- Band edges: exactly 2 minutes is under_3 (Bea, 1.95), exactly 3 is 3_to_5 (Tre, 3.00).
+  if pg_temp.row_for(ada, '1d') ->> 'detour_band' <> '3_to_5'
+     or pg_temp.row_for(ada, '1d') -> 'reasons' -> 0 <> '{"code": "detour", "label": "3–5 min detour", "ok": true}'::jsonb
+     or pg_temp.row_for(ada, '10') ->> 'detour_band' <> 'under_3' then
+    raise exception 'Band edges: Tre % / Bea %', pg_temp.row_for(ada, '1d'), pg_temp.row_for(ada, '10');
+  end if;
+
+  -- Within a band, exact minutes don't order anything (Q8): Dex (0 min) ranks after
+  -- Bea (2 min, smaller time gap) and right after Gus (2 min, same gap, lower id);
+  -- Tre (3 min) ranks after Cal (4 min, same gap, lower id).
+  if (pg_temp.row_for(ada, '1c') ->> 'rank')::integer <> (pg_temp.row_for(ada, '18') ->> 'rank')::integer + 1
+     or (pg_temp.row_for(ada, '1c') ->> 'rank')::integer < (pg_temp.row_for(ada, '10') ->> 'rank')::integer
+     or (pg_temp.row_for(ada, '1d') ->> 'rank')::integer <> (pg_temp.row_for(ada, '1a') ->> 'rank')::integer + 1 then
+    raise exception 'Same-band candidates were ordered by minutes: Dex %, Gus %, Tre %, Cal %',
+      pg_temp.row_for(ada, '1c') ->> 'rank', pg_temp.row_for(ada, '18') ->> 'rank',
+      pg_temp.row_for(ada, '1d') ->> 'rank', pg_temp.row_for(ada, '1a') ->> 'rank';
+  end if;
+  if pg_temp.row_for(ada, '1c') - array['other_id', 'name', 'origin_area_lat', 'origin_area_lng',
+       'origin_area_label', 'destination_area_lat', 'destination_area_lng', 'destination_area_label', 'rank']
+     <> pg_temp.row_for(ada, '18') - array['other_id', 'name', 'origin_area_lat', 'origin_area_lng',
+       'origin_area_label', 'destination_area_lat', 'destination_area_lng', 'destination_area_label', 'rank'] then
+    raise exception 'Dex (0 min) and Gus (2 min) should differ only in identity, areas and rank: % / %',
+      pg_temp.row_for(ada, '1c'), pg_temp.row_for(ada, '18');
   end if;
 
   -- Seats net of confirmed rides that date; a ride on another date doesn't count.
@@ -600,9 +633,23 @@ begin
     end loop;
   end loop;
 
-  if res::text ~ '(Toyota|Prius|Blue|BEA123|Brown|Lovelace|example\.test)' then
-    raise exception 'A vehicle detail, surname or email reached the result';
+  if res::text ~ '(Toyota|Prius|Blue|BEA123|example\.test)' then
+    raise exception 'A vehicle detail or email reached the result';
   end if;
+  -- No fixture member's surname appears anywhere but the public area labels (which
+  -- come from boundary data: "Park Street area, Alameda" is not Pia Park's name).
+  for k in
+    select split_part(p.display_name, ' ', 2)
+    from public.profiles p
+    where p.id::text like '00000000-0000-0000-0000-0000000026%'
+  loop
+    if exists (
+      select 1 from jsonb_array_elements(res) as x(item)
+      where (x.item - 'origin_area_label' - 'destination_area_label')::text ~ ('\m' || k || '\M')
+    ) then
+      raise exception 'The surname % reached the result', k;
+    end if;
+  end loop;
   if exists (
     select 1 from jsonb_array_elements(res) as x(item), jsonb_object_keys(x.item) as k(key)
     where k.key in ('origin', 'destination', 'display_name', 'email', 'vetted_at', 'suspended_at',
@@ -709,8 +756,8 @@ begin
   if pg_temp.keys(pg_temp.matches('01', 'driver')) @> array['11:driver'] then
     raise exception 'A deleted member still appears';
   end if;
-  if cardinality(pg_temp.keys(pg_temp.matches('01', 'driver'))) <> 11 then
-    raise exception 'Deleting Tia should leave Ada 11 drivers';
+  if cardinality(pg_temp.keys(pg_temp.matches('01', 'driver'))) <> 13 then
+    raise exception 'Deleting Tia should leave Ada 13 drivers';
   end if;
 end
 $$;
