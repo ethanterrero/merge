@@ -1,0 +1,64 @@
+name: Pages
+# Checks the static legal and support pages in site/ (M-40) and, once the owner turns
+# on GitHub Pages, deploys them from main.
+#
+# Owner setup (O-03), done once in the repository settings:
+#   1. Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".
+#   2. Settings -> Secrets and variables -> Actions -> Variables: add PAGES_ENABLED = true.
+#      Until then the deploy job is skipped, so main never shows a failed deploy.
+#   3. Settings -> Pages -> Custom domain: the domain from O-03 (plus its DNS records),
+#      then "Enforce HTTPS".
+on:
+  push:
+    paths:
+      - 'site/**'
+      - '.github/workflows/pages.yml'
+  pull_request:
+    paths:
+      - 'site/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test the site checker
+        run: node --test site/_tools/*.test.mjs
+      - name: Check links, draft markers and no remote resources
+        run: node site/_tools/check-site.mjs site --placeholders
+
+  deploy:
+    needs: check
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.PAGES_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      # Publish the pages and stylesheet only, not the checker in site/_tools.
+      - name: Build the site
+        run: |
+          mkdir -p "$RUNNER_TEMP/site"
+          cp site/*.html site/*.css "$RUNNER_TEMP/site/"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ runner.temp }}/site
+      - id: deployment
+        uses: actions/deploy-pages@v4
