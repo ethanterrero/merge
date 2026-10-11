@@ -4,6 +4,8 @@ import { colors, space, type } from '../theme';
 import { useNav } from '../navigation';
 import { useCommute } from '../state/commute';
 import {
+  COLOR_MAX,
+  NAME_MAX,
   PASSENGER_SEATS_MAX,
   PASSENGER_SEATS_MIN,
   VehicleErrors,
@@ -76,7 +78,7 @@ export function VehicleScreen() {
           placeholder="Toyota"
           autoCapitalize="words"
           autoCorrect={false}
-          maxLength={60}
+          maxLength={NAME_MAX}
           returnKeyType="next"
         />
         <TextField
@@ -87,7 +89,7 @@ export function VehicleScreen() {
           placeholder="Prius"
           autoCapitalize="words"
           autoCorrect={false}
-          maxLength={60}
+          maxLength={NAME_MAX}
           returnKeyType="next"
         />
         <TextField
@@ -107,7 +109,7 @@ export function VehicleScreen() {
           error={errors.color}
           placeholder="Silver"
           autoCapitalize="words"
-          maxLength={40}
+          maxLength={COLOR_MAX}
           returnKeyType="next"
         />
         <TextField
