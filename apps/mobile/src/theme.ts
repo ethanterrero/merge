@@ -49,6 +49,7 @@ export const colors = {
   road: '#8A938D',
   chiliZone: 'rgba(46,107,62,0.18)',
   maroonZone: 'rgba(20,48,28,0.10)',
+  mapLabel: 'rgba(255,255,255,0.85)', // attribution and tag backgrounds over map tiles
 
   // Welcome map
   mapBg: '#E9EBEF',
