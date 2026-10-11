@@ -25,6 +25,8 @@ import { ConfigErrorScreen } from './src/screens/ConfigErrorScreen';
 import { FirstRideProvider } from './src/state/firstRide';
 import { PostRideScreen } from './src/screens/PostRideScreen';
 import { PostRideThanksScreen } from './src/screens/PostRideThanksScreen';
+import { ReportScreen } from './src/screens/ReportScreen';
+import { BlockedPeopleScreen } from './src/screens/BlockedPeopleScreen';
 
 export default function App() {
   return (
@@ -125,5 +127,9 @@ function renderRoute(route: Route): React.ReactElement {
       return <PostRideScreen matchId={route.matchId} />;
     case 'postRideThanks':
       return <PostRideThanksScreen matchId={route.matchId} />;
+    case 'report':
+      return <ReportScreen personId={route.personId} personName={route.personName} rideId={route.rideId} rideLabel={route.rideLabel} />;
+    case 'blockedPeople':
+      return <BlockedPeopleScreen />;
   }
 }
