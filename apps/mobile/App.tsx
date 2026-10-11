@@ -22,13 +22,18 @@ import { DriverConfirmScreen } from './src/screens/DriverConfirmScreen';
 import { RoleScreen } from './src/screens/RoleScreen';
 import { VehicleScreen } from './src/screens/VehicleScreen';
 import { ConfigErrorScreen } from './src/screens/ConfigErrorScreen';
+import { FirstRideProvider } from './src/state/firstRide';
+import { PostRideScreen } from './src/screens/PostRideScreen';
+import { PostRideThanksScreen } from './src/screens/PostRideThanksScreen';
 
 export default function App() {
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
       <AuthProvider>
         <CommuteProvider>
-          <AuthGate />
+          <FirstRideProvider>
+            <AuthGate />
+          </FirstRideProvider>
         </CommuteProvider>
       </AuthProvider>
     </SafeAreaProvider>
@@ -116,5 +121,9 @@ function renderRoute(route: Route): React.ReactElement {
       return <RoleScreen />;
     case 'vehicle':
       return <VehicleScreen />;
+    case 'postRide':
+      return <PostRideScreen matchId={route.matchId} />;
+    case 'postRideThanks':
+      return <PostRideThanksScreen matchId={route.matchId} />;
   }
 }
