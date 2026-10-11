@@ -1,8 +1,8 @@
 # Typed data layer with mock and Supabase backends — design (M-19)
 
 **Date:** 2026-10-10
-**Status:** Draft, awaiting the owner's approval. Open choices are listed under
-[Owner questions](#owner-questions), each with a recommendation.
+**Status:** Approved by the owner on 2026-10-10, with all eight recommendations under
+[Owner questions](#owner-questions-answered-2026-10-10).
 **Scope:** `apps/mobile/src/lib/data/**` (new). No screen, `App.tsx`, `src/state/*`,
 `src/lib/supabase.ts` or `src/data/mock.ts` change. No new dependency.
 **Builds on:** the two modes in `2026-10-08-supabase-auth-design.md` (`prototype` when
@@ -507,36 +507,39 @@ prototype mode showing nothing changed (no screen imports the layer yet).
 - Error reporting (M-31).
 - Migrations, RPCs, generated types and hosted-project changes.
 
-## Owner questions
+## Owner questions (answered 2026-10-10)
 
-1. **TanStack Query or the in-house store?** *Recommend the in-house store* for the
+The owner approved every recommendation below as written. Questions 5 and 8 are
+backlog edits the owner makes; this task doesn't change `docs/mvp-backlog.md`.
+
+1. **Approved.** **TanStack Query or the in-house store?** *Recommend the in-house store* for the
    pilot (no root provider is possible in this task, small needs, no dependency).
    Revisit if a later task needs pagination, offline persistence or cross-screen
    optimistic updates; the hook shape makes the switch mechanical.
-2. **Data mode during `needsProfile`.** *Recommend `off`:* only `ready` uses Supabase.
+2. **Approved.** **Data mode during `needsProfile`.** *Recommend `off`:* only `ready` uses Supabase.
    The only screen in that state is the name step, which uses `saveProfile` from
    `state/auth.tsx`, and `useAuth()` exposes the user id only through `profile`, so
    no change to the serialized auth zone is needed.
-3. **Sample module.** *Recommend `profile` (read-only: own profile, plus by-id that
+3. **Approved.** **Sample module.** *Recommend `profile` (read-only: own profile, plus by-id that
    returns `null` for anyone else).* It touches only an existing table with simple
    RLS and doesn't pre-empt a file another task owns (`matches.ts`, `inbox.ts`, …).
    It overlaps slightly with the profile `state/auth.tsx` already loads; later tasks
    may use it or not.
-4. **One PR or spec first?** The card says spec, plan and code ship in one PR unless
+4. **Approved.** **One PR or spec first?** The card says spec, plan and code ship in one PR unless
    you ask to see the spec first. This branch already carries the spec for your
    review. *Recommend:* approve here, then the plan and code land on the same branch
    as one PR "M-19: Typed data layer".
-5. **Sibling files share their entry's zone.** The backlog's zone table names only
+5. **Approved.** **Sibling files share their entry's zone.** The backlog's zone table names only
    `rides.ts`, `matches.ts` and `inbox.ts`. *Recommend* you note in the backlog that
    `x.*.ts` siblings follow the same order as `x.ts` (this task doesn't edit the
    backlog).
-6. **Refetch stale data when the app returns to the foreground?** *Recommend yes*,
+6. **Approved.** **Refetch stale data when the app returns to the foreground?** *Recommend yes*,
    only for mounted queries older than 30 s; it costs one `AppState` listener and
    keeps reply-by times and the inbox current after a commute.
-7. **An in-app "simulate error" toggle for prototype walkthroughs?** *Recommend no*:
+7. **Approved.** **An in-app "simulate error" toggle for prototype walkthroughs?** *Recommend no*:
    error paths are covered by tests through the mock's `fail` option, and a hidden
    toggle is one more thing to strip before release (M-25).
-8. **Stable RPC error hints.** *Recommend* the DB specs still to be written (M-27,
+8. **Approved.** **Stable RPC error hints.** *Recommend* the DB specs still to be written (M-27,
    M-32, M-39, M-55a) raise business-rule rejections with a stable `hint` so the app
    can map them. This is advice for those tasks; mark it on their rows if you agree.
 
