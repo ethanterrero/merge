@@ -2,9 +2,9 @@
 
 **Date:** 2026-10-10
 **Task:** M-16
-**Status:** Draft for owner review. Brainstormed without the owner; each choice
-below has a recommended answer, and the choices the owner should confirm are listed
-under [Owner questions](#owner-questions).
+**Status:** Approved by the owner on 2026-10-10, with all six owner questions
+answered as recommended (see [Owner questions](#owner-questions)). Built in
+`supabase/migrations/0014_profile_cards.sql`.
 **Scope:** `supabase/migrations/0014_profile_cards.sql`,
 `supabase/tests/profile_cards_test.sql`, `apps/mobile/src/lib/database.types.ts`
 (CI artifact only). The backlog card plans 0009, which `0009_east_bay_neighborhoods.sql`
@@ -37,8 +37,8 @@ the name rule itself (M-56) are out of scope.
 
 ## Decisions
 
-The ones marked **(Q)** are recommendations the owner should confirm (see
-[Owner questions](#owner-questions)). The rest follow from Decided rows or from the
+The ones marked **(Q)** were owner questions, approved as recommended on 2026-10-10
+(see [Owner questions](#owner-questions)). The rest follow from Decided rows or from the
 privacy invariants.
 
 1. **One card, before and after confirmation (Q4).** The card has the same five
@@ -337,21 +337,29 @@ first push, the build commits the `database-types` artifact, which adds
 
 ## Owner questions
 
+All six approved by the owner on 2026-10-10 as recommended.
+
 1. **Ride preferences on the card?** Recommended: **yes**. Allowed before
    confirmation, profile-level, and `docs/mvp.md` says they show on cards. The
    backlog card listed only name, role and vetted.
+   **Approved: yes, on the card.**
 2. **Area labels on the card?** Recommended: **no**. Areas are per commute; the
    matching, invitation and booking functions return the one that applies. Putting
    them on the card would show every past contact all of a person's areas.
+   **Approved: no areas on the card.**
 3. **Which invitations make two people related?** Recommended: **every status, with
    no expiry.** Filtering by status reveals a "no" (D-16, D-22). Alternative: only
    invitations still pending or tied to a ride, which hides old contacts sooner but
    needs D-22's display timing reproduced exactly in SQL.
+   **Approved: every status, no expiry.**
 4. **Same card before and after confirmation?** Recommended: **yes.** Post-confirmation
    details stay with booking (M-32) and contact sharing (M-55a), each behind its own
    gate.
+   **Approved: the same card.**
 5. **Suspended caller: empty result or error?** Recommended: **empty**, per M-56
    decision 3 (nothing special in a suspended member's app).
+   **Approved: empty result.**
 6. **How a missing card renders.** Recommended: one label for every missing card,
    the existing "Former member", so deletion, block and suspension read alike.
    Final copy belongs to the UI tasks (M-44, M-47, M-48).
+   **Approved: "Former member" for every missing card.**
