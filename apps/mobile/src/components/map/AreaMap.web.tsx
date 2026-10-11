@@ -2,6 +2,10 @@
 // EXPO_PUBLIC_STADIA_KEY is set, and the stylized BayMap otherwise. maplibre-gl
 // is loaded on demand, so prototype mode never downloads it. If the style
 // can't load (bad key, no WebGL), it falls back to BayMap too.
+//
+// The stylesheet stays a static import: Expo's web export hoists every CSS
+// import into index.html, even a dynamic one, so loading it lazily saves
+// nothing. It's about 70 kB and styles nothing until a map exists.
 
 import 'maplibre-gl/dist/maplibre-gl.css';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -13,7 +17,7 @@ import { BayMap } from '../BayMap';
 import { areaRadius, areaSignature, areasFeatureCollection, isValidLatLng, southEdge } from './areas';
 import { AREA_FILL_LAYER_ID, AREA_SOURCE_ID, areaLayers } from './layers';
 import { MapErrorBoundary } from './MapErrorBoundary';
-import { chooseRenderer, stadiaStyleUrl, withStadiaKey } from './provider';
+import { chooseRenderer, redactKey, stadiaStyleUrl, withStadiaKey } from './provider';
 import { AreaTag, MapAttribution, MAP_KEY, boundsFor, cameraPadding, resolveInsets } from './shared';
 import type { AreaMapProps } from './types';
 
@@ -99,7 +103,10 @@ function WebAreaMap({
         created.on('error', (e) => {
           // A missing tile later on is fine; a style that never loads is not.
           if (!styleLoaded) {
-            console.warn('Map style failed to load; showing the stylized map instead.', e.error);
+            // Never log the error itself: its message holds the request URL, and that holds the key.
+            const status = (e.error as { status?: unknown } | undefined)?.status;
+            const http = typeof status === 'number' ? ` (HTTP ${status})` : '';
+            console.warn(`Map style failed to load${http}; showing the stylized map instead.`);
             latest.current.onFail();
           }
         });
@@ -122,7 +129,7 @@ function WebAreaMap({
         observer.observe(el);
       })
       .catch((err: unknown) => {
-        console.warn('maplibre-gl failed to load; showing the stylized map instead.', err);
+        console.warn(`maplibre-gl failed to load (${redactKey(String(err), mapKey)}); showing the stylized map instead.`);
         if (!cancelled) latest.current.onFail();
       });
 

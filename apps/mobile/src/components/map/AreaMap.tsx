@@ -4,9 +4,9 @@
 // when it can, and on the stylized BayMap otherwise:
 // - no EXPO_PUBLIC_STADIA_KEY (prototype mode with an empty .env),
 // - Expo Go, or a dev build made before MapLibre was added (no native module),
-// - the real map throwing while it renders.
+// - the real map throwing while it renders, or its style failing to load.
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Platform, TurboModuleRegistry } from 'react-native';
 import { BayMap } from '../BayMap';
 import { chooseRenderer } from './provider';
@@ -34,12 +34,13 @@ function loadNativeMap(): NativeMapModule | null {
 }
 
 export function AreaMap(props: AreaMapProps) {
+  const [failed, setFailed] = useState(false);
   const native = MAP_KEY && (Platform.OS === 'ios' || Platform.OS === 'android') ? loadNativeMap() : null;
   const choice = chooseRenderer({ key: MAP_KEY, platform: Platform.OS, nativeMapAvailable: native !== null });
-  if (choice.kind === 'native' && native && MAP_KEY) {
+  if (choice.kind === 'native' && native && MAP_KEY && !failed) {
     return (
       <MapErrorBoundary fallback={<BayMap {...props} />}>
-        <native.MapLibreAreaMap {...props} mapKey={MAP_KEY} />
+        <native.MapLibreAreaMap {...props} mapKey={MAP_KEY} onFail={() => setFailed(true)} />
       </MapErrorBoundary>
     );
   }

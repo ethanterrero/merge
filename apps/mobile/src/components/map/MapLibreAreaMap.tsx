@@ -14,7 +14,17 @@ import type { AreaMapProps } from './types';
 
 const LAYERS = areaLayers(colors);
 
-export function MapLibreAreaMap({ areas, style, insets, fitPadding, minSpanM, interactive = true, accessibilityLabel, mapKey }: AreaMapProps & { mapKey: string }) {
+export function MapLibreAreaMap({
+  areas,
+  style,
+  insets,
+  fitPadding,
+  minSpanM,
+  interactive = true,
+  accessibilityLabel,
+  mapKey,
+  onFail,
+}: AreaMapProps & { mapKey: string; onFail: () => void }) {
   const resolved = resolveInsets(insets);
   const padding = cameraPadding(resolved, fitPadding);
   const bounds = boundsFor(areas, minSpanM);
@@ -49,6 +59,13 @@ export function MapLibreAreaMap({ areas, style, insets, fitPadding, minSpanM, in
         doubleTapHoldZoom={interactive}
         touchRotate={false}
         touchPitch={false}
+        // A bad or revoked key, a 429 or no network: the style never loads and
+        // the map would stay blank with no tappable circles, so hand back to BayMap.
+        // The event carries no details, so nothing (and never the key) is logged with it.
+        onDidFailLoadingMap={() => {
+          console.warn('Map style failed to load; showing the stylized map instead.');
+          onFail();
+        }}
       >
         <Camera ref={camera} initialViewState={initial.current} />
         <GeoJSONSource
