@@ -2,8 +2,10 @@
 
 **Date:** 2026-10-10
 **Task:** M-23
-**Status:** Draft for owner review. Ten owner questions are at the end, each with a
-recommendation. Nothing is built yet.
+**Status:** Approved by the owner on 2026-10-10, with all ten owner questions
+answered as recommended (see [Owner questions](#owner-questions)). Two amendments
+from merging main after approval are under
+[Build amendments](#build-amendments-2026-10-10).
 **Scope (prototype, mock data):** `src/screens/TripsScreen.tsx` (new),
 `src/screens/DriverRequestsScreen.tsx`, `src/components/TabBar.tsx`,
 `src/navigation.tsx` and `App.tsx` (a new `trips` route), `src/data/mockTrips.ts`
@@ -438,50 +440,99 @@ for errors.
   theme's deprecated color names (M-51).
 - Changes to `docs/mvp-backlog.md`, `docs/ui.md` (M-54a's zone) or approved specs.
 
+## Build amendments (2026-10-10)
+
+Main moved after approval (M-20 #39, M-22 #41, M-24 #40, M-25 #38). Two changes
+follow, neither of which alters an approved answer:
+
+1. **Blocked people are hidden from Trips** with `useBlockedIds()` from
+   `src/lib/data/blocks.ts` (M-24), in both modes. Every Trips item carries the other
+   person's id (`TripPerson.id`). In prototype mode that id is the same stand-in the
+   block menus use: the match id (`priya`, `marcus`) for Match detail, and the request
+   id (`req-jordan`) for the driver's request screen, so blocking someone there
+   removes them from Trips and from the badge at once. A pure `gateOnBlocks(state,
+   blocked, keep)` in `lib/trips.ts` applies it: while the block list is loading,
+   each section reads `loading` (blocked people are never shown "just for a
+   moment"); if it failed, the section shows the generic error; once it is ready,
+   blocked people are dropped and a driving day loses their seat (a day with no
+   riders left is dropped). The badge counts only after the block list is ready.
+2. **The session booking comes from M-20's First Ride state,** not
+   `commute.bookedMatchId`. `TripsScreen` reads `useFirstRide().latestRide(matchId)`
+   for each match, and `bookedRides()` turns each into a `TripRide` on
+   `PROTOTYPE_RIDE_DATE`. A confirmed one shows under Upcoming → Riding; one completed
+   with Booked's prototype simulator moves to Past. (`withSessionBooking` in the test
+   plan becomes `bookedRides`.)
+
+Two smaller build notes: `Button` has no accessibility-label prop, so a row button's
+context ("to Marcus L., Wed, Oct 14") goes in its `accessibilityHint`; and
+`Segmented` takes no per-option accessibility label, so the Requests segment is read
+from its visible text ("Requests · 2"). Both components belong to M-51.
+
 ## Owner questions
+
+All ten approved by the owner on 2026-10-10 as recommended.
 
 1. **Structure.** One Trips screen with Requests / Upcoming / Past for every role,
    role-filtered sections inside, and the driver sections kept in
    `DriverRequestsScreen.tsx` as exported components (approach C).
    *Recommended: approve.* It keeps every later task inside the files the backlog
    gives it.
+   **Approved: approach C.**
+
 2. **`driverRequests` becomes an alias.** Its `renderRoute` case renders
    `TripsScreen` (Requests or Upcoming from its `tab` param) and App.tsx stops
    importing `DriverRequestsScreen`. The route and its params stay, because
    `DriverConfirmScreen` resets to it. This edits one existing `renderRoute` case,
    beyond the card's "append a `trips` route".
    *Recommended: approve;* M-43 or M-54a can move callers to `trips` later.
+   **Approved: `driverRequests` renders `TripsScreen`.**
+
 3. **Two new files, and their zone.** Add `src/lib/trips.ts` and
    `src/lib/trips.test.ts` (pure logic and tests; not in the card's file list).
    Treat `lib/trips.ts` like the data-layer index: M-35, M-36 and M-47 may append
    types, fields and functions, keeping both sides on a rebase conflict.
    *Recommended: approve, and add both to the backlog's zone table.*
+   **Approved: both files, `lib/trips.ts` append-only for M-35, M-36 and M-47.**
+
 4. **Invites in this task.** Build "Invites for you" (Accept / Decline) and driver-sent
    invites under "Waiting for a reply" in the prototype now. The card mentions only
    requests sent, but M-35's card edits "the sent-requests and invites sections" of
    TripsScreen and D-16 keeps driver invites.
    *Recommended: yes.*
+   **Approved: invites are built in this task.**
+
 5. **What the badge counts.** Only items that need my reply: requests to me, invites
    to me, and (from M-36) accepted invites awaiting my seat confirmation. Not my own
    pending sends. M-36, the TabBar badge owner, sums its inbox count with M-35's
    invite count.
    *Recommended: yes, and note the sum on M-36's card.*
+   **Approved: needs-my-reply only; M-36 sums both counts.**
+
 6. **Cancellation copy.** Trips says "Ride cancelled" for every cause, with no "{first}
    can't drive" attribution, so a D-07 removal can't be told apart from a Can't drive.
    (BookedScreen's existing "If {first} can't drive, you're notified right away" is a
    promise about notification, not attribution, and is M-47's to word.)
    *Recommended: neutral copy for every cause.*
+   **Approved: "Ride cancelled" for every cause.**
+
 7. **Unavailable requests.** They stay under "Waiting for a reply" until their ride date
    passes, with **Find another ride** and no dismiss; the app never works out a
    status from the clock.
    *Recommended: approve.*
+   **Approved.**
+
 8. **Default segment.** Requests when something needs my reply, otherwise Upcoming.
    *Recommended: approve.* The alternative, always Requests, is more predictable but
    opens on an empty list for most visits.
+   **Approved.**
+
 9. **Fixed prototype clock.** Sat Oct 10, 2026, 2:00 PM LA in `mockTrips.ts`, matching
    `PROTOTYPE_RIDE_DATE`.
    *Recommended: approve,* so fixtures don't age into the past and screenshots stay
    stable.
+   **Approved.**
+
 10. **One PR.** Spec, plan and code ship together as "M-23: Role-aware Trips tab" on
     this branch.
     *Recommended: yes,* per the card's default.
+    **Approved: one PR.**
