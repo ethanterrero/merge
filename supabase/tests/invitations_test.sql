@@ -113,6 +113,8 @@ begin
   insert into public.invitations (sender_id, recipient_id, commute_id, status, ride_date, direction)
   values (pg_temp.uid(pax), pg_temp.uid(drv), (pg_temp.commute_of(pax, 'passenger')).id, 'booked', d, 'request')
   returning id into inv;
+  -- Sent long ago, so it doesn't count toward today's sends.
+  update public.invitations set created_at = now() - interval '30 days' where id = inv;
   insert into public.rides (invitation_id, driver_id, passenger_id, ride_date, pickup_time, status, kind)
   values (inv, pg_temp.uid(drv), pg_temp.uid(pax), d, '07:45', st, 'first_ride')
   returning id into rid;
