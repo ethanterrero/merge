@@ -25,6 +25,7 @@ export type Route =
   | { name: 'postRideThanks'; matchId: string }
   | { name: 'report'; personId?: string; personName?: string; rideId?: string; rideLabel?: string }
   | { name: 'blockedPeople' }
+  | { name: 'trips'; tab?: 'requests' | 'upcoming' | 'past' }
 ;
 
 export type RouteName = Route['name'];

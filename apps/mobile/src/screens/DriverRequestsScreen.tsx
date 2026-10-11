@@ -1,78 +1,128 @@
-import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import React, { useMemo } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, shadow, space, type } from '../theme';
 import { useNav } from '../navigation';
 import { useCommute } from '../state/commute';
-import { REQUESTS, RideRequest } from '../data/mock';
+import { REQUESTS } from '../data/mock';
+import { DRIVING_DAYS, MOCK_LEAVE_TIME, MOCK_TRIPS_TODAY } from '../data/mockTrips';
+import { useBlockedIds } from '../lib/data/blocks';
+import type { QueryState } from '../lib/data/types';
 import { formatRideDate } from '../lib/dates';
 import { rideDateLine } from '../lib/rideKind';
-import { TabBar } from '../components/TabBar';
+import {
+  drivingDays,
+  firstName,
+  fromItems,
+  gateOnBlocks,
+  keepUnblockedPerson,
+  keepUnblockedRiders,
+  nextDrivingDay,
+  replyByLabel,
+  riderFromRequest,
+  seatsPillLabel,
+  showSection,
+  sidesFor,
+  toIncomingRequest,
+  type DrivingDay,
+  type DrivingRider,
+  type IncomingRequest,
+} from '../lib/trips';
 import { Icon } from '../components/Icon';
 import { Button } from '../components/Button';
-import { Avatar, Badge, Card, Eyebrow, Segmented, Stat } from '../components/primitives';
+import { Avatar, Badge, Card, Stat } from '../components/primitives';
 
-type Tab = 'new' | 'upcoming';
+// The driving side of the Trips tab (M-23 spec). TripsScreen renders these; the file
+// keeps its name because the screen lock table keys on it. M-36 wires the requests
+// and the seats pill (lib/data/inbox.ts), M-47 the driving days (lib/data/rides.ts).
+// Keep the hook return types: TripsScreen counts and empty states depend on them.
 
-/** Driver home: incoming requests and upcoming trips (designs D1 and D4). */
-export function DriverRequestsScreen({ initialTab = 'new' }: { initialTab?: Tab }) {
-  const nav = useNav();
+/** Passengers' requests to me, minus the ones I accepted and anyone I blocked. */
+export function useDrivingRequests(): QueryState<IncomingRequest[]> {
   const { commute } = useCommute();
-  const [tab, setTab] = useState<Tab>(initialTab);
-  const pending = REQUESTS.filter((r) => !commute.acceptedRequests.includes(r.id));
-  const accepted = REQUESTS.filter((r) => commute.acceptedRequests.includes(r.id));
-  const insets = useSafeAreaInsets();
-  const seatsOpen = Math.max(0, commute.seatsOffered - 1 - accepted.reduce((n, r) => n + r.seats, 0));
+  const blocked = useBlockedIds();
+  return useMemo(() => {
+    const items = sidesFor(commute.role).driving
+      ? REQUESTS.filter((r) => !commute.acceptedRequests.includes(r.id)).map(toIncomingRequest)
+      : [];
+    return gateOnBlocks(fromItems(items), blocked, keepUnblockedPerson);
+  }, [commute.role, commute.acceptedRequests, blocked]);
+}
 
+/** My driving days with their confirmed riders, minus anyone I blocked. */
+export function useDrivingDays(): QueryState<DrivingDay[]> {
+  const { commute } = useCommute();
+  const blocked = useBlockedIds();
+  return useMemo(() => {
+    const accepted = REQUESTS.filter((r) => commute.acceptedRequests.includes(r.id)).map(riderFromRequest);
+    const items = sidesFor(commute.role).driving
+      ? drivingDays(DRIVING_DAYS, accepted, MOCK_LEAVE_TIME).filter((day) => day.date >= MOCK_TRIPS_TODAY)
+      : [];
+    return gateOnBlocks(fromItems(items), blocked, keepUnblockedRiders);
+  }, [commute.role, commute.acceptedRequests, blocked]);
+}
+
+/** Header pill: seats open on my next driving day. */
+export function DrivingSeatsPill({ days }: { days: QueryState<DrivingDay[]> }) {
+  const { commute } = useCommute();
+  const next = days.status === 'success' ? nextDrivingDay(days.data, MOCK_TRIPS_TODAY) : null;
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <StatusBar style="dark" />
-      <View style={styles.header}>
-        <View style={{ paddingTop: insets.top + space.lg, paddingHorizontal: space.xl, gap: 14, paddingBottom: 14 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm }}>
-            <Text style={type.title} accessibilityRole="header">
-              Trips
-            </Text>
-            <View style={styles.drivingPill}>
-              <Icon name="car" size={14} color={colors.ember} />
-              <Text style={{ fontSize: 12, fontWeight: '700', color: colors.maroon }}>
-                Driving · {seatsOpen} of {commute.seatsOffered} seats open
-              </Text>
-            </View>
-          </View>
-          <Segmented<Tab>
-            value={tab}
-            onChange={setTab}
-            options={[
-              { value: 'new', label: `New · ${pending.length}` },
-              { value: 'upcoming', label: 'Upcoming' },
-            ]}
-          />
-        </View>
-      </View>
-
-      <ScrollView contentContainerStyle={{ padding: space.lg, gap: space.md }}>
-        {tab === 'new' ? (
-          <>
-            {pending.map((r, i) => (
-              <RequestCard key={r.id} request={r} highlighted={i === 0} onPress={() => nav.push({ name: 'driverRequest', requestId: r.id })} />
-            ))}
-            {pending.length === 0 ? <Text style={[type.body, { color: colors.textMuted }]}>No new requests. You'll get a notification when someone asks to ride.</Text> : null}
-            <Text style={[type.small, { color: colors.textMuted, paddingHorizontal: 4 }]}>
-              Requests expire if you don't reply. Riders only see your approximate area until you accept.
-            </Text>
-          </>
-        ) : (
-          <Upcoming accepted={accepted} />
-        )}
-      </ScrollView>
-      <TabBar active="trips" />
+    <View style={styles.drivingPill}>
+      <Icon name="car" size={14} color={colors.accent} />
+      <Text style={{ fontSize: 12, fontWeight: '700', color: colors.deep }}>{seatsPillLabel(next, commute.seatsOffered)}</Text>
     </View>
   );
 }
 
-function RequestCard({ request: r, highlighted, onPress }: { request: RideRequest; highlighted: boolean; onPress: () => void }) {
+/** A section heading in the Trips tab, read as a header. */
+export function TripsSectionTitle({ children }: { children: string }) {
+  return (
+    <Text accessibilityRole="header" style={[type.eyebrow, { color: colors.textMuted, paddingHorizontal: 4, paddingTop: space.sm }]}>
+      {children}
+    </Text>
+  );
+}
+
+/** Loading and error rows for a section. Renders nothing for other states. */
+export function TripsSectionStatus({ state, onRetry }: { state: QueryState<unknown[]>; onRetry?: () => void }) {
+  if (state.status === 'loading' || state.status === 'idle') {
+    return <Text style={[type.small, { color: colors.textFaint, paddingHorizontal: 4 }]}>Loading…</Text>;
+  }
+  if (state.status === 'error') {
+    return (
+      <View style={{ gap: space.sm, paddingHorizontal: 4 }}>
+        <Text accessibilityLiveRegion="polite" style={[type.small, { color: colors.danger }]}>
+          {state.error.message}
+        </Text>
+        {onRetry ? <Button label="Retry" variant="secondary" size="sm" onPress={onRetry} style={{ alignSelf: 'flex-start', height: 44 }} /> : null}
+      </View>
+    );
+  }
+  return null;
+}
+
+/** Requests section: "Asking you for a ride". */
+export function DriverRequestsSection({ state, onRetry }: { state: QueryState<IncomingRequest[]>; onRetry?: () => void }) {
+  const nav = useNav();
+  if (!showSection(state)) return null;
+  return (
+    <View style={{ gap: space.md }}>
+      <TripsSectionTitle>Asking you for a ride</TripsSectionTitle>
+      <TripsSectionStatus state={state} onRetry={onRetry} />
+      {state.status === 'success' ? (
+        <>
+          {state.data.map((r, i) => (
+            <RequestCard key={r.id} request={r} highlighted={i === 0} onPress={() => nav.push({ name: 'driverRequest', requestId: r.id })} />
+          ))}
+          <Text style={[type.small, { color: colors.textMuted, paddingHorizontal: 4 }]}>
+            Requests expire if you don't reply. Riders only see your approximate area until you accept.
+          </Text>
+        </>
+      ) : null}
+    </View>
+  );
+}
+
+function RequestCard({ request: r, highlighted, onPress }: { request: IncomingRequest; highlighted: boolean; onPress: () => void }) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -81,15 +131,15 @@ function RequestCard({ request: r, highlighted, onPress }: { request: RideReques
       style={({ pressed }) => [styles.card, highlighted ? styles.cardOn : styles.cardOff, pressed && { opacity: 0.85 }]}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
-        <Avatar initials={r.initials} variant={highlighted ? 'solid' : 'soft'} />
+        <Avatar initials={r.person.initials} variant={highlighted ? 'solid' : 'soft'} />
         <View style={{ flex: 1 }}>
           <Text style={type.subheading}>
-            {r.name}
-            {r.verified ? <Text style={{ fontSize: 12, fontWeight: '600', color: colors.successText }}> · Verified</Text> : null}
+            {r.person.name}
+            {r.person.verified ? <Text style={{ fontSize: 12, fontWeight: '600', color: colors.successText }}> · Verified</Text> : null}
           </Text>
           <Text style={[type.small, { color: colors.textMuted }]}>Wants to ride {rideDateLine(r.rideDate, r.kind)}</Text>
         </View>
-        <Badge label={`Reply by ${r.replyBy}`} tone={highlighted ? 'brand' : 'neutral'} />
+        <Badge label={`Reply by ${replyByLabel(r.rideDate, 'short')}`} tone={highlighted ? 'brand' : 'neutral'} />
       </View>
       <View style={styles.stats}>
         <Stat value={r.addedDetour} label="Added detour" />
@@ -100,71 +150,71 @@ function RequestCard({ request: r, highlighted, onPress }: { request: RideReques
   );
 }
 
-// The prototype's two upcoming driving days. Each accepted request is one ride,
-// so it appears only under its own date.
-const MON = '2026-10-12';
-const TUE = '2026-10-13';
-
-function Upcoming({ accepted }: { accepted: RideRequest[] }) {
-  const onMon = accepted.filter((a) => a.rideDate === MON);
-  const tueRiders = 1 + accepted.filter((a) => a.rideDate === TUE).length;
+/** Upcoming section: "Driving", one card per driving day. */
+export function DriverUpcomingSection({ state, onRetry }: { state: QueryState<DrivingDay[]>; onRetry?: () => void }) {
+  if (!showSection(state)) return null;
+  const justBooked = state.status === 'success' ? state.data.flatMap((day) => day.riders.filter((r) => r.justBooked)) : [];
   return (
-    <>
-      {accepted.length ? (
+    <View style={{ gap: space.md }}>
+      <TripsSectionTitle>Driving</TripsSectionTitle>
+      <TripsSectionStatus state={state} onRetry={onRetry} />
+      {justBooked.length ? (
         <View style={styles.success}>
           <Icon name="checkmark-circle" size={20} color={colors.successText} />
-          <Text style={[type.small, { fontWeight: '600', color: colors.maroon, flex: 1 }]}>
-            {accepted.map((a) => a.name.split(' ')[0]).join(' and ')} booked. Pickup details were shared.
+          <Text style={[type.small, { fontWeight: '600', color: colors.deep, flex: 1 }]}>
+            {justBooked.map((r) => firstName(r.person.name)).join(' and ')} booked. Pickup details were shared.
           </Text>
         </View>
       ) : null}
-      <Eyebrow>{formatRideDate(MON)}</Eyebrow>
-      <Card raised style={{ padding: space.lg, gap: space.md }}>
-        <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
-          <Text style={type.heading}>Leave 7:35 AM</Text>
-          <Text style={[type.small, { color: colors.textMuted }]}>Arrive ~[time]</Text>
-        </View>
-        <Rider initials="SR" name="Sam R. · 7:38 AM" spot="[Pickup spot]" />
-        {onMon.map((a) => (
-          <Rider key={a.id} initials={a.initials} name={`${a.name} · ${a.pickupTime} AM`} spot={a.cargo ? `${a.pickupSpot} · scooter in trunk` : a.pickupSpot} highlight />
-        ))}
-        <View style={{ flexDirection: 'row', gap: space.sm }}>
-          <Button label="Message riders" variant="secondary" size="sm" style={{ flex: 1, height: 44 }} />
-          <Button label="Can't drive" variant="destructive" size="sm" style={{ flex: 1, height: 44 }} accessibilityHint="Tells riders right away" />
-        </View>
-      </Card>
-      <Eyebrow>{formatRideDate(TUE)}</Eyebrow>
-      <Card style={{ padding: space.lg, flexDirection: 'row', alignItems: 'center', gap: space.md }}>
-        <View style={{ flex: 1 }}>
-          <Text style={type.subheading}>Leave 7:35 AM</Text>
-          <Text style={[type.small, { color: colors.textMuted }]}>{tueRiders === 1 ? '1 rider' : `${tueRiders} riders`}</Text>
-        </View>
-        <Icon name="chevron-forward" size={20} color={colors.textFaint} />
-      </Card>
-      <Text style={[type.small, { color: colors.textMuted, paddingHorizontal: 4 }]}>
-        If you mark a day as "can't drive," riders are notified right away and see other drivers for that day.
-      </Text>
-    </>
+      {state.status === 'success'
+        ? state.data.map((day, i) => <DayCard key={day.date} day={day} raised={i === 0} />)
+        : null}
+      {state.status === 'success' ? (
+        <Text style={[type.small, { color: colors.textMuted, paddingHorizontal: 4 }]}>
+          If you mark a day as "can't drive," riders are notified right away and see other drivers for that day.
+        </Text>
+      ) : null}
+    </View>
   );
 }
 
-function Rider({ initials, name, spot, highlight }: { initials: string; name: string; spot: string; highlight?: boolean }) {
+function DayCard({ day, raised }: { day: DrivingDay; raised: boolean }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-      <Avatar initials={initials} size={32} variant={highlight ? 'solid' : 'soft'} />
+    <Card raised={raised} style={{ padding: space.lg, gap: space.md }}>
+      <Text style={[type.eyebrow, { color: colors.textMuted }]}>{formatRideDate(day.date)}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: space.sm }}>
+        <Text style={type.heading}>Leave {day.leaveTime}</Text>
+        <Text style={[type.small, { color: colors.textMuted }]}>Arrive ~[time]</Text>
+      </View>
+      {day.riders.map((rider) => (
+        <Rider key={rider.id} rider={rider} />
+      ))}
+      <View style={{ flexDirection: 'row', gap: space.sm }}>
+        <Button label="Message riders" variant="secondary" size="sm" style={{ flex: 1, height: 44 }} />
+        <Button label="Can't drive" variant="destructive" size="sm" style={{ flex: 1, height: 44 }} accessibilityHint="Tells riders right away" />
+      </View>
+    </Card>
+  );
+}
+
+function Rider({ rider }: { rider: DrivingRider }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }} accessible accessibilityLabel={`${rider.person.name}, pickup ${rider.pickupTime}, ${rider.spot}`}>
+      <Avatar initials={rider.person.initials} size={32} variant={rider.justBooked ? 'solid' : 'soft'} />
       <View style={{ flex: 1 }}>
-        <Text style={[type.small, { fontWeight: '700', color: colors.textPrimary }]}>{name}</Text>
-        <Text style={[type.caption, { color: colors.textMuted }]}>{spot}</Text>
+        <Text style={[type.small, { fontWeight: '700', color: colors.textPrimary }]}>
+          {rider.person.name} · {rider.pickupTime}
+        </Text>
+        <Text style={[type.caption, { color: colors.textMuted }]}>{rider.spot}</Text>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
-  drivingPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.blush },
+  drivingPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: colors.tint, flexShrink: 1 },
   card: { padding: space.lg, borderRadius: radius.lg, gap: space.md, backgroundColor: colors.surface, ...shadow.sm },
-  cardOn: { borderWidth: 2, borderColor: colors.chili },
+  cardOn: { borderWidth: 2, borderColor: colors.primary },
   cardOff: { borderWidth: 1, borderColor: colors.border },
   stats: { flexDirection: 'row', gap: space.sm, paddingTop: space.md, borderTopWidth: 1, borderTopColor: colors.border },
   success: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: space.md, borderRadius: radius.lg, backgroundColor: colors.successBg },

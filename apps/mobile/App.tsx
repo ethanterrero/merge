@@ -16,7 +16,6 @@ import { DiscoverScreen } from './src/screens/DiscoverScreen';
 import { MatchDetailScreen } from './src/screens/MatchDetailScreen';
 import { RequestRideScreen } from './src/screens/RequestRideScreen';
 import { BookedScreen } from './src/screens/BookedScreen';
-import { DriverRequestsScreen } from './src/screens/DriverRequestsScreen';
 import { DriverRequestScreen } from './src/screens/DriverRequestScreen';
 import { DriverConfirmScreen } from './src/screens/DriverConfirmScreen';
 import { RoleScreen } from './src/screens/RoleScreen';
@@ -27,6 +26,7 @@ import { PostRideScreen } from './src/screens/PostRideScreen';
 import { PostRideThanksScreen } from './src/screens/PostRideThanksScreen';
 import { ReportScreen } from './src/screens/ReportScreen';
 import { BlockedPeopleScreen } from './src/screens/BlockedPeopleScreen';
+import { TripsScreen } from './src/screens/TripsScreen';
 
 export default function App() {
   return (
@@ -114,7 +114,8 @@ function renderRoute(route: Route): React.ReactElement {
     case 'booked':
       return <BookedScreen matchId={route.matchId} />;
     case 'driverRequests':
-      return <DriverRequestsScreen key={route.tab ?? 'new'} initialTab={route.tab} />;
+      // Alias kept for DriverConfirmScreen (M-23 owner question 2).
+      return <TripsScreen key={route.tab ?? 'auto'} initialTab={route.tab === 'upcoming' ? 'upcoming' : 'requests'} />;
     case 'driverRequest':
       return <DriverRequestScreen requestId={route.requestId} />;
     case 'driverConfirm':
@@ -131,5 +132,7 @@ function renderRoute(route: Route): React.ReactElement {
       return <ReportScreen personId={route.personId} personName={route.personName} rideId={route.rideId} rideLabel={route.rideLabel} />;
     case 'blockedPeople':
       return <BlockedPeopleScreen />;
+    case 'trips':
+      return <TripsScreen key={route.tab ?? 'auto'} initialTab={route.tab} />;
   }
 }
