@@ -160,8 +160,11 @@ create index invitations_sender_ride_date_idx on public.invitations (sender_id, 
 create index invitations_recipient_ride_date_idx on public.invitations (recipient_id, ride_date);
 
 -- RLS and grants (Q3) ----------------------------------------------------------------
--- The policy is defense in depth. Clients have no privilege on the table at all: the
--- raw status and timestamps carry the "no", and RLS can't hide a blocked pair.
+-- The policy is defense in depth. Clients can't read or write the table: the raw
+-- status and timestamps carry the "no", and RLS can't hide a blocked pair. Only
+-- delete stays granted to authenticated, because M-17a's suite checks that a client
+-- delete removes 0 rows rather than failing; with no delete policy, RLS lets it
+-- remove nothing.
 
 create policy "Participants read their invitations"
   on public.invitations for select
@@ -169,6 +172,7 @@ create policy "Participants read their invitations"
   using ((select auth.uid()) in (sender_id, recipient_id));
 
 revoke all on public.invitations from public, anon, authenticated;
+grant delete on public.invitations to authenticated;
 
 -- Projection ---------------------------------------------------------------------------
 -- States: waiting_for_them, waiting_for_me, accepted_confirm_seat (driver),

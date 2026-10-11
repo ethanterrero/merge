@@ -300,10 +300,14 @@ declare
   priv text;
   cols text[];
 begin
-  foreach priv in array array['select', 'insert', 'update', 'delete'] loop
-    if has_table_privilege('authenticated', 'public.invitations', priv)
-       or has_table_privilege('anon', 'public.invitations', priv) then
-      raise exception 'A client role has % on invitations', priv;
+  foreach priv in array array['select', 'insert', 'update', 'delete', 'truncate'] loop
+    if has_table_privilege('anon', 'public.invitations', priv) then
+      raise exception 'anon has % on invitations', priv;
+    end if;
+    -- delete stays granted (M-17a's suite deletes as a client and expects 0 rows); with
+    -- no delete policy, RLS lets it remove nothing.
+    if priv <> 'delete' and has_table_privilege('authenticated', 'public.invitations', priv) then
+      raise exception 'authenticated has % on invitations', priv;
     end if;
   end loop;
 
@@ -400,6 +404,23 @@ end
 $$;
 select pg_temp.reset();
 
+-- A client delete removes nothing, even the client's own invitations.
+do $$
+declare
+  iv uuid := pg_temp.send('01', '10', 'driver', pg_temp.d());
+  n integer;
+begin
+  perform tests.as_user(pg_temp.uid('01'));
+  delete from public.invitations;
+  get diagnostics n = row_count;
+  perform tests.as_admin();
+  if n <> 0 or not exists (select 1 from public.invitations i where i.id = iv) then
+    raise exception 'A client deleted % invitations', n;
+  end if;
+end
+$$;
+select pg_temp.reset();
+
 -- 2. Cutoffs (D-02, mirrors M-08) -----------------------------------------------------
 
 do $$
@@ -468,7 +489,7 @@ begin
 
   -- The area is a copy: Ada moving her pin out of her area doesn't move the request.
   update public.commutes set origin = pg_temp.pt('park') where id = ada.id;
-  if extensions.st_astext(pg_temp.inv(req).pickup_area) <> extensions.st_astext(ada.origin_area)
+  if extensions.st_astext((pg_temp.inv(req)).pickup_area) <> extensions.st_astext(ada.origin_area)
      or extensions.st_astext((pg_temp.commute_of('01', 'passenger')).origin_area) = extensions.st_astext(ada.origin_area) then
     raise exception 'The request''s area should stay put when the commute area changes';
   end if;
@@ -571,15 +592,15 @@ $$;
 do $$
 declare
   d date := pg_temp.d();
-  id uuid;
+  iv uuid;
   k integer;
   dee uuid;
   cy uuid;
 begin
   -- 10 sends a day, withdrawn ones included.
   for k in 1..10 loop
-    id := pg_temp.send('01', '10', 'driver', d);
-    perform pg_temp.expect('withdraw ' || k, pg_temp.act('01', 'withdraw', id), 'ok');
+    iv := pg_temp.send('01', '10', 'driver', d);
+    perform pg_temp.expect('withdraw ' || k, pg_temp.act('01', 'withdraw', iv), 'ok');
   end loop;
   perform pg_temp.expect('11th send', pg_temp.code(pg_temp.send_err('01', pg_temp.uid('10'), 'driver', d)), 'P0001|daily_limit');
   -- The limit comes before anything about the recipient: a blocked or opted-out person
@@ -590,8 +611,8 @@ begin
   perform pg_temp.reset();
 
   -- 5 open at once. A secretly declined request counts; withdrawn and expired ones don't.
-  id := pg_temp.send('01', '10', 'driver', d);
-  perform pg_temp.expect('Bea declines', pg_temp.act('10', 'decline', id), 'ok');
+  iv := pg_temp.send('01', '10', 'driver', d);
+  perform pg_temp.expect('Bea declines', pg_temp.act('10', 'decline', iv), 'ok');
   cy := pg_temp.send('01', '11', 'driver', d);
   dee := pg_temp.send('01', '12', 'driver', d);
   perform pg_temp.send('01', '13', 'driver', d);
@@ -613,9 +634,9 @@ begin
   perform pg_temp.reset();
 
   -- A driver's held withdrawal still occupies the pair's date for both.
-  id := pg_temp.send('10', '02', 'passenger', d);
-  perform pg_temp.expect('Abe accepts', pg_temp.act('02', 'accept', id), 'ok');
-  perform pg_temp.expect('Bea withdraws', pg_temp.act('10', 'withdraw', id), 'ok');
+  iv := pg_temp.send('10', '02', 'passenger', d);
+  perform pg_temp.expect('Abe accepts', pg_temp.act('02', 'accept', iv), 'ok');
+  perform pg_temp.expect('Bea withdraws', pg_temp.act('10', 'withdraw', iv), 'ok');
   perform pg_temp.expect('Bea re-invites', pg_temp.code(pg_temp.send_err('10', pg_temp.uid('02'), 'passenger', d)), 'P0001|already_requested');
   perform pg_temp.expect('Abe requests', pg_temp.code(pg_temp.send_err('02', pg_temp.uid('10'), 'driver', d)), 'P0001|already_requested');
   perform pg_temp.reset();
@@ -643,7 +664,7 @@ begin
   perform pg_temp.expect('accept', pg_temp.act('02', 'accept', inv), 'ok');
   perform pg_temp.expect('driver after accept', pg_temp.state('10', inv), 'accepted_confirm_seat');
   perform pg_temp.expect('passenger after accept', pg_temp.state('02', inv), 'accepted_waiting_for_driver');
-  if pg_temp.inv(inv).accepted_at is null then
+  if (pg_temp.inv(inv)).accepted_at is null then
     raise exception 'accepted_at not set';
   end if;
   perform pg_temp.expect('repeat accept', pg_temp.code(pg_temp.act('02', 'accept', inv)), '42501|unavailable');
@@ -691,7 +712,7 @@ begin
   perform pg_temp.expect('decline twice', pg_temp.code(pg_temp.act('10', 'decline', r)), '42501|unavailable');
   perform pg_temp.expect('recipient withdraws', pg_temp.code(pg_temp.act('10', 'withdraw', r)), '42501|unavailable');
   perform pg_temp.expect('sender declines', pg_temp.code(pg_temp.act('01', 'decline', r)), '42501|unavailable');
-  if pg_temp.inv(r).held_until is distinct from pg_temp.inv(r).expires_at then
+  if (pg_temp.inv(r)).held_until is distinct from (pg_temp.inv(r)).expires_at then
     raise exception 'A decline should be held until the reply cutoff';
   end if;
 
@@ -730,7 +751,7 @@ begin
   a := pg_temp.send('01', '10', 'driver', d);
   b := pg_temp.send('01', '11', 'driver', d);
   perform pg_temp.expect('Bea declines', pg_temp.act('10', 'decline', a), 'ok');
-  x := pg_temp.inv(a).expires_at;
+  x := (pg_temp.inv(a)).expires_at;
 
   perform pg_temp.expect('declined, before', public.invitation_state(pg_temp.inv(a), pg_temp.uid('01'), x - interval '1 second'), 'waiting_for_them');
   perform pg_temp.expect('unanswered, before', public.invitation_state(pg_temp.inv(b), pg_temp.uid('01'), x - interval '1 second'), 'waiting_for_them');
@@ -783,10 +804,10 @@ begin
   perform pg_temp.expect('Bea withdraws', pg_temp.act('10', 'withdraw', x), 'ok');
   perform pg_temp.expect('Bea sees', pg_temp.state('10', x), 'closed_by_me');
   perform pg_temp.expect('Abe sees', pg_temp.state('02', x), 'accepted_waiting_for_driver');
-  if pg_temp.inv(x).held_until is distinct from pg_temp.inv(x).expires_at then
+  if (pg_temp.inv(x)).held_until is distinct from (pg_temp.inv(x)).expires_at then
     raise exception 'A driver''s withdrawal after acceptance should be held';
   end if;
-  t := pg_temp.inv(x).expires_at;
+  t := (pg_temp.inv(x)).expires_at;
   perform pg_temp.expect('withdrawn, before', public.invitation_state(pg_temp.inv(x), pg_temp.uid('02'), t - interval '1 second'),
     public.invitation_state(pg_temp.inv(z), pg_temp.uid('01'), t - interval '1 second'));
   perform pg_temp.expect('withdrawn, at', public.invitation_state(pg_temp.inv(x), pg_temp.uid('02'), t),
@@ -811,7 +832,7 @@ begin
   perform pg_temp.expect('Ada b', pg_temp.state('01', b), 'closed_by_me');
   perform pg_temp.expect('Bea a', pg_temp.state('10', a), 'closed_by_me');
   perform pg_temp.expect('Cy b', pg_temp.state('11', b), 'unavailable');
-  perform pg_temp.expect('stored a', pg_temp.inv(a).status, 'declined');
+  perform pg_temp.expect('stored a', (pg_temp.inv(a)).status, 'declined');
   perform pg_temp.expect('withdraw again', pg_temp.code(pg_temp.act('01', 'withdraw', a)), '42501|unavailable');
   perform pg_temp.reset();
 end
@@ -824,21 +845,21 @@ declare
   d date := pg_temp.d();
   crew uuid := '40000000-0000-0000-0000-000000002701';
   want text := '42501|unavailable|This ride isn''t available anymore';
-  id uuid;
+  iv uuid;
   res jsonb;
 begin
-  id := pg_temp.send('01', '30', 'driver', d);
-  perform pg_temp.expect('Ride Again to an opted-out connection', pg_temp.inv(id).kind, 'ride_again');
-  perform pg_temp.expect('Ken sees it', pg_temp.state('30', id), 'waiting_for_me');
+  iv := pg_temp.send('01', '30', 'driver', d);
+  perform pg_temp.expect('Ride Again to an opted-out connection', (pg_temp.inv(iv)).kind, 'ride_again');
+  perform pg_temp.expect('Ken sees it', pg_temp.state('30', iv), 'waiting_for_me');
 
-  id := pg_temp.send('01', '32', 'driver', d, null, null, crew);
-  perform pg_temp.expect('Crew kind', pg_temp.inv(id).kind, 'crew');
-  perform pg_temp.expect('Crew id', pg_temp.inv(id).crew_id::text, crew::text);
-  perform pg_temp.expect('Crew view', pg_temp.row_of('01', id) ->> 'crew_id', crew::text);
+  iv := pg_temp.send('01', '32', 'driver', d, null, null, crew);
+  perform pg_temp.expect('Crew kind', (pg_temp.inv(iv)).kind, 'crew');
+  perform pg_temp.expect('Crew id', (pg_temp.inv(iv)).crew_id::text, crew::text);
+  perform pg_temp.expect('Crew view', pg_temp.row_of('01', iv) ->> 'crew_id', crew::text);
   perform pg_temp.expect('Crew off-day', pg_temp.send_err('01', pg_temp.uid('32'), 'driver', pg_temp.dt(), null, null, crew), want);
   perform pg_temp.expect('Crew unknown', pg_temp.send_err('01', pg_temp.uid('32'), 'driver', pg_temp.dt(), null, null, gen_random_uuid()), want);
   perform pg_temp.expect('Crew of another pair', pg_temp.send_err('01', pg_temp.uid('30'), 'driver', pg_temp.dt(), null, null, crew), want);
-  perform pg_temp.expect('withdraw', pg_temp.act('01', 'withdraw', id), 'ok');
+  perform pg_temp.expect('withdraw', pg_temp.act('01', 'withdraw', iv), 'ok');
   update public.commute_crews set status = 'paused' where id = crew;
   perform pg_temp.expect('Crew paused', pg_temp.send_err('01', pg_temp.uid('32'), 'driver', d, null, null, crew), want);
   update public.commute_crews set status = 'active' where id = crew;
@@ -861,8 +882,8 @@ begin
   if not res @> to_jsonb(array[pg_temp.uid('31')]) then
     raise exception 'A connected pair with a completed ride should match: %', res;
   end if;
-  id := pg_temp.send('01', '31', 'driver', d);
-  perform pg_temp.expect('Liv Ride Again', pg_temp.inv(id).kind, 'ride_again');
+  iv := pg_temp.send('01', '31', 'driver', d);
+  perform pg_temp.expect('Liv Ride Again', (pg_temp.inv(iv)).kind, 'ride_again');
   delete from public.connections where user_low = pg_temp.uid('01') and user_high = pg_temp.uid('31');
   perform pg_temp.reset();
 end
@@ -889,12 +910,12 @@ begin
   insert into public.blocks (blocker_id, blocked_id) values (pg_temp.uid('01'), pg_temp.uid('11'));  -- Ada blocks Cy
   insert into public.blocks (blocker_id, blocked_id) values (pg_temp.uid('12'), pg_temp.uid('01'));  -- Dee blocks Ada
 
-  perform pg_temp.expect('p status', pg_temp.inv(p).status, 'cancelled');
-  perform pg_temp.expect('p reason', pg_temp.inv(p).cancel_reason, 'block');
-  perform pg_temp.expect('q status', pg_temp.inv(q).status, 'cancelled');
-  perform pg_temp.expect('h status', pg_temp.inv(h).status, 'declined');
-  perform pg_temp.expect('h reason', pg_temp.inv(h).cancel_reason, 'block');
-  if pg_temp.inv(h).held_until > now() then
+  perform pg_temp.expect('p status', (pg_temp.inv(p)).status, 'cancelled');
+  perform pg_temp.expect('p reason', (pg_temp.inv(p)).cancel_reason, 'block');
+  perform pg_temp.expect('q status', (pg_temp.inv(q)).status, 'cancelled');
+  perform pg_temp.expect('h status', (pg_temp.inv(h)).status, 'declined');
+  perform pg_temp.expect('h reason', (pg_temp.inv(h)).cancel_reason, 'block');
+  if (pg_temp.inv(h)).held_until > now() then
     raise exception 'A block should end a hold';
   end if;
 
@@ -914,12 +935,12 @@ begin
   -- A block also ends a Ride Again invitation, and refuses the connected exception.
   k := pg_temp.send('01', '30', 'driver', d);
   insert into public.blocks (blocker_id, blocked_id) values (pg_temp.uid('30'), pg_temp.uid('01'));
-  perform pg_temp.expect('Ken invitation', pg_temp.inv(k).status, 'cancelled');
+  perform pg_temp.expect('Ken invitation', (pg_temp.inv(k)).status, 'cancelled');
   perform pg_temp.expect('Ada -> Ken', pg_temp.send_err('01', pg_temp.uid('30'), 'driver', pg_temp.dt()), want);
 
   -- Unblocking restores nothing.
   delete from public.blocks where blocker_id = pg_temp.uid('10') and blocked_id = pg_temp.uid('01');
-  perform pg_temp.expect('p after unblock', pg_temp.inv(p).status, 'cancelled');
+  perform pg_temp.expect('p after unblock', (pg_temp.inv(p)).status, 'cancelled');
   perform pg_temp.expect('Ada sees p after unblock', pg_temp.state('01', p), 'unavailable');
   perform pg_temp.reset();
 end
@@ -947,15 +968,15 @@ begin
 
   update public.profiles set suspended_at = now() where id in (pg_temp.uid('13'), pg_temp.uid('14'), pg_temp.uid('15'));
 
-  perform pg_temp.expect('s1', pg_temp.inv(s1).status, 'cancelled');
-  perform pg_temp.expect('s1 reason', pg_temp.inv(s1).cancel_reason, 'suspension');
-  perform pg_temp.expect('s2', pg_temp.inv(s2).status, 'cancelled');
-  perform pg_temp.expect('s2 reason', pg_temp.inv(s2).cancel_reason, 'suspension');
-  perform pg_temp.expect('s3', pg_temp.inv(s3).status, 'declined');
-  if pg_temp.inv(s3).held_until > now() then
+  perform pg_temp.expect('s1', (pg_temp.inv(s1)).status, 'cancelled');
+  perform pg_temp.expect('s1 reason', (pg_temp.inv(s1)).cancel_reason, 'suspension');
+  perform pg_temp.expect('s2', (pg_temp.inv(s2)).status, 'cancelled');
+  perform pg_temp.expect('s2 reason', (pg_temp.inv(s2)).cancel_reason, 'suspension');
+  perform pg_temp.expect('s3', (pg_temp.inv(s3)).status, 'declined');
+  if (pg_temp.inv(s3)).held_until > now() then
     raise exception 'A suspension should end a hold';
   end if;
-  perform pg_temp.expect('legacy', pg_temp.inv(legacy).status, 'accepted');
+  perform pg_temp.expect('legacy', (pg_temp.inv(legacy)).status, 'accepted');
 
   if pg_temp.row_of('01', s1) is not null or pg_temp.row_of('02', s2) is not null
      or pg_temp.row_of('01', s3) is not null or pg_temp.row_of('02', legacy) is not null then
@@ -972,7 +993,7 @@ begin
   perform pg_temp.expect('Abe 5th', pg_temp.send_err('02', pg_temp.uid('31'), 'driver', d), 'ok');
 
   update public.profiles set suspended_at = null where id in (pg_temp.uid('13'), pg_temp.uid('14'), pg_temp.uid('15'));
-  perform pg_temp.expect('s2 stays cancelled', pg_temp.inv(s2).status, 'cancelled');
+  perform pg_temp.expect('s2 stays cancelled', (pg_temp.inv(s2)).status, 'cancelled');
   delete from public.invitations where id = legacy;
   perform pg_temp.reset();
 end
