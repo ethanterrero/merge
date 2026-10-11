@@ -3,10 +3,19 @@
 // M-36, …) filter with useBlockedIds(); this task doesn't filter them.
 
 import { useMemo } from 'react';
-import { defineBackends, useBackendApi, useDataMutation, useDataQuery } from './backend';
-import { blocksKeys, toBlockedIds, type BlockedIds, type BlocksApi } from './blocks.api';
+import { defineBackends, useBackendApi, useDataContext, useDataMutation, useDataQuery } from './backend';
+import {
+  blocksKeys,
+  toBlockedIds,
+  withBlockListUpdates,
+  type BlockedIds,
+  type BlockedPerson,
+  type BlockListCache,
+  type BlocksApi,
+} from './blocks.api';
 import { createBlocksMock } from './blocks.mock';
 import { createBlocksSupabase } from './blocks.supabase';
+import { queryStore } from './hooks';
 
 const backends = defineBackends({ mock: createBlocksMock(), supabase: createBlocksSupabase });
 
@@ -23,17 +32,34 @@ export function useBlockedIds(): BlockedIds {
   return useMemo(() => toBlockedIds(query.status, people), [query.status, people]);
 }
 
-const BLOCK_ACTIONS = {
-  block: (api: BlocksApi, id: string) => api.block(id),
-  unblock: (api: BlocksApi, id: string) => api.unblock(id),
-};
+/** The member's cached blocks:list entry (the same scoped key useBlockedPeople reads). */
+function blockListCache(scope: string | null): BlockListCache | null {
+  if (!scope) return null;
+  const key = `${scope}:${blocksKeys.list}`;
+  return {
+    read: () => {
+      const snap = queryStore.getSnapshot(key);
+      return snap.hasValue ? (snap.value as BlockedPerson[]) : undefined;
+    },
+    write: (list) => queryStore.setQueryData<BlockedPerson[]>(key, () => list),
+  };
+}
 
 /**
- * block(id) / unblock(id). A block ends connections and Crews and hides people across
- * features, so success invalidates every key in the member's scope.
+ * block(id) / unblock(id). On success the cached list is updated first, so
+ * useBlockedIds() flips at once; then, because a block ends connections and Crews and
+ * hides people across features, every key in the member's scope is invalidated.
  */
 export function useBlockActions() {
-  return useDataMutation(backends, BLOCK_ACTIONS, { invalidate: 'all' });
+  const { scope } = useDataContext();
+  const actions = useMemo(() => {
+    const cache = blockListCache(scope);
+    return {
+      block: (api: BlocksApi, id: string) => withBlockListUpdates(api, cache).block(id),
+      unblock: (api: BlocksApi, id: string) => withBlockListUpdates(api, cache).unblock(id),
+    };
+  }, [scope]);
+  return useDataMutation(backends, actions, { invalidate: 'all' });
 }
 
 /** For event handlers that need a one-off call. null while the data mode is 'off'. */
@@ -41,5 +67,5 @@ export function useBlocksApi() {
   return useBackendApi(backends);
 }
 
-export { blockedOnLabel, blocksKeys, FORMER_MEMBER, isBlocked, toBlockedIds } from './blocks.api';
+export { blockedOnLabel, blocksKeys, FORMER_MEMBER, isBlocked, isPersonId, toBlockedIds } from './blocks.api';
 export type { BlockedIds, BlockedPerson, BlocksApi } from './blocks.api';

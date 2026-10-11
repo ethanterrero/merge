@@ -1,9 +1,9 @@
 // Supabase safety reports backend. Pure: the client is injected, and only types are
 // imported from supabase-js, so this loads under Node.
 //
-// insert() without .select() sends `Prefer: return=minimal`, so PostgREST runs no
-// RETURNING: reporters have no select grant on safety_reports (0005), and a
-// returning insert would fail. If hosted PostgREST ever rejects this, the fallback is
+// insert() without .select() sends no `Prefer: return=...` header, and PostgREST's
+// default is minimal, so it runs no RETURNING: reporters have no select grant on
+// safety_reports (0005), and a returning insert would fail. If hosted PostgREST ever rejects this, the fallback is
 // a security definer RPC returning void, never a select policy.
 
 import { settle, type ErrorOverrides } from './errors';

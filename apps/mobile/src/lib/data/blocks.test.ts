@@ -1,9 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { blockedOnLabel, isBlocked, toBlockedIds, type BlockedPerson, type BlocksApi } from './blocks.api';
+import {
+  blockedOnLabel,
+  isBlocked,
+  isPersonId,
+  toBlockedIds,
+  withBlockListUpdates,
+  type BlockedPerson,
+  type BlockListCache,
+  type BlocksApi,
+} from './blocks.api';
 import { BLOCK_COLUMNS, toBlockedPerson, type BlockRow } from './blocks.map';
 import { createBlocksMock, type BlocksMockOptions } from './blocks.mock';
 import { createBlocksSupabase } from './blocks.supabase';
+import { createQueryStore, toQueryState } from './store';
 import { errKind, ok, runContract } from './testing/contract';
 import type { RecordedCall } from './testing/fakeSupabase';
 
@@ -248,4 +258,86 @@ test('blockedOnLabel formats in local time and is empty for a bad timestamp', ()
   const local = new Date(2026, 9, 10, 9, 30);
   assert.equal(blockedOnLabel(local.toISOString()), 'Blocked Oct 10, 2026');
   assert.equal(blockedOnLabel('not a date'), '');
+});
+
+test('isPersonId accepts profile uuids only', () => {
+  assert.equal(isPersonId(ME), true);
+  assert.equal(isPersonId(ME.toUpperCase()), true);
+  assert.equal(isPersonId('priya'), false);
+  assert.equal(isPersonId('req-jordan'), false);
+  assert.equal(isPersonId(''), false);
+  assert.equal(isPersonId(null), false);
+  assert.equal(isPersonId(undefined), false);
+  assert.equal(isPersonId(`${ME} `), false);
+  assert.equal(isPersonId(ME.replace(/-/g, '')), false);
+});
+
+// The screen-facing path: the cached blocks:list entry, read through toQueryState and
+// toBlockedIds exactly as useBlockedIds does, flips on a successful write with no refetch.
+function cachedList(store: ReturnType<typeof createQueryStore>, key: string): BlockListCache {
+  return {
+    read: () => {
+      const snap = store.getSnapshot(key);
+      return snap.hasValue ? (snap.value as BlockedPerson[]) : undefined;
+    },
+    write: (list) => store.setQueryData<BlockedPerson[]>(key, () => list),
+  };
+}
+
+function screenIds(store: ReturnType<typeof createQueryStore>, key: string) {
+  const { state } = toQueryState<BlockedPerson[]>(store.getSnapshot(key));
+  return toBlockedIds(state.status, state.status === 'success' ? state.data : null);
+}
+
+test('a successful block flips isBlocked at once, with no refetch', async () => {
+  const store = createQueryStore();
+  const key = 'mock:blocks:list';
+  const api = createBlocksMock({ meId: ME, now: () => new Date('2026-10-10T17:00:00.000Z') });
+  let fetches = 0;
+  await store.fetch(key, () => {
+    fetches += 1;
+    return api.listBlocked();
+  });
+  assert.equal(screenIds(store, key).isBlocked(OTHER), false);
+
+  const actions = withBlockListUpdates(api, cachedList(store, key), () => new Date('2026-10-10T17:00:00.000Z'));
+  assert.deepEqual(await actions.block(OTHER), { ok: true, data: null });
+  assert.equal(screenIds(store, key).isBlocked(OTHER), true);
+  assert.deepEqual(store.getSnapshot(key).value, [{ id: OTHER, blockedAt: '2026-10-10T17:00:00.000Z' }]);
+
+  // Blocking again doesn't add a second entry.
+  await actions.block(OTHER);
+  assert.equal((store.getSnapshot(key).value as BlockedPerson[]).length, 1);
+
+  assert.deepEqual(await actions.unblock(OTHER), { ok: true, data: null });
+  assert.equal(screenIds(store, key).isBlocked(OTHER), false);
+  assert.equal(screenIds(store, key).status, 'ready');
+  assert.equal(fetches, 1);
+});
+
+test('a failed block or unblock leaves the cached list alone', async () => {
+  const store = createQueryStore();
+  const key = 'mock:blocks:list';
+  const failing = createBlocksMock({ meId: ME, blocks: [OLDER], fail: () => ({ kind: 'offline', message: 'x' }) });
+  store.setQueryData<BlockedPerson[]>(key, () => [OLDER]);
+  const actions = withBlockListUpdates(failing, cachedList(store, key));
+  assert.equal((await actions.block(OTHER)).ok, false);
+  assert.equal((await actions.unblock(THIRD)).ok, false);
+  assert.deepEqual(store.getSnapshot(key).value, [OLDER]);
+});
+
+test('with no cached list, a block writes nothing (the refetch fills it in)', async () => {
+  const store = createQueryStore();
+  const key = 'mock:blocks:list';
+  const actions = withBlockListUpdates(createBlocksMock({ meId: ME }), cachedList(store, key));
+  assert.deepEqual(await actions.block(OTHER), { ok: true, data: null });
+  assert.equal(store.getSnapshot(key).hasValue, false);
+});
+
+test('without a cache (data mode off), the actions still call the backend', async () => {
+  const api = createBlocksMock({ meId: ME });
+  assert.deepEqual(await withBlockListUpdates(api, null).block(OTHER), { ok: true, data: null });
+  const list = await api.listBlocked();
+  assert.ok(list.ok);
+  if (list.ok) assert.deepEqual(list.data.map((person) => person.id), [OTHER]);
 });

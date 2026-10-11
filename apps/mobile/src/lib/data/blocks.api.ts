@@ -65,6 +65,47 @@ export function toBlockedIds(status: QueryState<BlockedPerson[]>['status'], peop
   return { status: readiness, ids, isBlocked: (id) => isBlocked(ids, id) };
 }
 
+// Profile ids are Postgres uuids. Anything else (the prototype's 'priya', 'req-jordan')
+// would fail with 22P02 in connected mode.
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** True for a real profile id (a uuid). */
+export function isPersonId(id: string | null | undefined): id is string {
+  return typeof id === 'string' && UUID.test(id);
+}
+
+/** The cached blocks:list entry: undefined when it hasn't loaded. */
+export type BlockListCache = {
+  read: () => readonly BlockedPerson[] | undefined;
+  write: (list: BlockedPerson[]) => void;
+};
+
+/**
+ * block / unblock that also update the cached list on success, so isBlocked flips at
+ * once instead of waiting for the refetch (which may fail). The invalidation after it
+ * still reloads the server's copy. With no cached list there's nothing to update.
+ */
+export function withBlockListUpdates(
+  api: Pick<BlocksApi, 'block' | 'unblock'>,
+  cache: BlockListCache | null,
+  now: () => Date = () => new Date(),
+): Pick<BlocksApi, 'block' | 'unblock'> {
+  return {
+    block: async (id) => {
+      const result = await api.block(id);
+      const list = result.ok ? cache?.read() : undefined;
+      if (cache && list && !isBlocked(list, id)) cache.write([{ id, blockedAt: now().toISOString() }, ...list]);
+      return result;
+    },
+    unblock: async (id) => {
+      const result = await api.unblock(id);
+      const list = result.ok ? cache?.read() : undefined;
+      if (cache && list && isBlocked(list, id)) cache.write(list.filter((person) => person.id !== id));
+      return result;
+    },
+  };
+}
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** "Blocked Oct 10, 2026" in the device's time zone. Empty for an unreadable timestamp. */
