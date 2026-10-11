@@ -52,6 +52,8 @@ type Entry = {
   stale: boolean;
   staleMs: number;
   seq: number;
+  /** Bumped by invalidate(). A fetch that started under an older generation answers a question that's out of date. */
+  generation: number;
   inflight: Promise<void> | null;
   fetcher: Fetcher | null;
   listeners: Set<() => void>;
@@ -74,6 +76,7 @@ export function createQueryStore(options: { now?: () => number } = {}) {
         stale: false,
         staleMs: DEFAULT_STALE_MS,
         seq: 0,
+        generation: 0,
         inflight: null,
         fetcher: null,
         listeners: new Set(),
@@ -102,6 +105,7 @@ export function createQueryStore(options: { now?: () => number } = {}) {
     entry.fetcher = fetcher;
     if (entry.inflight && !opts.force) return entry.inflight;
     const seq = ++entry.seq;
+    const generation = entry.generation;
     update(entry, { fetching: true });
     const run = (async () => {
       let result: Result<unknown>;
@@ -113,7 +117,12 @@ export function createQueryStore(options: { now?: () => number } = {}) {
       // A newer request owns the entry, or the entry was evicted by a scope switch.
       if (entries.get(key) !== entry || seq !== entry.seq) return;
       entry.inflight = null;
-      if (result.ok) {
+      if (result.ok && generation !== entry.generation) {
+        // Started before an invalidation (for example a block committed meanwhile): the
+        // answer may predate that write. Keep the entry stale so the next mount refetches,
+        // and don't overwrite a value written since (setQueryData); use it only if there's nothing.
+        update(entry, entry.snapshot.hasValue ? { fetching: false } : { hasValue: true, value: result.data, error: null, fetching: false, fetchedAt: now() });
+      } else if (result.ok) {
         entry.stale = false;
         update(entry, { hasValue: true, value: result.data, error: null, fetching: false, fetchedAt: now() });
       } else {
@@ -137,6 +146,7 @@ export function createQueryStore(options: { now?: () => number } = {}) {
     for (const [key, entry] of entries) {
       if (!matchesPrefix(key, prefix)) continue;
       entry.stale = true;
+      entry.generation += 1;
       if (entry.listeners.size > 0 && entry.fetcher) void fetch(key, entry.fetcher, { force: true });
     }
   }

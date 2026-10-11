@@ -3,13 +3,14 @@ import assert from 'node:assert/strict';
 import type { AuthStatus } from '../authRules';
 import { dataMode, dataScope } from './mode';
 
-test('dataMode: only prototype is mock and only ready is supabase', () => {
+test('dataMode: only prototype is mock and only ready is supabase (misconfigured is off)', () => {
   const expected: Record<AuthStatus, string> = {
     prototype: 'mock',
     ready: 'supabase',
     loading: 'off',
     signedOut: 'off',
     needsProfile: 'off',
+    misconfigured: 'off',
   };
   for (const [status, mode] of Object.entries(expected)) {
     assert.equal(dataMode(status as AuthStatus), mode, status);

@@ -6,6 +6,7 @@ import { PROTOTYPE_RIDE_DATE, findMatch } from '../data/mock';
 import { formatRideDate } from '../lib/dates';
 import { rideKindBadge } from '../lib/rideKind';
 import { useCommute } from '../state/commute';
+import { useFirstRide } from '../state/firstRide';
 import { Screen, TopBar } from '../components/Screen';
 import { Button } from '../components/Button';
 import { Badge, Card, Row, SettingRow } from '../components/primitives';
@@ -13,6 +14,7 @@ import { Badge, Card, Row, SettingRow } from '../components/primitives';
 export function RequestRideScreen({ matchId }: { matchId: string }) {
   const nav = useNav();
   const { commute, update } = useCommute();
+  const { bookRide } = useFirstRide();
   const m = findMatch(matchId);
   const first = m.name.split(' ')[0];
   // Every new match starts with one ride on one date (First Ride spec).
@@ -22,6 +24,8 @@ export function RequestRideScreen({ matchId }: { matchId: string }) {
   const send = () => {
     // Prototype: treat the request as accepted so the booked state can be reviewed.
     update({ bookedMatchId: m.id });
+    // Each booking is its own ride, with its own post-ride feedback (M-20).
+    bookRide(m.id);
     nav.reset({ name: 'booked', matchId: m.id });
   };
 

@@ -3,14 +3,21 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, shadow, space, type } from '../theme';
 import { useNav } from '../navigation';
 import { toggleIn, useCommute } from '../state/commute';
-import { WEEKDAYS } from '../data/mock';
+import { PROTOTYPE_COMMUTE_AREAS, WEEKDAYS } from '../data/mock';
 import { Screen, StepProgress } from '../components/Screen';
 import { Button } from '../components/Button';
-import { BayMap, Zone } from '../components/BayMap';
+import { AreaMap } from '../components/map/AreaMap';
+import type { AreaMapItem } from '../components/map/types';
 import { Card, InfoNote, Row } from '../components/primitives';
 import { TimeField } from '../components/TimeField';
 
 const FLEX_OPTIONS = [5, 10, 15] as const;
+
+// The person's own areas, as generalized circles. Area picking comes later (M-29).
+const COMMUTE_AREAS: AreaMapItem[] = [
+  { id: 'pickup', center: { lat: PROTOTYPE_COMMUTE_AREAS.pickup.lat, lng: PROTOTYPE_COMMUTE_AREAS.pickup.lng }, tone: 'primary', dashed: true, label: 'Pickup' },
+  { id: 'dropoff', center: { lat: PROTOTYPE_COMMUTE_AREAS.dropoff.lat, lng: PROTOTYPE_COMMUTE_AREAS.dropoff.lng }, tone: 'deep', dashed: true, label: 'Drop-off' },
+];
 
 export function CommuteScreen() {
   const nav = useNav();
@@ -31,12 +38,13 @@ export function CommuteScreen() {
       </Text>
 
       <Card>
-        <BayMap height={150}>
-          <Zone x={300} y={74} size={76} dashed />
-          <Zone x={62} y={62} size={64} tone="maroon" dashed />
-          <Text style={[styles.mapTag, { left: 272, top: 116 }]}>Pickup</Text>
-          <Text style={[styles.mapTag, { left: 30, top: 98 }]}>Drop-off</Text>
-        </BayMap>
+        <AreaMap
+          areas={COMMUTE_AREAS}
+          style={styles.map}
+          interactive={false}
+          fitPadding={{ top: 4, bottom: 18, left: 24, right: 24 }}
+          accessibilityLabel="Map of your approximate pickup and drop-off areas"
+        />
         <AreaRow color={colors.primary} round label="Pickup area · about 0.5 mi wide" value={commute.pickupArea} />
         <AreaRow color={colors.deep} label="Drop-off area" value={commute.dropoffArea} divider />
         <Row style={{ backgroundColor: colors.background }}>
@@ -89,17 +97,7 @@ function AreaRow({ color, label, value, round, divider }: { color: string; label
 }
 
 const styles = StyleSheet.create({
-  mapTag: {
-    position: 'absolute',
-    backgroundColor: colors.surface,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-    overflow: 'hidden',
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
+  map: { height: 160 },
   day: { flex: 1, height: 44, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   dayOn: { backgroundColor: colors.primary },
   dayOff: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderStrong },

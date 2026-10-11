@@ -126,7 +126,7 @@ Mock data only, as today. No Supabase calls.
 
 ### State
 
-- `state/commute.tsx` gains per-match relationship state: ride status, my feedback, simulated partner answer, and the Crew (status, days, time).
+- A new `state/firstRide.tsx` (`FirstRideProvider`, mounted in `App()`) holds per-match relationship state: ride status, my feedback, simulated partner answer, and the Crew (status, days, time). Its pure rules live in `lib/firstRide.ts`. Amended per D-21 (Decided 2026-10-08): this state stays out of `state/commute.tsx`, which the onboarding work owns.
 - `state/connection.ts` exports a pure `resolveConnection(mine, theirs)` that returns `none | ride_again | ride_again_crew_eligible`, mirroring the SQL rules.
 - The minimal navigator in `navigation.tsx` gains routes: `postRide`, `postRideThanks`, `rideAgain`, `crewSetup`, `crew`.
 
