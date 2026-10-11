@@ -21,6 +21,8 @@ import { DriverRequestScreen } from './src/screens/DriverRequestScreen';
 import { DriverConfirmScreen } from './src/screens/DriverConfirmScreen';
 import { RoleScreen } from './src/screens/RoleScreen';
 import { VehicleScreen } from './src/screens/VehicleScreen';
+import { ReportScreen } from './src/screens/ReportScreen';
+import { BlockedPeopleScreen } from './src/screens/BlockedPeopleScreen';
 
 export default function App() {
   return (
@@ -112,5 +114,9 @@ function renderRoute(route: Route): React.ReactElement {
       return <RoleScreen />;
     case 'vehicle':
       return <VehicleScreen />;
+    case 'report':
+      return <ReportScreen personId={route.personId} personName={route.personName} rideId={route.rideId} rideLabel={route.rideLabel} />;
+    case 'blockedPeople':
+      return <BlockedPeopleScreen />;
   }
 }
