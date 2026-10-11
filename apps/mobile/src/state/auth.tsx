@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { appEnv, supabase } from '../lib/supabase';
 import type { Database } from '../lib/database.types';
 import {
+  appMode,
   AuthStatus,
   DELETE_ACCOUNT_ERROR,
   DELETED_SIGN_OUT_ERROR,
@@ -120,7 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const client = supabase;
     return {
       status: deriveStatus({
-        configured: client !== null,
+        mode: appMode({ appEnv, configured: client !== null }),
         sessionLoaded,
         hasSession: session !== null,
         profileLoaded,
