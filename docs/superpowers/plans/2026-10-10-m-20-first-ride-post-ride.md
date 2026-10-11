@@ -47,4 +47,11 @@
 
 - [x] `npm run typecheck`, `npm test`, `npm run lint` (0 errors).
 - [x] Web walkthrough in prototype mode: Booked → simulate ride completed → answer one question → Submit → Thanks → simulate Yes, Individual, No; Decide later; the safety link. Screenshots.
-- [ ] Push; CI green.
+- [x] Push; CI green.
+
+## Task 6: Review follow-ups
+
+- [x] Feedback per ride, not per match (TDD): Request dispatches `rideBooked`, which starts a fresh ride unless the match's latest ride is still open. Feedback is keyed by ride id. The pair's connection comes from my latest non-null ride-again answer across the pair's completed rides (ordered like `ride_again_at`), still through `resolveConnection`. Tests cover booking the same match twice. `RequestRideScreen.tsx` gains the one `bookRide` call (outside the card's file list; M-28 is next in that file's chain and starts after this merges).
+- [x] Thanks shows "If {first} also wants to ride again, you'll see it here." only when my own latest answer is Yes or Individual; otherwise just "Thanks.".
+- [x] The provider clears its state when the owner changes: 'prototype', the signed-in profile id, or null when signed out (`ownerChanged`).
+- [x] typecheck, test, lint; web walkthrough of booking Priya twice; push; CI green.
