@@ -16,7 +16,7 @@ import { Badge, Card } from '../components/primitives';
 export function BookedScreen({ matchId }: { matchId: string }) {
   const nav = useNav();
   const { commute } = useCommute();
-  const { relationship, completeRide } = useFirstRide();
+  const { latestRide, bookRide, completeRide } = useFirstRide();
   const m = findMatch(matchId);
   const first = m.name.split(' ')[0];
   const insets = useSafeAreaInsets();
@@ -24,9 +24,11 @@ export function BookedScreen({ matchId }: { matchId: string }) {
 
   // Prototype: stands in for the ride ending (D-01's arrival or fallback timer).
   const simulateCompleted = () => {
-    const next = postRideRoute(relationship(m.id));
+    const ride = latestRide(m.id);
+    // Request books the ride; this covers reaching Booked without one.
+    if (!ride) bookRide(m.id);
     completeRide(m.id);
-    nav.push({ name: next, matchId: m.id });
+    nav.push({ name: ride ? postRideRoute(ride) : 'postRide', matchId: m.id });
   };
 
   return (

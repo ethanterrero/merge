@@ -28,14 +28,17 @@ function rideAgainOptions(first: string): { value: RideAgainAnswer; label: strin
 /** Private post-ride feedback (First Ride spec, New screen 1). */
 export function PostRideScreen({ matchId }: { matchId: string }) {
   const nav = useNav();
-  const { submitFeedback } = useFirstRide();
+  const { latestRide, submitFeedback } = useFirstRide();
   const m = findMatch(matchId);
   const first = m.name.split(' ')[0];
+  // The ride this form answers for, fixed when it opens.
+  const [rideId] = useState(() => latestRide(m.id)?.id ?? null);
   const [draft, setDraft] = useState<Feedback>({ experience: null, rideAgain: null });
   const [showSafety, setShowSafety] = useState(false);
 
   const submit = () => {
-    submitFeedback(m.id, draft);
+    if (rideId === null) return;
+    submitFeedback(rideId, draft);
     // Reset, not push: the submitted form isn't reachable again (no editing in the prototype).
     nav.reset({ name: 'postRideThanks', matchId: m.id });
   };
@@ -49,7 +52,7 @@ export function PostRideScreen({ matchId }: { matchId: string }) {
       contentStyle={{ gap: space.lg }}
       footer={
         <>
-          <Button label="Submit" disabled={!canSubmitFeedback(draft)} onPress={submit} />
+          <Button label="Submit" disabled={rideId === null || !canSubmitFeedback(draft)} onPress={submit} />
           <Button label="Decide later" variant="secondary" size="md" onPress={decideLater} accessibilityHint="Closes this without saving an answer" />
         </>
       }

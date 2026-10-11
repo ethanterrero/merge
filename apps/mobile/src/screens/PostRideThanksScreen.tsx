@@ -18,17 +18,22 @@ const SIMULATED_ANSWERS: { value: RideAgainAnswer; label: string }[] = [
 ];
 
 /**
- * After submitting (First Ride spec, New screen 2). Never reveals either answer:
- * the only thing that can change is the Ride Again card, and resolveConnection
- * gives the same outcome whether the other person said no or hasn't answered.
+ * After submitting (First Ride spec, New screen 2). Never reveals the other
+ * person's answer: the only thing it can change is the Ride Again card, and
+ * resolveConnection gives the same outcome whether they said no or haven't
+ * answered. The "you'll see it here" line depends only on my own answer: it shows
+ * only when I said Yes or Individual, since otherwise no connection can appear.
  */
 export function PostRideThanksScreen({ matchId }: { matchId: string }) {
   const nav = useNav();
-  const { relationship, connection, simulatePartnerAnswer } = useFirstRide();
+  const { myRideAgain, connection, simulatedPartnerAnswer, simulatePartnerAnswer } = useFirstRide();
   const m = findMatch(matchId);
   const first = m.name.split(' ')[0];
   const connected = isConnected(connection(m.id));
-  const simulated = relationship(m.id).simulatedPartnerAnswer;
+  const simulated = simulatedPartnerAnswer(m.id);
+  // Depends only on my own answer: a connection can appear only if I'm open to riding again.
+  const mine = myRideAgain(m.id);
+  const openToRideAgain = mine === 'yes' || mine === 'individual';
   const done = () => nav.reset({ name: 'discover' });
 
   return (
@@ -42,7 +47,7 @@ export function PostRideThanksScreen({ matchId }: { matchId: string }) {
           <Icon name="checkmark" size={28} color={colors.deep} />
         </View>
         <Text style={type.title} accessibilityRole="header">
-          {`Thanks. If ${first} also wants to ride again, you'll see it here.`}
+          {openToRideAgain ? `Thanks. If ${first} also wants to ride again, you'll see it here.` : 'Thanks.'}
         </Text>
         <InfoNote icon="lock-closed" text={`Your answers stay private. ${first} never sees them, and you never see ${first}'s.`} />
       </View>
