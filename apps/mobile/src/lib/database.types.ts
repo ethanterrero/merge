@@ -678,6 +678,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      profile_cards: {
+        Args: { ids: string[] }
+        Returns: {
+          id: string
+          public_name: string
+          ride_prefs: string[]
+          role: string
+          vetted: boolean
+        }[]
+      }
       propose_crew: {
         Args: { departure_time: string; other: string; weekdays: number[] }
         Returns: string
