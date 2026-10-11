@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Drafts stay out of search results. Remove noindex once owner and counsel approve. -->
+<meta name="robots" content="noindex">
+<title>Privacy Policy · Merge</title>
+<meta name="description" content="What the Merge carpool pilot collects, who can see it, the services that process it, how long it's kept, and how to delete it.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"></span>Merge</a>
+    <nav class="site-nav" aria-label="Site">
+      <ul>
+        <li><a href="privacy.html" aria-current="page">Privacy</a></li>
+        <li><a href="terms.html">Terms</a></li>
+        <li><a href="support.html">Support</a></li>
+        <li><a href="delete-account.html">Delete account</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<!--
+  Source of truth: docs/privacy/data-inventory.md (M-11) and the owner decisions in
+  docs/mvp-backlog.md. Change this page when either changes. Values in
+  <span class="placeholder"> aren't decided; never fill them in without the owner.
+-->
+<main id="main" class="wrap">
+  <div class="draft" role="note">
+    <strong>Draft, pending review.</strong>
+    This Privacy Policy is a draft for the Merge pilot. The owner and counsel haven't approved it yet, and it may change before the pilot starts. Highlighted values are still to be decided.
+  </div>
+
+  <h1>Privacy Policy</h1>
+  <p class="meta">Effective date: <span class="placeholder" data-fill="Owner, on approval">[Effective date]</span></p>
+
+  <p class="counsel-note">This draft describes the pilot as designed. Some features it covers (ride messages, contact sharing, push notifications, ride mode, crash reporting) aren't built yet. Check each section against the app before publishing.</p>
+
+  <div class="callout">
+    <h2 id="summary">The short version</h2>
+    <ul>
+      <li>Other members never see your exact home, work or pickup point. Before a ride is confirmed they see your first name and last initial, your role, an approximate area about half a mile wide, your ride preferences and verification flags.</li>
+      <li>Merge doesn't track your location. During a ride, location is used only on the phone to notice arrival, and the server receives just "arrived" and the time.</li>
+      <li>Nobody is told who said no. Your post-ride feedback and your safety reports are never shown to the other person.</li>
+      <li>No ads, no analytics or advertising SDKs, no tracking across apps or websites, and we don't sell or share your personal information.</li>
+      <li>You can delete your account in the app or <a href="delete-account.html">ask us to delete it</a>.</li>
+    </ul>
+  </div>
+
+  <nav class="toc" aria-labelledby="toc-title">
+    <h2 id="toc-title">Contents</h2>
+    <ol>
+      <li><a href="#who">Who we are</a></li>
+      <li><a href="#scope">Who this policy covers</a></li>
+      <li><a href="#collect">What we collect</a></li>
+      <li><a href="#location">Location</a></li>
+      <li><a href="#visible">What other members see</a></li>
+      <li><a href="#use">How we use your information</a></li>
+      <li><a href="#processors">Services that process your information</a></li>
+      <li><a href="#not-collected">What we don't collect</a></li>
+      <li><a href="#retention">How long we keep it</a></li>
+      <li><a href="#choices">Your choices and rights</a></li>
+      <li><a href="#security">Security</a></li>
+      <li><a href="#age">Age</a></li>
+      <li><a href="#changes">Changes to this policy</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="who">1. Who we are</h2>
+  <p>Merge is a free commuter carpool app, piloting in Alameda for East Bay to San Francisco trips. Merge is run by <span class="placeholder" data-fill="D-10 publisher / D-12 counsel">[Operator: the person or legal entity that runs Merge]</span> ("Merge", "we", "us"). Merge is a working name.</p>
+  <p>Questions about this policy go to <span class="placeholder" data-fill="O-03 privacy@ mailbox">privacy@[domain]</span>.</p>
+
+  <h2 id="scope">2. Who this policy covers</h2>
+  <p>This policy covers the Merge mobile app and these web pages during the pilot. The pilot is invite-only: the Merge team adds each tester by hand, and testers must be 18 or older.</p>
+
+  <h2 id="collect">3. What we collect</h2>
+  <p>We collect only what Merge needs to match commuters, arrange rides and keep members safe.</p>
+
+  <h3 id="collect-account">Account and profile</h3>
+  <ul>
+    <li><strong>Email address</strong>, to sign you in with a 6-digit code and to send account emails. The code expires after 10 minutes.</li>
+    <li><strong>Display name</strong>, which you choose. Other members see only your first name and last initial.</li>
+    <li><strong>Role</strong> (driver, passenger or both), your <strong>ride preferences</strong> (quiet ride, smoke-free) and whether you've turned on <strong>discovery</strong>. Discovery is off until you turn it on.</li>
+    <li><strong>Account dates</strong>: when you joined, confirmed your email and last signed in.</li>
+    <li><strong>Driver check</strong>: if you drive, the date the Merge team checked your driver's license and insurance. We look at them in person or on a live video call and keep no copies.</li>
+    <li><strong>Account status</strong>: if we remove someone from the pilot for a safety reason, we record when.</li>
+  </ul>
+
+  <h3 id="collect-commute">Commute</h3>
+  <ul>
+    <li><strong>Start and end points</strong> that you place as pins on the map. We don't use address search, so we never receive your street address.</li>
+    <li><strong>Approximate areas</strong>: for each point, the server picks and stores a circle about half a mile wide that contains it, labelled with a neighbourhood or city name from public boundary data. Other members see the area, never the point.</li>
+    <li><strong>Schedule and flexibility</strong>: the days you commute, your departure time and time zone, how flexible your departure is, and the longest detour you'll accept.</li>
+    <li>Whether you bring a <strong>folding scooter</strong>.</li>
+  </ul>
+
+  <h3 id="collect-vehicle">Vehicle (drivers)</h3>
+  <ul>
+    <li>Make, model, year, colour, licence plate, passenger seats, and whether your trunk fits a folded scooter.</li>
+  </ul>
+
+  <h3 id="collect-rides">Ride requests and rides</h3>
+  <ul>
+    <li><strong>Requests</strong>: who asked whom, for which date, and the status.</li>
+    <li><strong>Rides</strong>: the driver and passenger, date, pickup time, the exact pickup spot and note the driver sets when confirming, and the ride's status.</li>
+    <li><strong>Ride events</strong>: when the driver tapped "Picked up", when the ride arrived (a time only, never a location), and whether either rider marked that it didn't happen.</li>
+    <li><strong>Cancellations</strong>: who cancelled and when, including late cancellations. Late cancellations are recorded privately, with no penalty during the pilot.</li>
+    <li><strong>Post-ride feedback</strong>: how the ride went and whether you'd ride together again. Only you and the Merge team can see it.</li>
+    <li><strong>Ride Again and Commute Crews</strong>: whether you and another member are connected, and the days and times of a Crew you agree to.</li>
+  </ul>
+
+  <h3 id="collect-messages">Messages, contact details and notifications</h3>
+  <ul>
+    <li><strong>Ride messages</strong> you send to the other rider once a ride is confirmed.</li>
+    <li><strong>Contact details you choose to share</strong>: a phone number, an email address, or both, that you type in. Merge doesn't verify phone numbers. We also record who offered to share with whom.</li>
+    <li><strong>Push notification tokens</strong> that let us send notifications to your phone.</li>
+  </ul>
+
+  <h3 id="collect-safety">Safety</h3>
+  <ul>
+    <li><strong>Blocks</strong>: who you've blocked. The person you block isn't told.</li>
+    <li><strong>Safety reports</strong>: who reported whom, the ride, the category, what you wrote, and the Merge team's notes. Reports are stored separately from ride feedback.</li>
+  </ul>
+
+  <h3 id="collect-technical">Technical information</h3>
+  <ul>
+    <li><strong>Server logs</strong>: when the app talks to our servers, they log your IP address, device and app details (user agent), what was requested, the result and the time.</li>
+    <li><strong>Sign-in records</strong>: a security log of sign-ins, with your email address and IP address, and the session that keeps you signed in.</li>
+    <li><strong>Crash reports</strong>: if the app crashes, a report with the error, device model, operating system and app version. Crash reports are scrubbed of personal details and don't include your IP address or user ID.</li>
+  </ul>
+
+  <h2 id="location">4. Location</h2>
+  <ul>
+    <li><strong>Your commute pins are precise.</strong> You place them yourself; we don't use GPS for them. Only you and the Merge team can see them.</li>
+    <li><strong>Ride mode uses location on the phone only.</strong> When the driver taps "Picked up", Merge starts using the phone's location to notice when the ride reaches its destination area. It keeps running in the background until arrival, with the system's location indicator (iOS) or a "Ride in progress" notification (Android) showing. Merge asks only for "while using the app" permission, never "Always", and doesn't use background location permission or geofencing.</li>
+    <li><strong>The server never receives coordinates from ride mode.</strong> It receives only that the ride arrived, and when. Location stops when the ride ends.</li>
+    <li><strong>No live tracking.</strong> Other members never see your location, during a ride or otherwise.</li>
+    <li><strong>The map.</strong> To draw map tiles, your phone asks our map provider for the part of the map on screen. The provider sees your IP address and that map area (see <a href="#processors">section 7</a>).</li>
+  </ul>
+  <p>If you don't allow location, rides still work: a ride completes automatically after its expected trip time.</p>
+
+  <h2 id="visible">5. What other members see</h2>
+  <div class="table-wrap">
+    <table>
+      <caption>Who can see what. The Merge team can see everything listed in section 3.</caption>
+      <thead>
+        <tr><th scope="col">When</th><th scope="col">What they see</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">In discovery, before a ride is confirmed (only if you've turned discovery on)</th>
+          <td>First name and last initial, role, approximate areas about half a mile wide with their area names, ride preferences, verification flags (for example "License &amp; insurance checked by Merge"), how many rides you've given and taken, and the month you joined (or "New to Merge"). <span class="placeholder" data-fill="M-11 Q6 (owner)">[Q6: whether the days and time you share with them show before confirmation]</span></td>
+        </tr>
+        <tr>
+          <th scope="row">After a ride is confirmed</th>
+          <td>The other rider also sees the exact pickup spot and note the driver set, the car's make, model, colour and plate, ride messages, and the ride's status.</td>
+        </tr>
+        <tr>
+          <th scope="row">If you both share contact details</th>
+          <td>Contact details show only when you have both offered, you have a confirmed ride (until 24 hours after it ends) or a Ride Again connection, and neither of you has blocked the other. A block, losing the connection, or deleting your account ends access in the app, but we can't pull back details someone has already saved.</td>
+        </tr>
+        <tr>
+          <th scope="row">Never</th>
+          <td>Your email address (unless you share it), your exact commute points, your post-ride feedback, whether you said no or simply didn't answer, your safety reports, who you've blocked, and your location.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p>A ride request shows the driver your pickup area (never your exact point), the date and time, and whether you bring a folding scooter. A declined request looks exactly like an expired one. If someone blocks you, or you block them, you stop appearing to each other.</p>
+
+  <h2 id="use">6. How we use your information</h2>
+  <ul>
+    <li>To run Merge: sign you in, match commutes, arrange and confirm rides, show you what you need for a ride, and send ride notifications.</li>
+    <li>To keep members safe: review safety reports, enforce blocks, check drivers, and remove people from the pilot when needed.</li>
+    <li>To keep Merge secure and working: prevent abuse (for example by limiting how many requests someone can send), investigate problems and fix crashes.</li>
+    <li>To contact you about your account and the pilot, including changes to these pages and the end of the pilot.</li>
+  </ul>
+  <p>We don't use your information for advertising, we don't build marketing profiles, and we don't sell or share your personal information with anyone for their own use.</p>
+  <p class="counsel-note">Add any disclosures counsel requires, for example when Merge would disclose information to comply with the law or to protect someone's safety.</p>
+
+  <h2 id="processors">7. Services that process your information</h2>
+  <p>We use these providers to run Merge. They process information on our behalf, only to provide their service to us.</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th scope="col">Provider</th><th scope="col">What it does</th><th scope="col">What it receives</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">Supabase</th>
+          <td>Database, sign-in and server logs. Data is stored in <span class="placeholder" data-fill="M-11 Q1 (D-12)">[Supabase project region]</span>.</td>
+          <td>Everything Merge stores about you (section 3), and IP addresses in its logs.</td>
+        </tr>
+        <tr>
+          <th scope="row"><span class="placeholder" data-fill="O-04 / M-11 Q2">[Email provider: Resend or Postmark]</span></th>
+          <td>Sends sign-in codes and account emails.</td>
+          <td>Your email address, the email's content, and delivery records.</td>
+        </tr>
+        <tr>
+          <th scope="row">Expo, Apple Push Notification service, Firebase Cloud Messaging</th>
+          <td>Deliver push notifications to iPhones (Apple) and Android phones (Google).</td>
+          <td>Your push token and the notification text. <span class="placeholder" data-fill="M-11 Q3 (D-13)">[Q3: whether notifications include message text]</span></td>
+        </tr>
+        <tr>
+          <th scope="row">Stadia Maps</th>
+          <td>Map tiles only. No address search or routing.</td>
+          <td>Your IP address, the map area on screen, and device details. These requests aren't linked to your Merge account.</td>
+        </tr>
+        <tr>
+          <th scope="row">Sentry</th>
+          <td>Crash reports, in the United States, kept for 30 days.</td>
+          <td>The error, device model, operating system and app version. Personal details are scrubbed; no IP address, user ID or screen recording is sent.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p>We don't use any address search (geocoding) or routing service: you place your own pins, and detours are estimated on our own database. Apple (TestFlight) and Google (Play testing) handle tester sign-ups for app distribution under their own privacy policies.</p>
+
+  <h2 id="not-collected">8. What we don't collect</h2>
+  <ul>
+    <li>Payment or financial information. Merge is free, and riders don't pay each other.</li>
+    <li>Location history or live tracking.</li>
+    <li>Street addresses or address searches.</li>
+    <li>Copies of driver's licenses, insurance, or other ID documents.</li>
+    <li>Gender. There's no women-only option in the pilot.</li>
+    <li>Profile photos, contacts, photos, calendar, microphone or health data.</li>
+    <li>Advertising IDs, analytics or advertising SDKs, or cookies. These pages set no cookies and load nothing from other websites.</li>
+    <li>Phone sign-in or SMS. Sign-in is by email only.</li>
+  </ul>
+
+  <h2 id="retention">9. How long we keep it</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th scope="col">Information</th><th scope="col">How long</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Account, profile, commute, vehicle, preferences, contact details, push tokens</td><td>Until you change or delete them, or delete your account.</td></tr>
+        <tr><td>Sign-in codes</td><td>They expire after 10 minutes.</td></tr>
+        <tr><td>Rides, requests, post-ride feedback, Ride Again connections and Crews</td><td><span class="placeholder" data-fill="M-11 Q12 (D-12)">[Q12: proposed until the pilot ends]</span>, or until you delete your account (see <a href="delete-account.html#kept">what's kept</a>).</td></tr>
+        <tr><td>Ride messages</td><td><span class="placeholder" data-fill="M-11 Q8 (D-13)">[Q8: proposed 30 days after the ride]</span></td></tr>
+        <tr><td>Blocks</td><td>Until you unblock, or either account is deleted.</td></tr>
+        <tr><td>Safety reports</td><td>12 months after the later of the report date and the deletion of the reporter's or reported person's account. Then they're deleted automatically.</td></tr>
+        <tr><td>Server logs</td><td><span class="placeholder" data-fill="O-05 (Supabase plan)">[Supabase plan log retention]</span></td></tr>
+        <tr><td>Sign-in security log</td><td><span class="placeholder" data-fill="M-11 Q12 (D-12)">[Q12: proposed 90 days]</span>. Your entries are removed when you delete your account.</td></tr>
+        <tr><td>Database backups</td><td><span class="placeholder" data-fill="O-05 (Supabase plan)">[Supabase plan backup window]</span></td></tr>
+        <tr><td>Crash reports</td><td>30 days.</td></tr>
+        <tr><td>Email delivery records</td><td><span class="placeholder" data-fill="O-04 / M-11 Q2">[Email provider's log retention]</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>When the pilot ends</strong>, we plan to email testers at least 30 days ahead and then delete every account, which applies the same rules as deleting your own account. We keep only overall counts (for example, how many rides were completed), never names, locations or messages.</p>
+
+  <h2 id="choices">10. Your choices and rights</h2>
+  <ul>
+    <li><strong>See and change your information</strong> in the app: your name, role, commute, vehicle and preferences.</li>
+    <li><strong>Turn off discovery</strong> at any time to stop appearing to other members.</li>
+    <li><strong>Block</strong> someone so you never appear to each other.</li>
+    <li><strong>Stop or remove contact sharing</strong> at any time.</li>
+    <li><strong>Turn off notifications or location</strong> in your phone's settings.</li>
+    <li><strong>Delete your account</strong> in the app, or <a href="delete-account.html">ask us to delete it</a>.</li>
+    <li><strong>Ask for a copy</strong> of your information, or ask us to correct or delete something, by writing to <span class="placeholder" data-fill="O-03 privacy@ mailbox">privacy@[domain]</span> from the email address on your account.</li>
+  </ul>
+  <h3 id="california">California residents</h3>
+  <p>You can review and ask us to change your information as described above. We'll post any change to this policy on this page with a new effective date. Merge doesn't track you across other websites or apps, so it does nothing different when your browser sends a "Do Not Track" signal. We don't sell or share personal information.</p>
+  <p class="counsel-note">Confirm which California privacy laws apply to the pilot (CalOPPA, and whether the CCPA/CPRA applies) and any wording they require.</p>
+
+  <h2 id="security">11. Security</h2>
+  <p>Data travels encrypted (HTTPS). Our database denies access by default, and each member can read only what the rules in section 5 allow. Exact points are never sent to other members' phones. Your session is stored on your phone until you sign out. No system is perfectly secure; if you find a security problem, please report it privately through <a href="https://github.com/ethanterrero/merge/security/advisories/new">GitHub's private vulnerability reporting</a>.</p>
+
+  <h2 id="age">12. Age</h2>
+  <p>Merge is for people 18 and older. We don't knowingly collect information from anyone under 18. If you believe someone under 18 has an account, contact <span class="placeholder" data-fill="O-03 privacy@ mailbox">privacy@[domain]</span> and we'll delete it.</p>
+
+  <h2 id="changes">13. Changes to this policy</h2>
+  <p>If we change this policy, we'll update the effective date above and tell testers by email before the change takes effect.</p>
+
+  <h2 id="contact">14. Contact</h2>
+  <p>Privacy questions and requests: <span class="placeholder" data-fill="O-03 privacy@ mailbox">privacy@[domain]</span>. Other help: see <a href="support.html">Support</a>. The data sources behind Merge's maps and area names are on the <a href="attributions.html">Data sources</a> page.</p>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul>
+      <li><a href="privacy.html">Privacy Policy</a></li>
+      <li><a href="terms.html">Terms of Use</a></li>
+      <li><a href="support.html">Support</a></li>
+      <li><a href="delete-account.html">Delete account</a></li>
+      <li><a href="attributions.html">Data sources</a></li>
+    </ul>
+    <p>Merge is a free, invite-only commuter carpool pilot. Merge is a working name.</p>
+  </div>
+</footer>
+</body>
+</html>

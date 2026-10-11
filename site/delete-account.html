@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Drafts stay out of search results. Remove noindex once owner and counsel approve. -->
+<meta name="robots" content="noindex">
+<title>Delete your account · Merge</title>
+<meta name="description" content="How to delete your Merge account in the app or by request, what's deleted, what's kept for other members and safety, and for how long.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"></span>Merge</a>
+    <nav class="site-nav" aria-label="Site">
+      <ul>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a href="terms.html">Terms</a></li>
+        <li><a href="support.html">Support</a></li>
+        <li><a href="delete-account.html" aria-current="page">Delete account</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<!--
+  This is the Google Play account-deletion URL (O-10). It follows the decided policy
+  D-15 as built in supabase/migrations/0010_account_deletion.sql and
+  0013_schedule_report_purge.sql (spec: docs/superpowers/specs/2026-10-08-account-deletion-design.md).
+  The in-app steps describe M-17b's "Delete account" in the account sheet; re-check
+  them against the app before publishing.
+-->
+<main id="main" class="wrap">
+  <div class="draft" role="note">
+    <strong>Draft, pending review.</strong>
+    This page is a draft for the Merge pilot. The owner and counsel haven't approved it yet, and it may change before the pilot starts. Highlighted values are still to be decided.
+  </div>
+
+  <h1>Delete your Merge account</h1>
+  <p class="lede">You can delete your account for the Merge carpool app at any time, in the app or by asking us. Deleting is permanent and can't be undone.</p>
+
+  <h2 id="in-app">Delete it in the app</h2>
+  <ol>
+    <li>Open Merge and sign in.</li>
+    <li>On the Discover screen, tap the <strong>Account</strong> button (the person icon at the top).</li>
+    <li>Tap <strong>Delete account</strong>, read what will be deleted, and confirm.</li>
+  </ol>
+  <p>Your account is deleted straight away and you're signed out.</p>
+
+  <h2 id="request">Ask us to delete it</h2>
+  <p>If you can't use the app, for example because you've uninstalled it or changed phones:</p>
+  <ol>
+    <li>Email <span class="placeholder" data-fill="O-03 privacy@ mailbox">privacy@[domain]</span> <strong>from the email address you use to sign in to Merge</strong>, with the subject "Delete my Merge account".</li>
+    <li>We'll reply to that address to confirm the request is yours. We only act on requests we can match to the account's email address.</li>
+    <li>We'll delete the account within <span class="placeholder" data-fill="Owner (D-15 / O-03)">[number of days]</span> and email you when it's done.</li>
+  </ol>
+  <p>If you no longer have access to that email address, write to us anyway and say so, and we'll work out with you how to confirm it's your account.</p>
+
+  <h2 id="deleted">What's deleted</h2>
+  <ul>
+    <li>Your profile: name, role, ride preferences, discovery setting, and the record of any driver check.</li>
+    <li>Your email address and sign-in records.</li>
+    <li>Your commutes, including your pinned points and approximate areas, and your vehicles.</li>
+    <li>Your post-ride feedback and your Ride Again connections.</li>
+    <li>Your pending requests, and any other request that didn't lead to a ride.</li>
+    <li>Blocks you made, and blocks others made against you.</li>
+    <li>Ride messages you wrote, contact details you shared, contact-sharing offers, and your push notification tokens.</li>
+  </ul>
+  <p>We don't keep a copy or a scrambled ("hashed") version of your email address. To come back to the pilot, the Merge team would need to add you again.</p>
+
+  <h2 id="kept">What's kept, and for how long</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th scope="col">What</th><th scope="col">What happens</th><th scope="col">How long</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Rides you shared with someone else, and the request behind each one</td>
+          <td>Kept for the other rider, with your name removed. They see "Former member", with no name, car or contact details. Upcoming confirmed rides are cancelled.</td>
+          <td><span class="placeholder" data-fill="M-11 Q12 (D-12)">[Q12: proposed until the pilot ends]</span>, or until the other rider also deletes their account.</td>
+        </tr>
+        <tr>
+          <td>Commute Crews</td>
+          <td>Open Crews end. The other member keeps the record as "Former member".</td>
+          <td>As for rides.</td>
+        </tr>
+        <tr>
+          <td>Safety reports you made, or that were made about you</td>
+          <td>Kept for safety follow-up, with the link to your account removed. What the reporter wrote is kept as written and may mention you. Only the Merge team can read reports.</td>
+          <td>12 months after the later of the report date and your deletion, then deleted automatically.</td>
+        </tr>
+        <tr>
+          <td>Server logs (IP address, device details, requests)</td>
+          <td>Not deleted early.</td>
+          <td><span class="placeholder" data-fill="O-05 (Supabase plan)">[Supabase plan log retention]</span>, then they expire.</td>
+        </tr>
+        <tr>
+          <td>Database backups</td>
+          <td>Not changed; your data drops out as old backups expire.</td>
+          <td><span class="placeholder" data-fill="O-05 (Supabase plan)">[Supabase plan backup window]</span></td>
+        </tr>
+        <tr>
+          <td>Email delivery records at our email provider</td>
+          <td>Not deleted early.</td>
+          <td><span class="placeholder" data-fill="O-04 / M-11 Q2">[Email provider's log retention]</span></td>
+        </tr>
+        <tr>
+          <td>Crash reports</td>
+          <td>They don't include your user ID or IP address, so they aren't linked to your account.</td>
+          <td>30 days, then they expire.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Contact details you shared that another member already saved on their own phone can't be pulled back.</p>
+
+  <h2 id="partial">Delete some data without deleting your account</h2>
+  <p>In the app you can edit or delete your commute and vehicle, turn off discovery, and stop sharing contact details. To ask us to delete anything else, write to <span class="placeholder" data-fill="O-03 privacy@ mailbox">privacy@[domain]</span>.</p>
+
+  <p>More about how Merge handles your information: <a href="privacy.html">Privacy Policy</a>. Other help: <a href="support.html">Support</a>.</p>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul>
+      <li><a href="privacy.html">Privacy Policy</a></li>
+      <li><a href="terms.html">Terms of Use</a></li>
+      <li><a href="support.html">Support</a></li>
+      <li><a href="delete-account.html">Delete account</a></li>
+      <li><a href="attributions.html">Data sources</a></li>
+    </ul>
+    <p>Merge is a free, invite-only commuter carpool pilot. Merge is a working name.</p>
+  </div>
+</footer>
+</body>
+</html>

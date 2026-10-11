@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Drafts stay out of search results. Remove noindex once owner and counsel approve. -->
+<meta name="robots" content="noindex">
+<title>Data sources · Merge</title>
+<meta name="description" content="The map tiles and boundary data the Merge carpool app uses, with their sources and licences.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true"></span>Merge</a>
+    <nav class="site-nav" aria-label="Site">
+      <ul>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a href="terms.html">Terms</a></li>
+        <li><a href="support.html">Support</a></li>
+        <li><a href="delete-account.html">Delete account</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<!-- Sources: D-08 (map attribution) and docs/superpowers/specs/2026-10-08-commute-privacy-design.md, section 3. -->
+<main id="main" class="wrap">
+  <div class="draft" role="note">
+    <strong>Draft, pending review.</strong>
+    This page is a draft for the Merge pilot. The owner hasn't approved it yet, and it may change before the pilot starts.
+  </div>
+
+  <h1>Data sources and attributions</h1>
+  <p class="lede">Merge's maps and area names are built on open data. Thank you to everyone who makes it.</p>
+
+  <h2 id="map">Map</h2>
+  <p>Map tiles: © <a href="https://stadiamaps.com/">Stadia Maps</a> © <a href="https://openmaptiles.org/">OpenMapTiles</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>.</p>
+  <p>The same attribution appears on every map in the app.</p>
+
+  <h2 id="boundaries">Area names</h2>
+  <p>Merge labels each approximate area with a neighbourhood or city name, using these boundaries. Their licences don't require attribution, but we credit them anyway.</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th scope="col">Data</th><th scope="col">Source</th><th scope="col">Licence</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Neighborhood boundaries (San Francisco)</td>
+          <td><a href="https://data.sfgov.org/d/j2bu-swwd">DataSF Analysis Neighborhoods</a></td>
+          <td><a href="https://opendatacommons.org/licenses/pddl/1-0/">PDDL 1.0</a></td>
+        </tr>
+        <tr>
+          <td>City limits</td>
+          <td><a href="https://www.census.gov/geographies/mapping-files/time-series/geo/tiger-line-file.html">US Census Bureau TIGER/Line 2025</a></td>
+          <td>Public domain</td>
+        </tr>
+        <tr>
+          <td>East Bay neighborhoods (Alameda, Oakland, Berkeley)</td>
+          <td>Hand-drawn by Merge (<a href="https://github.com/ethanterrero/merge/blob/main/scripts/boundaries/east-bay-neighborhoods.geojson">download</a>)</td>
+          <td><a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 1.0</a></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The East Bay outlines are approximate by design: they label a circle about half a mile wide, not an exact place.</p>
+
+  <h2 id="code">Code</h2>
+  <p>Merge is open source under the <a href="https://github.com/ethanterrero/merge/blob/main/LICENSE">Apache License 2.0</a>. The source is on <a href="https://github.com/ethanterrero/merge">GitHub</a>.</p>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul>
+      <li><a href="privacy.html">Privacy Policy</a></li>
+      <li><a href="terms.html">Terms of Use</a></li>
+      <li><a href="support.html">Support</a></li>
+      <li><a href="delete-account.html">Delete account</a></li>
+      <li><a href="attributions.html" aria-current="page">Data sources</a></li>
+    </ul>
+    <p>Merge is a free, invite-only commuter carpool pilot. Merge is a working name.</p>
+  </div>
+</footer>
+</body>
+</html>
