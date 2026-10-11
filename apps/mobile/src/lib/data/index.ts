@@ -28,3 +28,5 @@ export {
 } from './backend';
 
 export * from './profile';
+export * from './blocks';
+export * from './reports';
