@@ -169,11 +169,16 @@ add its own on the same columns.
   *Added by M-17b:* `supabase/functions/delete-account` connects with the injected
   `SUPABASE_DB_URL` (the table isn't exposed through the Data API) and deletes the entries
   whose `actor_id` or `traits.user_id` is the person, or whose `actor_username` or
-  `traits.user_email` is their email. If that fails (for example, the database connection
-  times out), the account is still deleted: the function answers
-  `auditLogPurged: false` and logs "audit log purge failed" without identifiers. Nothing
-  identifies the person afterwards, so the owner's fallback is a sweep of entries for
-  users who no longer exist, run in the SQL editor:
+  `traits.user_email` is their email. It purges twice: once before deleting the user
+  (while the id and email are still known, so a later failure can't lose them) and once
+  after (deleting the user writes its own entry). Each purge runs in a transaction with an
+  8 s `statement_timeout`, and the connection is always closed. If the purge after the
+  delete fails, the account is still deleted: the function answers
+  `auditLogPurged: false` and logs "audit log purge after delete failed" without
+  identifiers. If the delete itself fails, the first purge has already removed the
+  person's entries while their account remains. Nothing identifies the person after
+  deletion, so the owner's fallback is a sweep of entries for users who no longer exist,
+  run in the SQL editor:
 
   ```sql
   delete from auth.audit_log_entries a

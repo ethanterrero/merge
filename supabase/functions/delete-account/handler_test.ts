@@ -8,15 +8,22 @@ import {
   handleDeleteAccount,
   PURGE_AUDIT_LOG_SQL,
   purgeAuditLogParams,
+  purgeAuditLogWith,
+  type SqlClient,
 } from './handler.ts';
 
 const ADA: AccountUser = { id: '00000000-0000-4000-8000-00000000000a', email: 'Ada@Example.com' };
 const URL_BASE = 'https://project.supabase.co';
 
-type Calls = { getUser: string[]; deleteUser: string[]; purge: AccountUser[]; logged: string[] };
+type Calls = { getUser: string[]; deleteUser: string[]; purge: AccountUser[]; logged: string[]; order: string[] };
+type PurgeOutcome = 'ok' | 'fail' | 'hang';
 
-function deps(overrides: Partial<DeleteAccountDeps> = {}): { deps: DeleteAccountDeps; calls: Calls } {
-  const calls: Calls = { getUser: [], deleteUser: [], purge: [], logged: [] };
+/** `purges` scripts each purge call in turn (default: every purge succeeds). */
+function deps(
+  overrides: Partial<DeleteAccountDeps> = {},
+  purges: PurgeOutcome[] = [],
+): { deps: DeleteAccountDeps; calls: Calls } {
+  const calls: Calls = { getUser: [], deleteUser: [], purge: [], logged: [], order: [] };
   return {
     calls,
     deps: {
@@ -26,10 +33,15 @@ function deps(overrides: Partial<DeleteAccountDeps> = {}): { deps: DeleteAccount
       },
       deleteUser: (id) => {
         calls.deleteUser.push(id);
+        calls.order.push('delete');
         return Promise.resolve();
       },
       purgeAuditLog: (user) => {
+        const outcome = purges[calls.purge.length] ?? 'ok';
         calls.purge.push(user);
+        calls.order.push(`purge:${outcome}`);
+        if (outcome === 'fail') return Promise.reject(new Error('permission denied'));
+        if (outcome === 'hang') return new Promise<void>(() => {});
         return Promise.resolve();
       },
       logError: (message) => {
@@ -64,14 +76,16 @@ Deno.test('bearerToken rejects missing or malformed headers', () => {
 // ---------------------------------------------------------------------------
 // handleDeleteAccount
 
-Deno.test('deletes the caller, purges their audit log and reports success', async () => {
+Deno.test('purges the audit log, deletes the caller, purges again and reports success', async () => {
   const { deps: d, calls } = deps();
   const res = await handleDeleteAccount(post(), d);
   assertEquals(res.status, 200);
   assertEquals(await res.json(), { deleted: true, auditLogPurged: true });
   assertEquals(calls.getUser, ['user-jwt']);
   assertEquals(calls.deleteUser, [ADA.id]);
-  assertEquals(calls.purge, [ADA]);
+  // Before the delete, while the id and email are known; after it, for the delete's own entry.
+  assertEquals(calls.order, ['purge:ok', 'delete', 'purge:ok']);
+  assertEquals(calls.purge, [ADA, ADA]);
   assertEquals(res.headers.get('Access-Control-Allow-Origin'), '*');
   assertEquals(res.headers.get('Content-Type'), 'application/json');
 });
@@ -150,28 +164,47 @@ Deno.test('reports 502 when Auth cannot be reached, and deletes nothing', async 
   assertEquals(calls.logged.length, 1);
 });
 
-Deno.test('reports 500 when the delete fails, and purges nothing', async () => {
+Deno.test('reports 500 when the delete fails, after only the first purge', async () => {
   const { deps: d, calls } = deps({ deleteUser: () => Promise.reject(new Error('db down')) });
   const res = await handleDeleteAccount(post(), d);
   assertEquals(res.status, 500);
   assertEquals(await res.json(), { error: 'delete_failed' });
-  assertEquals(calls.purge.length, 0);
+  assertEquals(calls.order, ['purge:ok']);
   assertEquals(calls.logged.length, 1);
 });
 
-Deno.test('still reports the deletion when the audit-log purge fails', async () => {
-  const { deps: d, calls } = deps({ purgeAuditLog: () => Promise.reject(new Error('permission denied')) });
+Deno.test('a failed first purge does not stop the delete; the second purge decides', async () => {
+  const { deps: d, calls } = deps({}, ['fail', 'ok']);
+  const res = await handleDeleteAccount(post(), d);
+  assertEquals(res.status, 200);
+  assertEquals(await res.json(), { deleted: true, auditLogPurged: true });
+  assertEquals(calls.order, ['purge:fail', 'delete', 'purge:ok']);
+  assertEquals(calls.logged.length, 1);
+});
+
+Deno.test('still reports the deletion when the second purge fails', async () => {
+  const { deps: d, calls } = deps({}, ['ok', 'fail']);
   const res = await handleDeleteAccount(post(), d);
   assertEquals(res.status, 200);
   assertEquals(await res.json(), { deleted: true, auditLogPurged: false });
+  assertEquals(calls.order, ['purge:ok', 'delete', 'purge:fail']);
   assertEquals(calls.logged.length, 1);
 });
 
-Deno.test('gives up on a purge that hangs', async () => {
-  const { deps: d } = deps({ purgeAuditLog: () => new Promise<void>(() => {}) });
+Deno.test('reports both purges failing, and still deletes', async () => {
+  const { deps: d, calls } = deps({}, ['fail', 'fail']);
+  const res = await handleDeleteAccount(post(), d);
+  assertEquals(await res.json(), { deleted: true, auditLogPurged: false });
+  assertEquals(calls.deleteUser, [ADA.id]);
+  assertEquals(calls.logged.length, 2);
+});
+
+Deno.test('gives up on purges that hang, and still deletes', async () => {
+  const { deps: d, calls } = deps({}, ['hang', 'hang']);
   const res = await handleDeleteAccount(post(), d, { purgeTimeoutMs: 5 });
   assertEquals(res.status, 200);
   assertEquals(await res.json(), { deleted: true, auditLogPurged: false });
+  assertEquals(calls.order, ['purge:hang', 'delete', 'purge:hang']);
 });
 
 Deno.test('never logs the person’s id, email or token', async () => {
@@ -179,6 +212,7 @@ Deno.test('never logs the person’s id, email or token', async () => {
   const failing = new Error(`failed for ${ADA.id} ${ADA.email}`);
   const { deps: d } = deps({
     purgeAuditLog: () => Promise.reject(failing),
+    deleteUser: () => Promise.reject(failing),
     logError: (message, error) => logged.push(message, error),
   });
   await (await handleDeleteAccount(post(), d)).body?.cancel();
@@ -306,4 +340,64 @@ Deno.test('the purge deletes only from auth.audit_log_entries, matching actor an
     assertEquals(sql.includes(fragment), true, fragment);
   }
   assertEquals(sql.includes(';'), false);
+});
+
+// ---------------------------------------------------------------------------
+// purgeAuditLogWith
+
+type FakeSql = SqlClient & { log: string[]; params: unknown[][] };
+
+function fakeSql(behaviour: { connect?: 'ok' | 'hang' | 'fail'; query?: 'ok' | 'fail'; end?: 'ok' | 'hang' | 'fail' } = {}): FakeSql {
+  const log: string[] = [];
+  const params: unknown[][] = [];
+  const outcome = (kind: 'ok' | 'hang' | 'fail' | undefined) =>
+    kind === 'hang' ? new Promise<void>(() => {}) : kind === 'fail' ? Promise.reject(new Error('x')) : Promise.resolve();
+  return {
+    log,
+    params,
+    connect: () => {
+      log.push('connect');
+      return outcome(behaviour.connect);
+    },
+    queryArray: (sql: string, args?: unknown[]) => {
+      const text = sql.replace(/\s+/g, ' ').trim();
+      log.push(text.startsWith('delete from auth.audit_log_entries') ? 'delete' : text);
+      if (args) params.push(args);
+      return text.startsWith('delete') && behaviour.query === 'fail' ? Promise.reject(new Error('x')) : Promise.resolve();
+    },
+    end: () => {
+      log.push('end');
+      return outcome(behaviour.end);
+    },
+  };
+}
+
+Deno.test('purgeAuditLogWith deletes in a transaction with a server-side statement timeout, then closes', async () => {
+  const sql = fakeSql();
+  await purgeAuditLogWith(sql, ADA);
+  assertEquals(sql.log, ['connect', 'begin', 'set local statement_timeout = 8000', 'delete', 'commit', 'end']);
+  assertEquals(sql.params, [[ADA.id, 'ada@example.com']]);
+});
+
+Deno.test('purgeAuditLogWith closes the connection when the delete fails', async () => {
+  const sql = fakeSql({ query: 'fail' });
+  await assertRejects(() => purgeAuditLogWith(sql, ADA));
+  assertEquals(sql.log, ['connect', 'begin', 'set local statement_timeout = 8000', 'delete', 'end']);
+});
+
+Deno.test('purgeAuditLogWith closes the connection when connecting fails', async () => {
+  const sql = fakeSql({ connect: 'fail' });
+  await assertRejects(() => purgeAuditLogWith(sql, ADA));
+  assertEquals(sql.log, ['connect', 'end']);
+});
+
+Deno.test('purgeAuditLogWith gives up on a connection that hangs', async () => {
+  const sql = fakeSql({ connect: 'hang' });
+  await assertRejects(() => purgeAuditLogWith(sql, ADA, { connectTimeoutMs: 5 }), Error, 'connect timed out');
+  assertEquals(sql.log, ['connect', 'end']);
+});
+
+Deno.test('purgeAuditLogWith does not wait on, or fail because of, closing the connection', async () => {
+  await purgeAuditLogWith(fakeSql({ end: 'fail' }), ADA);
+  await purgeAuditLogWith(fakeSql({ end: 'hang' }), ADA, { endTimeoutMs: 5 });
 });

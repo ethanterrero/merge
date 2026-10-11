@@ -12,8 +12,7 @@ import {
   deleteAuthUser,
   fetchAuthUser,
   handleDeleteAccount,
-  PURGE_AUDIT_LOG_SQL,
-  purgeAuditLogParams,
+  purgeAuditLogWith,
 } from './handler.ts';
 
 function env(name: string): string {
@@ -23,15 +22,10 @@ function env(name: string): string {
 }
 
 // auth.audit_log_entries isn't exposed through the Data API, so this goes straight to
-// Postgres as the project's database owner.
-async function purgeAuditLog(user: AccountUser): Promise<void> {
-  const client = new Client(env('SUPABASE_DB_URL'));
-  await client.connect();
-  try {
-    await client.queryArray(PURGE_AUDIT_LOG_SQL, purgeAuditLogParams(user));
-  } finally {
-    await client.end();
-  }
+// Postgres as the project's database owner. purgeAuditLogWith bounds the connect and the
+// statement and always closes the connection.
+function purgeAuditLog(user: AccountUser): Promise<void> {
+  return purgeAuditLogWith(new Client(env('SUPABASE_DB_URL')), user);
 }
 
 Deno.serve((req) =>

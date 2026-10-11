@@ -28,7 +28,11 @@ export type DeleteAccountDeps = {
   logError: (message: string, errorName: string) => void;
 };
 
-export const PURGE_TIMEOUT_MS = 10_000;
+/** Outer limit on one purge; above PURGE_CONNECT_TIMEOUT_MS + PURGE_STATEMENT_TIMEOUT_MS. */
+export const PURGE_TIMEOUT_MS = 12_000;
+export const PURGE_CONNECT_TIMEOUT_MS = 3_000;
+/** Postgres cancels the purge itself after this, so a timed-out purge doesn't keep running. */
+export const PURGE_STATEMENT_TIMEOUT_MS = 8_000;
 
 export const CORS_HEADERS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
@@ -53,10 +57,10 @@ function errorName(error: unknown): string {
   return error instanceof Error ? error.name : typeof error;
 }
 
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+function withTimeout<T>(promise: Promise<T>, ms: number, message = 'timed out'): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error('timed out')), ms);
+    timer = setTimeout(() => reject(new Error(message)), ms);
   });
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
@@ -88,6 +92,20 @@ export async function handleDeleteAccount(
   if (lookup.status === 'not_found') return json(200, { deleted: true, auditLogPurged: false });
 
   const { user } = lookup;
+  const purge = async (when: 'before' | 'after'): Promise<boolean> => {
+    try {
+      await withTimeout(deps.purgeAuditLog(user), options.purgeTimeoutMs ?? PURGE_TIMEOUT_MS);
+      return true;
+    } catch (error) {
+      deps.logError(`delete-account: audit log purge ${when} delete failed; see the account-deletion spec`, errorName(error));
+      return false;
+    }
+  };
+
+  // First while the user exists: if the purge after the delete fails, a retry finds no user
+  // (`not_found`) and nothing left to match the email by. Its result doesn't matter.
+  await purge('before');
+
   try {
     await deps.deleteUser(user.id);
   } catch (error) {
@@ -95,14 +113,8 @@ export async function handleDeleteAccount(
     return json(500, { error: 'delete_failed' });
   }
 
-  // After the delete, because deleting the user writes its own audit entry.
-  let auditLogPurged = true;
-  try {
-    await withTimeout(deps.purgeAuditLog(user), options.purgeTimeoutMs ?? PURGE_TIMEOUT_MS);
-  } catch (error) {
-    auditLogPurged = false;
-    deps.logError('delete-account: audit log purge failed; see the account-deletion spec', errorName(error));
-  }
+  // Again after the delete, which writes its own audit entry. This one decides the answer.
+  const auditLogPurged = await purge('after');
   return json(200, { deleted: true, auditLogPurged });
 }
 
@@ -171,4 +183,34 @@ where payload ->> 'actor_id' = $1
 export function purgeAuditLogParams(user: AccountUser): [string, string | null] {
   const email = user.email?.trim().toLowerCase() ?? '';
   return [user.id, email === '' ? null : email];
+}
+
+/** The parts of a Postgres client the purge uses (`@db/postgres`'s Client fits). */
+export type SqlClient = {
+  connect: () => Promise<void>;
+  queryArray: (sql: string, args?: unknown[]) => Promise<unknown>;
+  end: () => Promise<void>;
+};
+
+/**
+ * Runs the purge on a fresh connection and always closes it. The statement timeout is
+ * set inside a transaction (`set local`), so it holds behind a transaction pooler too,
+ * and Postgres cancels the delete itself rather than leaving it running.
+ */
+export async function purgeAuditLogWith(
+  client: SqlClient,
+  user: AccountUser,
+  options: { connectTimeoutMs?: number; statementTimeoutMs?: number; endTimeoutMs?: number } = {},
+): Promise<void> {
+  const statementTimeoutMs = Math.floor(options.statementTimeoutMs ?? PURGE_STATEMENT_TIMEOUT_MS);
+  try {
+    await withTimeout(client.connect(), options.connectTimeoutMs ?? PURGE_CONNECT_TIMEOUT_MS, 'connect timed out');
+    await client.queryArray('begin');
+    await client.queryArray(`set local statement_timeout = ${statementTimeoutMs}`);
+    await client.queryArray(PURGE_AUDIT_LOG_SQL, purgeAuditLogParams(user));
+    await client.queryArray('commit');
+  } finally {
+    // Closing also rolls back an unfinished transaction. Never let it hang or mask the result.
+    await withTimeout(client.end(), options.endTimeoutMs ?? 1_000).catch(() => {});
+  }
 }
