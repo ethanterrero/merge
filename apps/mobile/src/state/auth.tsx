@@ -37,8 +37,8 @@ type Auth = {
   deleteAccount: () => Promise<string | null>;
 };
 
-// The function deletes the user, then purges their audit log (up to 10 s).
-const DELETE_ACCOUNT_TIMEOUT_MS = 30000;
+// The function purges the audit log (up to 12 s), deletes the user, then purges again.
+const DELETE_ACCOUNT_TIMEOUT_MS = 45000;
 
 const AuthContext = createContext<Auth | null>(null);
 
@@ -171,7 +171,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         );
         if (!result.deleted) return result.message;
         // The account and its sessions are gone on the server; clear this device's copy.
-        // Auth answers 403 for a deleted user, which signOut treats as signed out.
+        // signOut({ scope: 'local' }) still posts /logout?scope=local (auth-js 2.117). Auth
+        // refuses it for the deleted user, and auth-js treats 401/403/404 as signed out and
+        // clears the stored session; on other errors it clears it too and returns the error.
         const { error } = await client.auth.signOut({ scope: 'local' });
         return error && sessionRef.current ? DELETED_SIGN_OUT_ERROR : null;
       },

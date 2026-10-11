@@ -38,13 +38,24 @@ function Bullets({ items }: { items: string[] }) {
 /**
  * Explains what deleting the account removes and keeps, and deletes it on confirmation.
  * On success the Router returns to Welcome. Renders nothing in prototype mode, which has
- * no account to delete.
+ * no account to delete. `onDeletingChange` lets a container (a sheet or modal) refuse to
+ * close while the request is in flight.
  */
-export function DeleteAccountConfirm({ onCancel, onDeleted }: { onCancel: () => void; onDeleted?: () => void }) {
+export function DeleteAccountConfirm({
+  onCancel,
+  onDeleted,
+  onDeletingChange,
+}: {
+  onCancel: () => void;
+  onDeleted?: () => void;
+  onDeletingChange?: (deleting: boolean) => void;
+}) {
   const { status, deleteAccount } = useAuth();
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
+  // Set synchronously, so a fast double tap can't send a second request before re-render.
+  const inFlight = useRef(false);
 
   useEffect(() => {
     mounted.current = true;
@@ -56,10 +67,14 @@ export function DeleteAccountConfirm({ onCancel, onDeleted }: { onCancel: () => 
   if (status === 'prototype') return null;
 
   const confirm = async () => {
-    if (deleting) return;
+    if (inFlight.current) return;
+    inFlight.current = true;
     setError(null);
     setDeleting(true);
+    onDeletingChange?.(true);
     const message = await deleteAccount();
+    inFlight.current = false;
+    onDeletingChange?.(false);
     if (!mounted.current) return;
     if (message === null) {
       onDeleted?.();

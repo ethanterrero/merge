@@ -12,6 +12,8 @@ export function AccountSheet({ visible, onClose }: { visible: boolean; onClose: 
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  // While an account deletion is in flight the sheet can't be dismissed.
+  const [deleting, setDeleting] = useState(false);
   const open = useRef(visible);
   const { height } = useWindowDimensions();
 
@@ -38,15 +40,26 @@ export function AccountSheet({ visible, onClose }: { visible: boolean; onClose: 
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.scrim} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close account" />
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={deleting ? undefined : onClose}>
+      <Pressable
+        style={styles.scrim}
+        onPress={onClose}
+        disabled={deleting}
+        accessibilityRole="button"
+        accessibilityLabel="Close account"
+        accessibilityState={{ disabled: deleting }}
+      />
       <View style={styles.sheet}>
         <SafeAreaView edges={['bottom']}>
           {confirmingDelete ? (
             // The confirmation is longer than the sheet's main view; let it scroll on short screens.
             <ScrollView style={{ maxHeight: height * 0.85 }} contentContainerStyle={{ padding: space.xl }}>
               {/* On success the Router sends the signed-out person to Welcome. */}
-              <DeleteAccountConfirm onCancel={() => setConfirmingDelete(false)} onDeleted={onClose} />
+              <DeleteAccountConfirm
+                onCancel={() => setConfirmingDelete(false)}
+                onDeleted={onClose}
+                onDeletingChange={setDeleting}
+              />
             </ScrollView>
           ) : (
             <View style={{ padding: space.xl, gap: space.md }}>

@@ -76,3 +76,16 @@ build in prototype mode (the item is hidden). Connected-mode deletion waits for 
 
 The deletion spec's "Out of scope" bullet on `auth.audit_log_entries` is updated to say how
 the function purges it and the owner's fallback SQL if the purge fails.
+
+## Review follow-ups (2026-10-10)
+
+1. Purge the audit log before `deleteUser` as well as after; only the second purge sets
+   `auditLogPurged`.
+2. `purgeAuditLogWith` (tested): 3 s connect timeout, `set local statement_timeout = 8000`
+   in a transaction, connection always closed (close bounded to 1 s). Outer limit per purge
+   12 s; the app's invoke timeout is 45 s.
+3. `supabase/functions/delete-account/deno.json` + committed `deno.lock`; CI runs each
+   function directory with `--frozen` on Deno 2.1.4 (Edge Runtime v1.77.4, the version
+   Supabase CLI 2.120.0 runs).
+4. AccountSheet can't be dismissed while a delete is in flight; a ref guards double taps.
+5. Corrected the comment on `signOut({ scope: 'local' })`.
