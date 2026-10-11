@@ -9,8 +9,16 @@ import type { Database } from './database.types';
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-// No client is created until environment variables are configured. Without
-// one, the app runs as the click-through prototype.
+/**
+ * Which build this is: eas.json sets 'development', 'preview' or 'production' per
+ * profile, and local `expo start` leaves it unset. Read as a literal
+ * `process.env.EXPO_PUBLIC_*` so Expo inlines it into the bundle.
+ */
+export const appEnv = process.env.EXPO_PUBLIC_APP_ENV;
+
+// No client is created until environment variables are configured. Without one,
+// a development build runs as the click-through prototype, and a preview or
+// production build refuses to start (appMode in authRules.ts).
 export const supabase = url && anonKey
   ? createClient<Database>(url, anonKey, {
       auth: {

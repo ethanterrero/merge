@@ -10,7 +10,7 @@ Merge is built with [EAS Build](https://docs.expo.dev/build/introduction/). The 
 | `preview` | A release build for the owner's own phones. | Internal (iOS ad hoc, Android APK) | `preview` | `preview` |
 | `production` | Store builds for TestFlight and Play internal testing (D-11). | Store | `production` | `production` |
 
-`EXPO_PUBLIC_APP_ENV` is set in `eas.json` and baked into the bundle. M-25 uses it so release builds refuse to start in prototype mode. **Until M-25 merges, a preview or production build with missing Supabase variables silently runs as the prototype.**
+`EXPO_PUBLIC_APP_ENV` is set in `eas.json` and baked into the bundle. Release builds use it to refuse prototype mode: a `preview` or `production` build missing `EXPO_PUBLIC_SUPABASE_URL` or `EXPO_PUBLIC_SUPABASE_ANON_KEY` opens on a blocking "This build isn't set up correctly" screen instead of mock data. So does any `EXPO_PUBLIC_APP_ENV` value other than `development`, so a typo in a profile fails closed. Development builds and local `expo start` (no `EXPO_PUBLIC_APP_ENV`) keep running as the prototype with an empty `.env`. The rule is `appMode` in `src/lib/authRules.ts`. To see the screen locally: `EXPO_PUBLIC_APP_ENV=preview npm run web` from the repo root with no `.env`. (`production` can't be tried this way until D-10, because the placeholder-ID check below stops `expo start` first.)
 
 Version numbers: `expo.version` in `app.json` (now `0.1.0`) is the version people see. Build numbers live on EAS (`cli.appVersionSource: "remote"`), and the production profile increments them on every build.
 
