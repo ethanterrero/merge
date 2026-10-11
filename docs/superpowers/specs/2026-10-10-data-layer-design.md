@@ -74,7 +74,7 @@ apps/mobile/src/lib/data/
   index.ts              barrel of the public API; append-only (zone: Data-layer index)
   types.ts              shared types; append-only (zone: Data-layer index)
   mode.ts               pure: dataMode(status), dataScope(mode, userId)
-  errors.ts             pure: DataError, toDataError(), user-facing copy
+  errors.ts             pure: DataError, toDataError(), settle(), user-facing copy
   store.ts              pure: the query store (cache, dedupe, invalidation, scope)
   mockUtil.ts           pure: findById (null for unknown ids), mock factory helpers
   hooks.ts              binding: useQuery / useMutation over the store (imports react only)
@@ -83,7 +83,7 @@ apps/mobile/src/lib/data/
     fakeSupabase.ts     pure test helper: recording fake of the supabase-js client
     contract.ts         pure test helper: run one case list against both backends
   purity.test.ts        enforces the purity rule over this directory
-  mode.test.ts, errors.test.ts, store.test.ts, mockUtil.test.ts
+  mode.test.ts, errors.test.ts, store.test.ts, mockUtil.test.ts, fakeSupabase.test.ts
 
   profile.ts            binding: the sample feature's public entry (hooks + api hook)
   profile.api.ts        pure: domain types, ProfileApi interface, query keys
@@ -176,11 +176,13 @@ generator; mappers never pass them to UI types.
 `profile.api.ts` (pure):
 
 ```ts
+import type { RidePref, Role } from '../../state/commute'; // reuse, don't redefine
+
 export type ProfileSummary = {
   id: string;
   displayName: string;
-  role: 'driver' | 'passenger' | 'both';
-  ridePrefs: string[];
+  role: Role;
+  ridePrefs: RidePref[]; // 'quiet' / 'smoke_free' in the database, mapped to labels
   discoveryOptIn: boolean;
 };
 
@@ -201,31 +203,36 @@ export const profileKeys = {
 `profile.supabase.ts` (pure; client injected):
 
 ```ts
+import { settle } from './errors';
 import type { ProfileApi } from './profile.api';
+import { PROFILE_COLUMNS, toProfileSummary } from './profile.map';
 import type { TypedClient } from './types';
-import { toProfileSummary } from './profile.map';
-import { toDataError } from './errors';
-
-const COLUMNS = 'id, display_name, role, ride_prefs, discovery_opt_in';
 
 export function createProfileSupabase(client: TypedClient, userId: string) {
-  const byId = async (id: string) => {
-    const { data, error, status } = await client.from('profiles').select(COLUMNS).eq('id', id).maybeSingle();
-    if (error) return { ok: false, error: toDataError({ ...error, status }) } as const;
-    return { ok: true, data: data ? toProfileSummary(data) : null } as const;
-  };
+  const byId = (id: string) =>
+    settle(client.from('profiles').select(PROFILE_COLUMNS).eq('id', id).maybeSingle(), (row) =>
+      row ? toProfileSummary(row) : null,
+    );
   return { getMyProfile: () => byId(userId), getProfile: byId } satisfies ProfileApi;
 }
 ```
 
+`settle(request, map, overrides?)` in `errors.ts` awaits a supabase-js request and
+returns a `Result`: it maps `data` on success, and turns a returned error (with its
+HTTP status) or a thrown one into a `DataError`. Every Supabase backend uses it, so no
+backend method can throw. `PROFILE_COLUMNS` and the mapper live in `profile.map.ts`.
+
 Rules shown here: explicit column lists (never `select('*')`), so supabase-js types
 the result from the literal and a privacy review sees exactly what's read;
 `maybeSingle()` for by-id reads, so "no row" is `null`, not error `PGRST116`; errors go
-through `toDataError`.
+through `settle` / `toDataError`.
 
-`profile.mock.ts` (pure): `createProfileMock(seed = DEFAULT_PROFILES)` keeps a `Map`
-of profiles and a `meId`, and uses `findById` from `mockUtil.ts`, which returns `null`
-for an unknown id. A fresh instance per call, so tests never share state.
+`profile.mock.ts` (pure): `createProfileMock({ profiles?, meId?, fail? })` keeps its
+own copy of the profiles (default: one "Prototype Member", `PROTOTYPE_MEMBER_ID`, with
+discovery off per D-14) and uses `findById` from `mockUtil.ts`, which returns `null`
+for an unknown id. It mirrors RLS: only the member's own row is visible, so another
+member's id reads `null` in both backends. A fresh instance per call, so tests never
+share state.
 
 `profile.ts` (binding, the public entry):
 
@@ -241,11 +248,14 @@ export function useMyProfile() {
   return useDataQuery(backends, profileKeys.me, (api) => api.getMyProfile());
 }
 export function useProfile(id: string | null) {
-  return useDataQuery(backends, id ? profileKeys.byId(id) : null, (api) => api.getProfile(id!));
+  return useDataQuery(backends, id ? profileKeys.byId(id) : null, (api) => api.getProfile(id ?? ''));
 }
 /** For event handlers that need a one-off call. null while the data mode is 'off'. */
-export const useProfileApi = () => useBackendApi(backends);
-export type { ProfileSummary } from './profile.api';
+export function useProfileApi() {
+  return useBackendApi(backends);
+}
+export { profileKeys } from './profile.api';
+export type { ProfileApi, ProfileSummary } from './profile.api';
 ```
 
 The sample is read-only on purpose: name and role edits stay with `saveProfile` in
@@ -269,8 +279,9 @@ export function useBlockActions() {                       // illustrative, M-24 
   While an action is pending, calling it again resolves to the same promise, so a
   double tap on "Send request" sends once.
 - On success the mutation invalidates its own feature's key prefix. A mutation that
-  changes what other features show (block, report, cancel) invalidates everything
-  (`'all'`): at pilot scale a few extra reads are cheaper than a missed refresh.
+  changes what other features show (block, report, cancel) passes `'all'`, which
+  invalidates every key in the member's scope: at pilot scale a few extra reads are
+  cheaper than a missed refresh.
 - No optimistic updates in v1. The mock answers instantly anyway; connected mode
   shows `pending` on the button.
 
@@ -310,7 +321,7 @@ export type DataError = {
   kind: DataErrorKind;
   /** Safe, user-facing copy. Never the server's raw message. */
   message: string;
-  /** Postgres / PostgREST code or HTTP status, for developer logs only. */
+  /** Postgres / PostgREST code, or `http_<status>`, for developer logs only. */
   code?: string;
 };
 
@@ -376,8 +387,10 @@ no TanStack Query.** Reasons:
 - **Freshness.** A cached result is fresh for `staleMs` (default 30 s). Mounting a
   fresh key shows the cache and doesn't fetch. Mounting a stale key shows the cache
   with `refreshing: true` and refetches.
-- **Invalidation.** `invalidate(prefix)` or `invalidate('all')` marks entries stale
-  and refetches the ones with subscribers.
+- **Invalidation.** `invalidate(prefix)` marks every entry whose key equals the prefix
+  or continues it with `:` stale, and refetches the ones with subscribers. Passing
+  the scope itself (what `useDataMutation`'s `'all'` does) covers the member's whole
+  cache.
 - **Scope switch clears the cache.** When the scope changes (sign-out, a different
   user, prototype ↔ connected in development), every entry outside the new scope is
   dropped, so a shared phone never shows the previous member's data.
@@ -410,13 +423,13 @@ exercise error paths. There's no in-app error toggle (owner question 7).
    against both backends with `testing/contract.ts`:
 
    ```ts
-   runContract<ProfileApi>('profile', {
-     mock: (fixture) => createProfileMock(fixture.seed),
-     supabase: (fixture) => createProfileSupabase(fakeSupabase(fixture.server), ME),
+   runContract<ProfileApi, ProfileMockOptions>('profile', {
+     mock: (seed) => createProfileMock({ meId: ME, profiles: [ME_SUMMARY, OTHER_SUMMARY], ...seed }),
+     supabase: (client) => createProfileSupabase(client, ME), // client = fakeSupabase(case.server).client
    }, [
-     { name: 'unknown id is null', seed: [], server: { data: null }, call: (api) => api.getProfile('nope'), expect: ok(null) },
-     { name: 'own profile maps to the UI type', seed: [ME_ROW_UI], server: { data: ME_ROW }, call: (api) => api.getMyProfile(), expect: ok(ME_SUMMARY) },
-     { name: 'network failure is offline', only: 'supabase', server: { throws: new TypeError('Network request failed') }, call: (api) => api.getMyProfile(), expect: err('offline') },
+     { name: 'my profile maps to the UI type', server: { data: ME_ROW }, call: (api) => api.getMyProfile(), expect: ok(ME_SUMMARY), checkCalls: byIdQuery(ME) },
+     { name: 'an unknown id is null, never another profile', server: { data: null }, call: (api) => api.getProfile('nobody'), expect: ok(null) },
+     { name: 'a thrown fetch error is offline', only: 'supabase', server: { throws: new TypeError('Failed to fetch') }, call: (api) => api.getMyProfile(), expect: errKind('offline') },
    ]);
    ```
 
@@ -426,8 +439,9 @@ exercise error paths. There's no in-app error toggle (owner question 7).
 4. **`testing/fakeSupabase.ts`** is a recording fake of the supabase-js surface the
    backends use (`from(...).select/insert/update/upsert/delete`, the filters `eq`,
    `neq`, `in`, `gte`, `lte`, `order`, `limit`, `maybeSingle`, `single`, and `rpc`).
-   Every chain records its calls and resolves to the canned `{ data, error, status }`
-   (or rejects with `throws`). Tests can also assert the recorded chain, for example
+   `fakeSupabase(response | (call) => response)` returns `{ client, calls }`: every
+   chain records its calls and resolves to the canned `{ data, error, status }` (or
+   rejects with `throws`). Tests can also assert the recorded chain, for example
    that `getProfile` filters on `id` and never selects `*`. It is cast to
    `TypedClient` only inside the testing folder.
 5. **What this doesn't prove,** stated plainly: the fake checks how a backend builds
@@ -486,9 +500,10 @@ glob `src/**/*.test.ts` already picks them up) and import only pure modules.
 | --- | --- |
 | `mode.test.ts` | `dataMode` for all five `AuthStatus` values (only `prototype` → `mock`, only `ready` → `supabase`); `dataScope` for each mode, with and without a user id |
 | `errors.test.ts` | every row of the mapping table; `overrides` by kind, code and hint; the copy never contains the raw server message |
-| `store.test.ts` | dedupe of concurrent fetches; a late stale response is dropped; fresh vs stale on subscribe; `invalidate(prefix)` and `'all'` refetch only subscribed keys; scope switch drops other scopes; failed refetch keeps cached data and sets `lastError`; `isEmpty` default for `null`, `undefined`, `[]`; `setQueryData`; mutation de-duplication while pending (with an injected clock and no timers left running) |
+| `store.test.ts` | dedupe of concurrent fetches; a late stale response is dropped; fresh vs stale on subscribe; `invalidate(prefix)` and the whole-scope prefix refetch only subscribed keys, matching whole segments; scope switch drops other scopes; failed refetch keeps cached data and sets `lastError`; `isEmpty` default for `null`, `undefined`, `[]`; `setQueryData`; `refetchStale` (foreground refetch) only for subscribed entries past `staleMs`; a response arriving after a scope switch is ignored; single-flight de-duplication of a pending action (with an injected clock and no timers left running) |
 | `mockUtil.test.ts` | `findById` returns the item, or `null` for an unknown id (never the first item); `fail` injection |
-| `profile.test.ts` | the contract suite against mock and fake Supabase: unknown id → `null`, RLS-hidden row → `null`, own profile maps, offline / server errors map; the recorded query uses explicit columns and an `id` filter; `toProfileSummary` mapping |
+| `fakeSupabase.test.ts` | the fake records `from()` chains and `rpc()` calls, returns errors with a status, can throw, can answer per call; `assertResult` compares data deeply and errors by kind |
+| `profile.test.ts` | the contract suite against mock and fake Supabase: unknown id → `null`, another member's (RLS-hidden) row → `null`, own profile maps, offline (status 0 and thrown) / server errors map; the recorded query uses explicit columns, an `id` filter and `maybeSingle()`; mappers drop unknown `ride_prefs` codes (including `toString`) and map an unknown role to `both` |
 | `purity.test.ts` | the purity rule above |
 
 Plus `npm run typecheck`, `npm run lint`, and a web walkthrough (`npm run web`) in
