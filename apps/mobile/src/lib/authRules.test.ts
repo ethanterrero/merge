@@ -1,15 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  AppMode,
   DELETE_ACCOUNT_ERROR,
   DELETE_ACCOUNT_SESSION_ERROR,
   DELETE_ACCOUNT_UNAVAILABLE_ERROR,
   SERVER_ERROR,
+  appMode,
   deleteAccountResult,
   deriveStatus,
   digitsOnly,
   displayNameError,
   isCompleteCode,
+  isReleaseBuild,
   isValidEmail,
   launchRoute,
   mustLeaveRoute,
@@ -140,9 +143,42 @@ test('sendCodeErrorMessage only uses the message when there is no code', () => {
   );
 });
 
+test('isReleaseBuild: only an unset or development APP_ENV is a development build', () => {
+  assert.equal(isReleaseBuild(undefined), false);
+  assert.equal(isReleaseBuild(''), false);
+  assert.equal(isReleaseBuild('development'), false);
+  assert.equal(isReleaseBuild('preview'), true);
+  assert.equal(isReleaseBuild('production'), true);
+});
+
+test('isReleaseBuild fails closed on values eas.json never sets', () => {
+  // A typo in a build profile must not quietly ship the mock prototype.
+  for (const appEnv of ['prod', 'staging', 'Production', ' development', 'test']) {
+    assert.equal(isReleaseBuild(appEnv), true, appEnv);
+  }
+});
+
+test('appMode: development builds without Supabase config stay the prototype', () => {
+  assert.equal(appMode({ appEnv: undefined, configured: false }), 'prototype');
+  assert.equal(appMode({ appEnv: '', configured: false }), 'prototype');
+  assert.equal(appMode({ appEnv: 'development', configured: false }), 'prototype');
+});
+
+test('appMode: preview and production builds without Supabase config are misconfigured', () => {
+  assert.equal(appMode({ appEnv: 'preview', configured: false }), 'misconfigured');
+  assert.equal(appMode({ appEnv: 'production', configured: false }), 'misconfigured');
+  assert.equal(appMode({ appEnv: 'staging', configured: false }), 'misconfigured');
+});
+
+test('appMode: any build with Supabase config is connected', () => {
+  for (const appEnv of [undefined, '', 'development', 'preview', 'production']) {
+    assert.equal(appMode({ appEnv, configured: true }), 'connected', String(appEnv));
+  }
+});
+
 test('deriveStatus', () => {
-  const base = { configured: true, sessionLoaded: true, hasSession: true, profileLoaded: true, hasProfile: true };
-  assert.equal(deriveStatus({ ...base, configured: false, sessionLoaded: false }), 'prototype');
+  const base = { mode: 'connected' as AppMode, sessionLoaded: true, hasSession: true, profileLoaded: true, hasProfile: true };
+  assert.equal(deriveStatus({ ...base, mode: 'prototype', sessionLoaded: false }), 'prototype');
   assert.equal(deriveStatus({ ...base, sessionLoaded: false }), 'loading');
   assert.equal(deriveStatus({ ...base, hasSession: false, profileLoaded: false, hasProfile: false }), 'signedOut');
   assert.equal(deriveStatus({ ...base, profileLoaded: false, hasProfile: false }), 'loading');
@@ -150,11 +186,19 @@ test('deriveStatus', () => {
   assert.equal(deriveStatus(base), 'ready');
 });
 
+test('deriveStatus reports a misconfigured release build before anything loads', () => {
+  const none = { sessionLoaded: false, hasSession: false, profileLoaded: false, hasProfile: false };
+  assert.equal(deriveStatus({ ...none, mode: 'misconfigured' }), 'misconfigured');
+  assert.equal(deriveStatus({ ...none, mode: 'prototype' }), 'prototype');
+  assert.equal(deriveStatus({ ...none, mode: 'connected' }), 'loading');
+});
+
 test('launchRoute sends only ready users past Welcome', () => {
   assert.equal(launchRoute('ready'), 'discover');
   assert.equal(launchRoute('needsProfile'), 'welcome');
   assert.equal(launchRoute('signedOut'), 'welcome');
   assert.equal(launchRoute('prototype'), 'welcome');
+  assert.equal(launchRoute('misconfigured'), 'welcome');
 });
 
 test('welcomeNext picks the next onboarding step', () => {
@@ -173,6 +217,7 @@ test('mustLeaveRoute only moves signed-out people off signed-in screens', () => 
   assert.equal(mustLeaveRoute('signedOut', 'role'), false);
   assert.equal(mustLeaveRoute('ready', 'discover'), false);
   assert.equal(mustLeaveRoute('prototype', 'discover'), false);
+  assert.equal(mustLeaveRoute('misconfigured', 'welcome'), false);
 });
 
 test('profileRetryDelayMs doubles from one second', () => {
