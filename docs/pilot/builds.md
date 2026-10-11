@@ -43,7 +43,15 @@ Run these from `apps/mobile`, after the Expo, Apple and Google accounts exist (O
    eas env:create --environment preview --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value <publishable key> --visibility sensitive
    ```
 
-   Use the publishable (or legacy `anon`) key only, never a secret or `service_role` key. `EXPO_PUBLIC_` values end up inside the app bundle, so don't use `secret` visibility for them. Later tasks add the map display key (M-22) and the Sentry DSN (M-31) the same way.
+   Use the publishable (or legacy `anon`) key only, never a secret or `service_role` key. `EXPO_PUBLIC_` values end up inside the app bundle, so don't use `secret` visibility for them. The Sentry DSN (M-31) is added the same way.
+
+   The map display key (O-08, M-22) is the Stadia Maps **client** key, restricted to the app, never a server key:
+
+   ```bash
+   eas env:create --environment preview --name EXPO_PUBLIC_STADIA_KEY --value <stadia client key> --visibility sensitive
+   ```
+
+   For local checks, put the same line (`EXPO_PUBLIC_STADIA_KEY=...`) in `apps/mobile/.env`. Without it, every map in the app is the stylized, offline BayMap (see [Maps](#maps)).
 4. Build:
 
    ```bash
@@ -75,7 +83,20 @@ Install the development build on the phone, then start Metro with the dev-client
 npm --workspace apps/mobile run dev-client     # same as: npx expo start --dev-client (from apps/mobile)
 ```
 
-`npm run start`, `npm run ios` and `npm run android` still open the app in **Expo Go** (they pass `--go`), because installing `expo-dev-client` would otherwise make `expo start` default to a dev build. Once the app needs a native module Expo Go doesn't have (MapLibre in M-22), switch those scripts to the dev build.
+`npm run start`, `npm run ios` and `npm run android` still open the app in **Expo Go** (they pass `--go`), because installing `expo-dev-client` would otherwise make `expo start` default to a dev build. M-22 kept it that way: Expo Go lacks MapLibre's native module, but the map falls back to the stylized BayMap there instead of crashing, so Expo Go still runs every screen. Use the dev build (`dev-client`) to see real map tiles on a phone. Switch the default only when a module with no fallback arrives (push, M-38).
+
+## Maps
+
+Discover and "Where and when" draw generalized areas (0.5 mi circles around server-picked area centers, never exact points) with `src/components/map/AreaMap`. Which map you get:
+
+| Where | `EXPO_PUBLIC_STADIA_KEY` set | Map |
+| --- | --- | --- |
+| Dev, preview or production build (iOS, Android) | yes | MapLibre Native with Stadia Maps tiles (D-08) |
+| Expo Go, or a dev build made before M-22 | yes | Stylized BayMap (no MapLibre native module) |
+| Web build | yes | maplibre-gl with Stadia Maps tiles, loaded on demand |
+| Anywhere | no (prototype mode, empty `.env`) | Stylized BayMap, no network |
+
+Real maps show "© Stadia Maps © OpenMapTiles © OpenStreetMap contributors", linking to each source, as on `site/attributions.html`. If the real map throws or its style can't load, the stylized map takes its place. A development build made before M-22 has no MapLibre, so rebuild it (`eas build --profile development`) after M-22 merges. The `@maplibre/maplibre-react-native` config plugin adds no permissions (checked with `npx expo config --type introspect`).
 
 ## What the release config sets
 
