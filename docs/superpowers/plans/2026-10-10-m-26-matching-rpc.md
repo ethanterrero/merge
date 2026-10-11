@@ -4,7 +4,7 @@
 
 **Goal:** Build `public.find_matches(ride_date, role_filter)`, the `security definer` discovery RPC, with every hard filter, the ranking, banded detours and privacy-safe output, plus its SQL tests.
 
-**Architecture:** One migration, `supabase/migrations/0015_matching.sql`, adds GiST indexes on the commute area columns and four functions:
+**Architecture:** One migration, `supabase/migrations/0015_matching.sql`, adds four functions (the GiST indexes first planned here were dropped after the security review; spec section 7):
 - `match_prefilter`: an immutable area bound.
 - `match_days_label`: an immutable label helper.
 - `match_candidates(me, ride_date)`: the invoker helper with the hard filters and raw pair fields, including exact detour minutes. It's internal only, and M-27 reuses it.
@@ -25,7 +25,7 @@ One test file, `supabase/tests/matching_test.sql`, covers the spec's section 10.
 - Call `is_blocked`, `is_active` and `is_vetted` only inside definer code. Never reimplement M-33's estimate.
 - No returned column may carry exact detour minutes. `detour_band` is `under_3` (0–2 min) or `3_to_5` (3–5 min). The reason labels are "Under 3 min detour" and "3–5 min detour".
 - Output columns, in order: `other_id, role, name, vetted, ride_prefs, origin_area_lat, origin_area_lng, origin_area_label, destination_area_lat, destination_area_lng, destination_area_label, area_radius_m, shared_weekdays, departure_time, window_start, window_end, departure_gap_minutes, detour_band, seats_offered, seats_open, brings_scooter, scooter_fits, connected, reasons, rank`.
-- Ranking: exact detour, then |gap|, then connected first, then shared preferences (descending), then shared weekdays (descending), then reaches 3+ occupants first, then `other_id`, then `role`. Cap at 50 rows.
+- Ranking: the detour band (never exact minutes; security review follow-up), then |gap|, then connected first, then shared preferences (descending), then shared weekdays (descending), then reaches 3+ occupants first, then `other_id`, then `role`. Cap at 50 rows.
 - Errors: no uid → 42501; null or past `ride_date` → 22023; bad `role_filter` → 22023. These return an empty set: a suspended caller, a caller with no profile, a weekend date, and a caller with no commute that weekday.
 - Commit `apps/mobile/src/lib/database.types.ts` only from CI's `database-types` artifact.
 - No PR, no merge, no hosted DB, no backlog edits. Never force-push.
@@ -102,7 +102,6 @@ Expected: `FAIL matching_test.sql` with `function public.find_matches(date, text
   - `public.find_matches(ride_date date, role_filter text default 'all')` with the output columns in Global Constraints.
 
 - [ ] **Step 1: Write the migration.**
-  - Indexes: `commutes_origin_area_gist` and `commutes_destination_area_gist`.
   - `match_prefilter`: midpoint disc of radius `(L + D)/2 × 1.01 + area_radius_m()`, where `D = (limit + 0.5) × mph × 1609.344 / 60 / road_factor`.
   - `match_days_label`: a gaps-and-islands label.
   - `match_candidates`: SQL, invoker. CTEs `mine → pairs → eligible → available → scored`, applying rules 1–13 in the spec's section 2. Parameters are qualified as `match_candidates.<name>`, because `rides.ride_date` would otherwise win.
