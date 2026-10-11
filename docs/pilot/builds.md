@@ -10,7 +10,7 @@ Merge is built with [EAS Build](https://docs.expo.dev/build/introduction/). The 
 | `preview` | A release build for the owner's own phones. | Internal (iOS ad hoc, Android APK) | `preview` | `preview` |
 | `production` | Store builds for TestFlight and Play internal testing (D-11). | Store | `production` | `production` |
 
-`EXPO_PUBLIC_APP_ENV` is set in `eas.json` and baked into the bundle. M-25 uses it so release builds refuse to start in prototype mode. **Until M-25 merges, a preview or production build with missing Supabase variables silently runs as the prototype.**
+`EXPO_PUBLIC_APP_ENV` is set in `eas.json` and baked into the bundle. Release builds use it to refuse prototype mode: a `preview` or `production` build missing `EXPO_PUBLIC_SUPABASE_URL` or `EXPO_PUBLIC_SUPABASE_ANON_KEY` opens on a blocking "This build isn't set up correctly" screen instead of mock data. So does any `EXPO_PUBLIC_APP_ENV` value other than `development`, so a typo in a profile fails closed. Development builds and local `expo start` (no `EXPO_PUBLIC_APP_ENV`) keep running as the prototype with an empty `.env`. The rule is `appMode` in `src/lib/authRules.ts`. To see the screen locally: `EXPO_PUBLIC_APP_ENV=preview npm run web` from the repo root with no `.env`. (`production` can't be tried this way until D-10, because the placeholder-ID check below stops `expo start` first.)
 
 Version numbers: `expo.version` in `app.json` (now `0.1.0`) is the version people see. Build numbers live on EAS (`cli.appVersionSource: "remote"`), and the production profile increments them on every build.
 
@@ -43,7 +43,15 @@ Run these from `apps/mobile`, after the Expo, Apple and Google accounts exist (O
    eas env:create --environment preview --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value <publishable key> --visibility sensitive
    ```
 
-   Use the publishable (or legacy `anon`) key only, never a secret or `service_role` key. `EXPO_PUBLIC_` values end up inside the app bundle, so don't use `secret` visibility for them. Later tasks add the map display key (M-22) and the Sentry DSN (M-31) the same way.
+   Use the publishable (or legacy `anon`) key only, never a secret or `service_role` key. `EXPO_PUBLIC_` values end up inside the app bundle, so don't use `secret` visibility for them. The Sentry DSN (M-31) is added the same way.
+
+   The map display key (O-08, M-22) is the Stadia Maps **client** key, restricted to the app, never a server key:
+
+   ```bash
+   eas env:create --environment preview --name EXPO_PUBLIC_STADIA_KEY --value <stadia client key> --visibility sensitive
+   ```
+
+   For local checks, put the same line (`EXPO_PUBLIC_STADIA_KEY=...`) in `apps/mobile/.env`. Without it, every map in the app is the stylized, offline BayMap (see [Maps](#maps)).
 4. Build:
 
    ```bash
@@ -75,7 +83,38 @@ Install the development build on the phone, then start Metro with the dev-client
 npm --workspace apps/mobile run dev-client     # same as: npx expo start --dev-client (from apps/mobile)
 ```
 
-`npm run start`, `npm run ios` and `npm run android` still open the app in **Expo Go** (they pass `--go`), because installing `expo-dev-client` would otherwise make `expo start` default to a dev build. Once the app needs a native module Expo Go doesn't have (MapLibre in M-22), switch those scripts to the dev build.
+`npm run start`, `npm run ios` and `npm run android` still open the app in **Expo Go** (they pass `--go`), because installing `expo-dev-client` would otherwise make `expo start` default to a dev build. M-22 kept it that way: Expo Go lacks MapLibre's native module, but the map falls back to the stylized BayMap there instead of crashing, so Expo Go still runs every screen. Use the dev build (`dev-client`) to see real map tiles on a phone. Switch the default only when a module with no fallback arrives (push, M-38).
+
+## Maps
+
+Discover and "Where and when" draw generalized areas (0.5 mi circles around server-picked area centers, never exact points) with `src/components/map/AreaMap`. Which map you get:
+
+| Where | `EXPO_PUBLIC_STADIA_KEY` set | Map |
+| --- | --- | --- |
+| Dev, preview or production build (iOS, Android) | yes | MapLibre Native with Stadia Maps tiles (D-08) |
+| Expo Go, or a dev build made before M-22 | yes | Stylized BayMap (no MapLibre native module) |
+| Web build | yes | maplibre-gl with Stadia Maps tiles, loaded on demand |
+| Anywhere | no (prototype mode, empty `.env`) | Stylized BayMap, no network |
+
+Real maps show "© Stadia Maps © OpenMapTiles © OpenStreetMap contributors", linking to each source, as on `site/attributions.html`.
+
+When the real map can't be shown, the stylized map takes its place on that screen until it's opened again:
+
+- **The style fails to load** (a mistyped or revoked key, Stadia rate limiting with a 429, no network). On web this is maplibre-gl's `error` event before the style loads; on iOS and Android it's MapLibre's `onDidFailLoadingMap`. The warning says only "Map style failed to load" (plus the HTTP status on web), never the URL, because request URLs carry the key.
+- **The map throws while rendering.** An error boundary catches it and logs the message with every `api_key` value redacted.
+
+A key that is blank or obviously a placeholder (`your-stadia-key`, `changeme123`, `undefined`, `YOUR-API-KEY` and the like) counts as no key, so no tile requests are made. Stadia doesn't publish its key format, so real keys aren't checked further.
+
+A development build made before M-22 has no MapLibre, so rebuild it (`eas build --profile development`) after M-22 merges. The `@maplibre/maplibre-react-native` config plugin adds no permissions (checked with `npx expo config --type introspect`).
+
+### Device check for real tiles (O-07)
+
+On a development build with `EXPO_PUBLIC_STADIA_KEY` set, on an iPhone and an Android phone:
+
+1. Discover shows street tiles with the match circles and the attribution, and tapping a circle opens the match.
+2. Labels and icons on the map draw. Native MapLibre has no request hook, so the key reaches Stadia only through the style URL. Whether the style's sprite, glyph and tile URLs carry it depends on Stadia's style JSON. Missing street names or icons mean they don't.
+3. With a deliberately wrong key, the screen shows the stylized map, not a blank one.
+4. The built Android manifest has no permissions beyond those `app.json` declares (the native MapLibre library could add some at build time).
 
 ## What the release config sets
 

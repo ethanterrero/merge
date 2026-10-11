@@ -108,6 +108,39 @@ test('invalidating the scope prefix refetches every subscribed key in it', async
   assert.equal(b.calls, 2);
 });
 
+test('a fetch that started before an invalidation neither clears stale nor overwrites newer data', async () => {
+  let now = 0;
+  const store = createQueryStore({ now: () => now });
+  // Cached and fresh, with no subscriber (the screen is unmounted).
+  await store.fetch('mock:list', async () => ok(['a']));
+  const before = deferred<Result<string[]>>();
+  const inflight = store.fetch('mock:list', () => before.promise, { force: true });
+  // A write lands (for example a block): the cache is updated, then everything is invalidated.
+  store.setQueryData<string[]>('mock:list', () => ['a', 'blocked']);
+  store.invalidate('mock');
+  // The pre-write response arrives afterwards.
+  before.resolve(ok(['a']));
+  await inflight;
+  assert.deepEqual(store.getSnapshot('mock:list').value, ['a', 'blocked']);
+  assert.equal(store.getSnapshot('mock:list').fetching, false);
+  // Still stale: mounting refetches at once instead of trusting the old answer for 30 s.
+  now = 1;
+  const fetcher = counter(() => ok(['a', 'blocked']));
+  store.ensure('mock:list', fetcher, 30_000);
+  assert.equal(fetcher.calls, 1);
+});
+
+test('a fetch that started after the last invalidation still counts as fresh', async () => {
+  let now = 0;
+  const store = createQueryStore({ now: () => now });
+  store.invalidate('mock');
+  await store.fetch('mock:list', async () => ok(['a']));
+  now = 1;
+  const fetcher = counter(() => ok(['b']));
+  store.ensure('mock:list', fetcher, 30_000);
+  assert.equal(fetcher.calls, 0);
+});
+
 test('a prefix matches whole segments only', async () => {
   const store = createQueryStore();
   const rides = counter(() => ok('r'));

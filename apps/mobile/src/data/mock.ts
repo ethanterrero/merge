@@ -9,6 +9,14 @@ export const WEEKDAYS: Weekday[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
 export type Reason = { label: string; ok: boolean };
 
+/**
+ * A generalized area: the center of a ~0.5 mi circle, like the stored
+ * `origin_area` / `destination_area` that matching returns (M-18, M-26).
+ * Never an address or an exact pin. The coordinates below are made up and
+ * rounded to about 100 m.
+ */
+export type AreaCenter = { lat: number; lng: number; label: string };
+
 export type Match = {
   id: string;
   name: string;
@@ -24,8 +32,9 @@ export type Match = {
   vehicle?: { description: string; seats: number; cargoFits: boolean };
   ridePrefs: string[];
   stats: { rides: string; onTime: string; memberSince: string };
-  /** Position of the generalized area marker on the stylized map, 0–1. */
-  marker: { x: number; y: number; size: number };
+  /** Where they start: their origin area, drawn as a circle on Discover. */
+  originArea: AreaCenter;
+  destinationArea: AreaCenter;
   window: string;
 };
 
@@ -50,7 +59,8 @@ export const MATCHES: Match[] = [
     vehicle: { description: '[Make, model, color]', seats: 4, cargoFits: true },
     ridePrefs: ['Smoke-free', 'Quiet ride'],
     stats: { rides: '[N]', onTime: '[X]%', memberSince: '[Mon YY]' },
-    marker: { x: 0.65, y: 0.66, size: 96 },
+    originArea: { lat: 37.768, lng: -122.24, label: 'Park Street area, Alameda' },
+    destinationArea: { lat: 37.791, lng: -122.399, label: 'Financial District/South Beach area, San Francisco' },
     window: '7:25–7:55',
   },
   {
@@ -71,7 +81,8 @@ export const MATCHES: Match[] = [
     vehicle: { description: '[Make, model, color]', seats: 4, cargoFits: false },
     ridePrefs: ['Smoke-free'],
     stats: { rides: '[N]', onTime: '[X]%', memberSince: '[Mon YY]' },
-    marker: { x: 0.78, y: 0.48, size: 72 },
+    originArea: { lat: 37.776, lng: -122.278, label: 'West End area, Alameda' },
+    destinationArea: { lat: 37.782, lng: -122.401, label: 'South of Market area, San Francisco' },
     window: '7:40–8:10',
   },
   {
@@ -89,12 +100,22 @@ export const MATCHES: Match[] = [
     ],
     ridePrefs: ['Quiet ride'],
     stats: { rides: '[N]', onTime: '[X]%', memberSince: '[Mon YY]' },
-    marker: { x: 0.86, y: 0.76, size: 64 },
+    originArea: { lat: 37.762, lng: -122.231, label: 'East End area, Alameda' },
+    destinationArea: { lat: 37.794, lng: -122.402, label: 'Financial District/South Beach area, San Francisco' },
     window: '7:35–8:05',
   },
 ];
 
 export const findMatch = (id: string): Match => MATCHES.find((m) => m.id === id) ?? MATCHES[0];
+
+/**
+ * The prototype person's own pickup and drop-off areas, for "Where and when".
+ * Their labels match the commute draft's defaults in state/commute.tsx.
+ */
+export const PROTOTYPE_COMMUTE_AREAS: { pickup: AreaCenter; dropoff: AreaCenter } = {
+  pickup: { lat: 37.766, lng: -122.246, label: 'Park St area, Alameda' },
+  dropoff: { lat: 37.792, lng: -122.398, label: 'Financial District, SF' },
+};
 
 /** The one date ('YYYY-MM-DD') the prototype requests and books with a match. */
 export const PROTOTYPE_RIDE_DATE = '2026-10-12';

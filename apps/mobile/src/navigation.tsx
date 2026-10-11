@@ -21,6 +21,10 @@ export type Route =
   | { name: 'driverConfirm'; requestId: string }
   | { name: 'role' }
   | { name: 'vehicle' }
+  | { name: 'postRide'; matchId: string }
+  | { name: 'postRideThanks'; matchId: string }
+  | { name: 'report'; personId?: string; personName?: string; rideId?: string; rideLabel?: string }
+  | { name: 'blockedPeople' }
 ;
 
 export type RouteName = Route['name'];

@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, radius, space, type } from '../theme';
 import { useNav } from '../navigation';
 import { findRequest } from '../data/mock';
 import { rideDateLine } from '../lib/rideKind';
 import { useCommute } from '../state/commute';
-import { Screen, TopBar } from '../components/Screen';
+import { IconButton, Screen, TopBar } from '../components/Screen';
 import { Button } from '../components/Button';
 import { Avatar, Badge, Card, SettingRow } from '../components/primitives';
+import { BlockReportMenu, useCanBlockOrReport } from '../components/BlockReportMenu';
 
 /** D2: review an incoming request, then accept, suggest a change or decline. */
 export function DriverRequestScreen({ requestId }: { requestId: string }) {
@@ -16,10 +17,28 @@ export function DriverRequestScreen({ requestId }: { requestId: string }) {
   const r = findRequest(requestId);
   const first = r.name.split(' ')[0];
   const seatsLeftAfter = Math.max(0, commute.seatsOffered - 1 - r.seats);
+  const [menuOpen, setMenuOpen] = useState(false);
+  // Prototype requests carry no member id, so the request id stands in for the
+  // requester. M-36 wires the inbox and passes the sender's profile id instead;
+  // until then the menu is hidden in connected mode (the id isn't a uuid).
+  const requesterId = r.id;
+  const canBlockOrReport = useCanBlockOrReport(requesterId);
 
   return (
     <Screen
-      header={<TopBar title={`${first}'s request`} right={<Text style={[type.caption, { fontWeight: '700', color: colors.textMuted, paddingRight: space.sm }]}>Reply by {r.replyBy}</Text>} />}
+      header={
+        <TopBar
+          title={`${first}'s request`}
+          right={
+            <>
+              <Text style={[type.caption, { fontWeight: '700', color: colors.textMuted, paddingRight: canBlockOrReport ? 0 : space.sm }]}>
+                Reply by {r.replyBy}
+              </Text>
+              {canBlockOrReport ? <IconButton icon="ellipsis-vertical" label="Block or report" onPress={() => setMenuOpen(true)} /> : null}
+            </>
+          }
+        />
+      }
       footer={
         <>
           <Button label="Accept" onPress={() => nav.push({ name: 'driverConfirm', requestId: r.id })} />
@@ -74,6 +93,9 @@ export function DriverRequestScreen({ requestId }: { requestId: string }) {
         />
         {r.cargo ? <SettingRow divider title={r.cargo.label} description={r.cargo.detail} trailing={<Badge label="Needs your OK" tone="brand" />} /> : null}
       </Card>
+
+      {/* Once blocked, the request leaves this screen; hiding it from the inbox is M-36's. */}
+      <BlockReportMenu visible={menuOpen && canBlockOrReport} onClose={() => setMenuOpen(false)} personId={requesterId} firstName={first} onBlocked={nav.back} />
     </Screen>
   );
 }
