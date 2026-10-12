@@ -18,6 +18,7 @@ import {
   SIGN_OUT_ERROR,
   VERIFY_CODE_ERROR,
 } from '../lib/authRules';
+import { devSignInAccount, devSignInErrorMessage } from '../lib/devSignIn';
 import type { Role } from './commute';
 
 export type Profile = Database['public']['Tables']['profiles']['Row'];
@@ -29,6 +30,8 @@ type Auth = {
   /** Each action resolves to an error message to show, or null on success. */
   sendCode: (email: string) => Promise<string | null>;
   verifyCode: (email: string, code: string) => Promise<string | null>;
+  /** Signs in as the dev test account, skipping the emailed code. Null unless offered (devSignIn.ts). */
+  devSignIn: { email: string; signIn: () => Promise<string | null> } | null;
   saveProfile: (input: { displayName: string; role: Role }) => Promise<string | null>;
   signOut: () => Promise<string | null>;
   /**
@@ -42,6 +45,15 @@ type Auth = {
 const DELETE_ACCOUNT_TIMEOUT_MS = 45000;
 
 const AuthContext = createContext<Auth | null>(null);
+
+// Literal process.env reads so Expo inlines them; app.config.js blocks a release build that sets them.
+const DEV_ACCOUNT = devSignInAccount({
+  isDev: __DEV__,
+  appEnv,
+  configured: supabase !== null,
+  email: process.env.EXPO_PUBLIC_DEV_SIGN_IN_EMAIL,
+  password: process.env.EXPO_PUBLIC_DEV_SIGN_IN_PASSWORD,
+});
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -142,6 +154,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { error } = await client.auth.verifyOtp({ email: normalizeEmail(email), token: code, type: 'email' });
         return error ? VERIFY_CODE_ERROR : null;
       },
+      devSignIn:
+        client && DEV_ACCOUNT
+          ? {
+              email: DEV_ACCOUNT.email,
+              signIn: async () => {
+                const { error } = await client.auth.signInWithPassword(DEV_ACCOUNT);
+                return error ? devSignInErrorMessage(error) : null;
+              },
+            }
+          : null,
       saveProfile: async ({ displayName, role }) => {
         if (!client || !session) return SAVE_PROFILE_ERROR;
         const { data, error } = await client

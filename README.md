@@ -48,6 +48,16 @@ With the Supabase values in `apps/mobile/.env` left empty, the app runs as a cli
    - Authentication → Emails → SMTP Settings: turn on custom SMTP before you edit the templates. On the free plan, projects created since June 2026 can't edit email templates while they use Supabase's built-in sender. That sender also only delivers to members of your Supabase team, and only a couple of emails an hour, so testers outside the team need custom SMTP anyway. Resend example: host `smtp.resend.com`, port `465`, username `resend`, password = a Resend API key with sending access. Enter the key in the dashboard only, and never commit it or put it in `.env`. Until you verify a domain in Resend, its `onboarding@resend.dev` sender delivers only to your own Resend account's email.
    - Authentication → Emails → Templates: put `{{ .Token }}` in the body of both the **Confirm sign up** and **Magic link or OTP** templates, and drop the link, so every email contains a 6-digit code. With "Confirm email" on, a brand-new user's first sign-in sends Confirm sign up, and returning users get Magic link or OTP. For example: `<p>Your Merge code is {{ .Token }}</p>`
 
+### Dev sign-in (skip the emailed code)
+
+For local development you can sign in with a password instead of waiting for an email:
+
+1. In the Supabase dashboard, Authentication → Users → Add user → Create new user. Use an address you control (for example `you+dev@example.com`), set a password, and tick **Auto Confirm User**. This works with sign-ups off.
+2. Put the same values in `apps/mobile/.env` as `EXPO_PUBLIC_DEV_SIGN_IN_EMAIL` and `EXPO_PUBLIC_DEV_SIGN_IN_PASSWORD`, then restart `npm run start`.
+3. The Sign in screen shows **Skip code: sign in as …** under the email field. The first time, the app asks for a name like any new user.
+
+The button appears only in a `__DEV__` bundle of a development build (local `expo start`), and `app.config.js` refuses to resolve a preview or production config while either variable is set, so the account is never bundled into a build testers get. Use a throwaway account: anyone with your `.env` can sign in as it.
+
 After changing the schema, don't regenerate `apps/mobile/src/lib/database.types.ts` by hand. CI generates it from `supabase/migrations/`, and [CONTRIBUTING.md](CONTRIBUTING.md) explains how to download and commit it. Use `npm run db:types` only to check the live hosted schema.
 
 In migrations, schema-qualify extension objects (for example `extensions.geography`), because the Supabase CLI applies migrations as a role whose `search_path` is only `"$user", public`.
