@@ -179,7 +179,7 @@ Every table and column on this branch, and where it's covered above.
 | Apple Push Notification service | Delivers to iOS | Device token, notification content | Apple | Apple Developer terms | planned |
 | Firebase Cloud Messaging | Delivers to Android | FCM token, notification content | Google | Firebase data processing terms. Don't enable Firebase Analytics. | planned |
 | Stadia Maps | Map **tiles only** (D-08) | IP address, viewport, user agent, API key | Not stated in M01 (verify) | DPA available; logs about 7–14 days | planned |
-| Sentry | Crash diagnostics (D-17) | Crash data; IP and user ID off unless enabled | US or EU (Q4) | Sentry DPA | planned (undecided) |
+| Sentry | Crash diagnostics (D-17), preview and production builds only. Free tier. No session replay, tracing or release-health sessions. | Crash data: stack trace, device model, OS, app version, scrubbed breadcrumbs. The app strips emails, coordinates, 6-digit codes, tokens, UUIDs and the device name before sending. No IP or user ID. | US | Sentry DPA; 30-day retention | planned (decided; SDK added in M-31, live once the owner sets the DSN) |
 
 **No geocoding or routing vendor.** People place their own pins, and detour is estimated in PostGIS. If address search or real routing is added later, the new vendor goes on this list.
 
