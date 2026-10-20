@@ -1027,8 +1027,17 @@ begin
       raise exception 'Ada''s view contains "%": %', w, v;
     end if;
   end loop;
-  if position(extensions.st_x(ada.origin::extensions.geometry)::text in v::text) > 0
-     or position(extensions.st_y(ada.origin::extensions.geometry)::text in v::text) > 0 then
+  -- Compare values, not substrings: the area center is drawn within 402 m of the
+  -- exact point, so its longer decimal text can start with the exact coordinate's.
+  if exists (
+    select 1
+    from jsonb_path_query(v, 'strict $.**') j,
+      lateral (select extensions.st_x(ada.origin::extensions.geometry) as x,
+                      extensions.st_y(ada.origin::extensions.geometry) as y) o
+    where (jsonb_typeof(j) = 'number' and (j #>> '{}')::double precision in (o.x, o.y))
+       or (jsonb_typeof(j) = 'string'
+           and (position(o.x::text in j #>> '{}') > 0 or position(o.y::text in j #>> '{}') > 0))
+  ) then
     raise exception 'An exact coordinate is in the view';
   end if;
   if exists (select 1 from jsonb_array_elements(v) e where e ->> 'ride_id' is not null) then
