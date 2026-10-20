@@ -27,6 +27,7 @@ import { PostRideThanksScreen } from './src/screens/PostRideThanksScreen';
 import { ReportScreen } from './src/screens/ReportScreen';
 import { BlockedPeopleScreen } from './src/screens/BlockedPeopleScreen';
 import { TripsScreen } from './src/screens/TripsScreen';
+import { ProfileScreen } from './src/screens/ProfileScreen';
 
 export default function App() {
   return (
@@ -134,5 +135,7 @@ function renderRoute(route: Route): React.ReactElement {
       return <BlockedPeopleScreen />;
     case 'trips':
       return <TripsScreen key={route.tab ?? 'auto'} initialTab={route.tab} />;
+    case 'profile':
+      return <ProfileScreen />;
   }
 }
