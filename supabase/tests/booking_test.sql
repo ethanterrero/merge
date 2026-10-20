@@ -846,11 +846,19 @@ begin
     perform pg_temp.expect(who || ' note', nt, 'North side of Park St');
   end loop;
 
-  -- The other passenger in Bea's car, a requester, a stranger: nothing, and no error.
+  -- The other passenger in Bea's car, a closed requester (Cat, closed `full`), a stranger:
+  -- nothing, and no error.
   foreach who in array array['02', '03', '06'] loop
     perform pg_temp.expect(who || ' sees the pickup', pg_temp.pickups(who, rid)::text, '0');
   end loop;
   perform pg_temp.expect('unknown ride', pg_temp.pickups('01', gen_random_uuid())::text, '0');
+
+  -- A pending requester: Ivy's request to Gus is still open (closed only in group 12), and
+  -- Gus+Dot was booked through confirm_ride, so it has a pickups row.
+  perform pg_temp.expect('Ivy''s request still pending', pg_temp.state('06', pg_temp.kept('ivy_gus')), 'waiting_for_them');
+  perform pg_temp.expect('Gus+Dot has pickups',
+    (select count(*) from public.ride_pickups x where x.ride_id = pg_temp.kept('ride_gus_dot'))::text, '1');
+  perform pg_temp.expect('Ivy (pending to Gus)', pg_temp.pickups('06', pg_temp.kept('ride_gus_dot'))::text, '0');
 
   raised := false;
   begin
