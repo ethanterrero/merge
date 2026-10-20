@@ -1046,9 +1046,65 @@ begin
 
   perform pg_temp.expect('Gus driver_day', pg_temp.driver_day_of('13', d), '(3,0,f,t)');
   perform pg_temp.expect('yesterday', pg_temp.code(pg_temp.cant_err('13', pg_temp.la_today() - 1)), '22023|invalid_input');
+  perform pg_temp.expect('past the 14-day horizon', pg_temp.code(pg_temp.cant_err('13', pg_temp.la_today() + 15)),
+    '22023|invalid_input');
   perform pg_temp.expect('twice', pg_temp.cant_err('13', d), 'ok');
   perform pg_temp.expect('one day off row',
     (select count(*) from public.driver_days_off x where x.driver_id = pg_temp.uid('13'))::text, '1');
+end
+$$;
+
+-- 13. Q1 at confirm: the passenger is already booked that date, in either role ------------
+-- Fresh members, so nothing above changes: 20 Pip, 24 Vic and 27 Zoe passengers; 21 Rex,
+-- 22 Sol and 26 Ken drivers; 23 Tia and 25 Yan "Both". Every send comes before the
+-- booking that would hide its people from matching.
+
+do $$
+declare
+  d date := pg_temp.d();
+  want text := '42501|unavailable|This ride isn''t available anymore';
+  pr uuid;
+  tr uuid;
+  yk uuid;
+  vy uuid;
+begin
+  perform pg_temp.member('20', 'Pip Park', vetted => false);  perform pg_temp.passenger('20');
+  perform pg_temp.member('21', 'Rex Reed');                   perform pg_temp.driver('21');
+  perform pg_temp.member('22', 'Sol Soto');                   perform pg_temp.driver('22');
+  perform pg_temp.member('23', 'Tia Tran');                   perform pg_temp.driver('23');
+                                                              perform pg_temp.passenger('23');
+  perform pg_temp.member('24', 'Vic Vale', vetted => false);  perform pg_temp.passenger('24');
+  perform pg_temp.member('25', 'Yan Yu');                     perform pg_temp.driver('25');
+                                                              perform pg_temp.passenger('25');
+  perform pg_temp.member('26', 'Ken Kerr');                   perform pg_temp.driver('26');
+  perform pg_temp.member('27', 'Zoe Zhu', vetted => false);   perform pg_temp.passenger('27');
+
+  pr := pg_temp.send('20', '21', 'driver', d);   -- Pip asks Rex
+  tr := pg_temp.send('23', '21', 'driver', d);   -- Tia (as a passenger) asks Rex
+  yk := pg_temp.send('25', '26', 'driver', d);   -- Yan (as a passenger) asks Ken
+  vy := pg_temp.send('24', '25', 'driver', d);   -- Vic asks Yan (as a driver)
+
+  -- a. Pip is booked with Sol behind Rex's back: Rex's confirm is the neutral refusal.
+  perform pg_temp.ride('22', '20', d);
+  perform pg_temp.expect('Pip''s request open for Rex', pg_temp.state('21', pr), 'waiting_for_me');
+  perform pg_temp.expect('Rex confirms Pip', pg_temp.try_center('21', pr), want);
+  if pg_temp.has_ride(pr) then
+    raise exception 'Rex got a ride with Pip, who is booked with Sol';
+  end if;
+
+  -- b. Tia drives Zoe that date: her own request to Rex as a passenger is refused the same way.
+  perform pg_temp.ride('23', '27', d);
+  perform pg_temp.expect('Tia''s request open for Rex', pg_temp.state('21', tr), 'waiting_for_me');
+  perform pg_temp.expect('Rex confirms Tia', pg_temp.try_center('21', tr), want);
+  if pg_temp.has_ride(tr) then
+    raise exception 'Rex got a ride with Tia, who drives that day';
+  end if;
+
+  -- c. Yan confirms Vic as a driver while asking Ken as a passenger: that request closes.
+  perform pg_temp.confirm_center('25', vy);
+  perform pg_temp.expect('Yan->Ken status', (pg_temp.inv(yk)).status, 'cancelled');
+  perform pg_temp.expect('Yan->Ken reason', (pg_temp.inv(yk)).cancel_reason, 'booked_elsewhere');
+  perform pg_temp.expect('Ken sees Yan->Ken', pg_temp.state('26', yk), 'unavailable');
 end
 $$;
 

@@ -10,21 +10,24 @@
 -- that leave out every cancel column, so the other participant sees "Ride cancelled",
 -- never why, when or by whom.
 --
--- Locking. Every path that changes a person's rides on a date takes that person's day
--- lock (day_lock). confirm_ride takes, in this order: both profiles for share (id
+-- Locking. Every path that adds a ride or checks capacity takes both people's day
+-- locks (day_lock): confirm_ride takes, in this order, both profiles for share (id
 -- order), the pair lock, both day locks (uuid order), then the invitation row for
 -- update. cancel_ride takes both day locks before the ride row; cant_drive takes the
--- driver's day lock before any ride or invitation row. Day locks always come before
--- invitation row locks, so a confirm and a "can't drive" never wait on each other's
--- rows while holding a day lock the other needs.
+-- driver's day lock before any ride or invitation row. The cancel-only paths
+-- (blocks_cancel_rides, withdraw_member, the deletion policy, and cant_drive for its
+-- passengers) take none, which is safe because they only cancel: a racing confirm or
+-- cancel can at worst be refused. Day locks always come before invitation row locks,
+-- so a confirm and a "can't drive" never wait on each other's rows while holding a day
+-- lock the other needs.
 -- The rows a confirm or a "can't drive" closes are other people's, which no day lock
 -- covers (two confirms for different drivers can each close a row of the other's
 -- set). So both lock every row they will close in one statement, in id order, before
 -- closing any; overlapping sets are then always taken in the same order. A confirm's
--- own invitation row, locked earlier, is never in another confirm's set unless the two
--- share a person, and then they already queue on that person's day lock. The block and
--- suspension closes (0017's blocks_close_invitations and withdraw_member) keep their
--- unsorted single-call pattern.
+-- own invitation row, locked earlier, is never in another confirm's or a can't-drive's
+-- set unless the two share a person on that date, and then they already queue on that
+-- person's day lock. The block and suspension closes (0017's blocks_close_invitations
+-- and withdraw_member) keep their unsorted single-call pattern.
 
 -- Rides: seats, cargo and why a ride was cancelled ----------------------------------------
 -- Existing rows and the older test inserts that name only 0003's columns get the
@@ -52,6 +55,8 @@ create unique index rides_one_per_passenger_date
 
 -- The "Read own rides" policy (0003) stays. The ride_feedback and safety_reports
 -- policies (0003, 0005) read only id, status, driver_id and passenger_id.
+-- Clients must list rides columns explicitly: select('*') now fails with 42501. The
+-- generated Rides.Row type still lists the hidden columns.
 revoke select on public.rides from public, anon, authenticated;
 grant select (id, invitation_id, driver_id, passenger_id, ride_date, pickup_time, status, kind,
               created_at, completed_at, seats, brings_scooter)
@@ -111,8 +116,10 @@ begin
   if day_lock.uid is null or day_lock.ride_date is null then
     return;
   end if;
+  -- to_char, not ::text: the key mustn't depend on the session's DateStyle or TimeZone.
   perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(
-    'merge.day:' || day_lock.uid::text || ':' || day_lock.ride_date::text, 0));
+    'merge.day:' || day_lock.uid::text || ':'
+      || pg_catalog.to_char(day_lock.ride_date::timestamp, 'YYYY-MM-DD'), 0));
 end
 $$;
 
@@ -495,7 +502,8 @@ begin
   if me is null then
     raise exception 'Sign in first' using errcode = '42501', hint = 'not_signed_in';
   end if;
-  if d is null or d < today then
+  -- Today through Q7's request horizon.
+  if d is null or d < today or d > today + 14 then
     raise exception 'Check the date and try again' using errcode = '22023', hint = 'invalid_input';
   end if;
   if not public.is_active(me) then
