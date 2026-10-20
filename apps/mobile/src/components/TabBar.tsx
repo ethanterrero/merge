@@ -24,7 +24,7 @@ type Tab = { key: 'discover' | 'trips' | 'profile'; label: string; icon: IconNam
 const TABS: Tab[] = [
   { key: 'discover', label: 'Discover', icon: 'location', route: { name: 'discover' } },
   { key: 'trips', label: 'Trips', icon: 'calendar', route: { name: 'trips' } },
-  { key: 'profile', label: 'Profile', icon: 'person', route: { name: 'preferences' } },
+  { key: 'profile', label: 'Profile', icon: 'person', route: { name: 'profile' } },
 ];
 
 /**
