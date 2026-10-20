@@ -13,6 +13,9 @@ import { Badge, Card, InfoNote, Row } from '../components/primitives';
 /** Prototype "today" for Crew rides: the day after the prototype's First Ride. */
 const CREW_TODAY = addDays(PROTOTYPE_RIDE_DATE, 1);
 
+/** First day a Crew ride can be proposed: the day after "today", never the same day. */
+const CREW_FROM_DATE = addDays(CREW_TODAY, 1);
+
 /**
  * Crew view (First Ride spec, New screen 5). A Crew never creates rides on its
  * own: the next proposed ride is one dated invitation, confirmed or skipped on
@@ -37,8 +40,8 @@ export function CrewScreen({ matchId }: { matchId: string }) {
   }
 
   const active = crew.status === 'active';
-  const next = nextCrewRide(crew, CREW_TODAY);
-  const confirmed = confirmedCrewRides(crew, CREW_TODAY);
+  const next = nextCrewRide(crew, CREW_FROM_DATE);
+  const confirmed = confirmedCrewRides(crew, CREW_FROM_DATE);
 
   return (
     <Screen header={header} contentStyle={{ gap: space.lg }}>
@@ -66,21 +69,22 @@ export function CrewScreen({ matchId }: { matchId: string }) {
                 </View>
               </Card>
             ) : null}
-            {confirmed.length > 0 ? (
-              <Card>
-                {confirmed.map((date, i) => (
-                  <Row key={date} divider={i > 0}>
-                    <Text style={type.body}>
-                      Confirmed: {formatRideDate(date)} · {crew.departureTime}
-                    </Text>
-                  </Row>
-                ))}
-              </Card>
-            ) : null}
           </>
         ) : (
           <Text style={[type.body, { color: colors.textSecondary }]}>Paused. No rides are proposed until you resume.</Text>
         )}
+        {/* Pausing never touches confirmed rides: each Crew ride is its own ride. */}
+        {confirmed.length > 0 ? (
+          <Card>
+            {confirmed.map((date, i) => (
+              <Row key={date} divider={i > 0}>
+                <Text style={type.body}>
+                  Confirmed: {formatRideDate(date)} · {crew.departureTime}
+                </Text>
+              </Row>
+            ))}
+          </Card>
+        ) : null}
       </View>
 
       <View style={{ gap: space.sm }}>
