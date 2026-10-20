@@ -229,6 +229,33 @@ export type Database = {
           },
         ]
       }
+      driver_days_off: {
+        Row: {
+          created_at: string
+          driver_id: string
+          ride_date: string
+        }
+        ComputedFields: never
+        Insert: {
+          created_at?: string
+          driver_id: string
+          ride_date: string
+        }
+        Update: {
+          created_at?: string
+          driver_id?: string
+          ride_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_days_off_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           accepted_at: string | null
@@ -448,8 +475,55 @@ export type Database = {
           },
         ]
       }
+      ride_pickups: {
+        Row: {
+          created_at: string
+          note: string | null
+          ride_id: string
+          spot: unknown
+          vehicle_color: string | null
+          vehicle_make: string | null
+          vehicle_model: string | null
+          vehicle_plate: string | null
+        }
+        ComputedFields: never
+        Insert: {
+          created_at?: string
+          note?: string | null
+          ride_id: string
+          spot: unknown
+          vehicle_color?: string | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_plate?: string | null
+        }
+        Update: {
+          created_at?: string
+          note?: string | null
+          ride_id?: string
+          spot?: unknown
+          vehicle_color?: string | null
+          vehicle_make?: string | null
+          vehicle_model?: string | null
+          vehicle_plate?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ride_pickups_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: true
+            referencedRelation: "rides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rides: {
         Row: {
+          brings_scooter: boolean
+          cancel_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_late: boolean | null
           completed_at: string | null
           created_at: string
           driver_id: string | null
@@ -459,10 +533,16 @@ export type Database = {
           passenger_id: string | null
           pickup_time: string
           ride_date: string
+          seats: number
           status: string
         }
         ComputedFields: never
         Insert: {
+          brings_scooter?: boolean
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_late?: boolean | null
           completed_at?: string | null
           created_at?: string
           driver_id?: string | null
@@ -472,9 +552,15 @@ export type Database = {
           passenger_id?: string | null
           pickup_time: string
           ride_date: string
+          seats?: number
           status?: string
         }
         Update: {
+          brings_scooter?: boolean
+          cancel_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_late?: boolean | null
           completed_at?: string | null
           created_at?: string
           driver_id?: string | null
@@ -484,9 +570,17 @@ export type Database = {
           passenger_id?: string | null
           pickup_time?: string
           ride_date?: string
+          seats?: number
           status?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "rides_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "rides_driver_id_fkey"
             columns: ["driver_id"]
@@ -626,6 +720,8 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      cancel_ride: { Args: { ride_id: string }; Returns: undefined }
+      cant_drive: { Args: { ride_date: string }; Returns: undefined }
       close_invitations: {
         Args: { ids: string[]; reason: string }
         Returns: undefined
@@ -639,6 +735,17 @@ export type Database = {
         }
         Returns: unknown
       }
+      confirm_ride: {
+        Args: {
+          invitation_id: string
+          note: string
+          scooter_ok?: boolean
+          spot_lat: number
+          spot_lng: number
+        }
+        Returns: string
+      }
+      day_lock: { Args: { ride_date: string; uid: string }; Returns: undefined }
       decline_invitation: {
         Args: { invitation_id: string }
         Returns: undefined
@@ -649,6 +756,15 @@ export type Database = {
       }
       detour_road_factor: { Args: Record<PropertyKey, never>; Returns: number }
       detour_speed_mph: { Args: Record<PropertyKey, never>; Returns: number }
+      driver_day: {
+        Args: { ride_date: string }
+        Returns: {
+          day_off: boolean
+          scooter_booked: boolean
+          seats_booked: number
+          seats_total: number
+        }[]
+      }
       estimate_detour_minutes: {
         Args: {
           driver_dest: unknown
@@ -886,6 +1002,18 @@ export type Database = {
       ride_cutoff: {
         Args: { minutes: number; ride_date: string }
         Returns: string
+      }
+      ride_pickup: {
+        Args: { ride_id: string }
+        Returns: {
+          note: string
+          spot_lat: number
+          spot_lng: number
+          vehicle_color: string
+          vehicle_make: string
+          vehicle_model: string
+          vehicle_plate: string
+        }[]
       }
       road_minutes: { Args: { meters: number }; Returns: number }
       send_invitation: {
