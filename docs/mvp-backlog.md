@@ -1513,7 +1513,7 @@ When done, open a PR to main and stop.
 
 ### M-19 · Typed data layer with mock and Supabase backends
 
-- **Status:** Building. Spec `docs/superpowers/specs/2026-10-10-data-layer-design.md` approved by the owner on 2026-10-10 with all eight recommendations (in-house cache, no TanStack Query; Supabase only when status is `ready`; read-only `profile` sample module; refetch on foreground after 30 s; no simulate-error toggle). Branch `feat/m-19-data-layer`. Don't dispatch it again.
+- **Status:** Done. Merged to main in PR #36 (`198847c`) on 2026-10-10. Don't dispatch it again. Spec `docs/superpowers/specs/2026-10-10-data-layer-design.md` approved by the owner on 2026-10-10 with all eight recommendations (in-house cache, no TanStack Query; Supabase only when status is `ready`; read-only `profile` sample module; refetch on foreground after 30 s; no simulate-error toggle). Branch `feat/m-19-data-layer`. Don't dispatch it again.
 - **Wave:** 2
 - **Kind:** design-then-build
 - **Size:** M
@@ -1649,7 +1649,7 @@ When done, open a PR to main and stop.
 
 ### M-16 · Limited profile cards for related users
 
-- **Status:** Building. Spec `docs/superpowers/specs/2026-10-10-profile-cards-design.md` approved by the owner on 2026-10-10 with all six recommendations (ride preferences on the card, no area labels, every invitation status counts with no expiry, the same card before and after confirmation, empty result for a suspended caller, "Former member" for every missing card). Branch `feat/m-16-profile-cards`, migration 0014; it merges before M-26. Don't dispatch it again.
+- **Status:** Done. Merged to main in PR #35 (`f9a33c2`) on 2026-10-10, migration `0014_profile_cards.sql`. Don't dispatch it again. Spec `docs/superpowers/specs/2026-10-10-profile-cards-design.md` approved by the owner on 2026-10-10 with all six recommendations (ride preferences on the card, no area labels, every invitation status counts with no expiry, the same card before and after confirmation, empty result for a suspended caller, "Former member" for every missing card). Branch `feat/m-16-profile-cards`, migration 0014; it merges before M-26. Don't dispatch it again.
 - **Wave:** 3
 - **Kind:** design-then-build
 - **Size:** M
@@ -1995,7 +1995,7 @@ When done, open a PR to main and stop.
 
 ### M-23 · Role-aware Trips tab
 
-- **Status:** Building. Spec `docs/superpowers/specs/2026-10-10-trips-tab-design.md` approved by the owner on 2026-10-10 with all ten recommendations (one Trips screen for every role; `driverRequests` aliases to Trips; new `src/lib/trips.ts`; invites for you built now; badge counts only items needing my reply; "Ride cancelled" for every cause; unavailable requests stay until their date; default segment; fixed prototype clock; one PR). Branch `feat/m-23-trips-tab`. Don't dispatch it again.
+- **Status:** Done. Merged to main in PR #43 (`c81d724`) on 2026-10-20. Don't dispatch it again. Spec `docs/superpowers/specs/2026-10-10-trips-tab-design.md` approved by the owner on 2026-10-10 with all ten recommendations (one Trips screen for every role; `driverRequests` aliases to Trips; new `src/lib/trips.ts`; invites for you built now; badge counts only items needing my reply; "Ride cancelled" for every cause; unavailable requests stay until their date; default segment; fixed prototype clock; one PR). Branch `feat/m-23-trips-tab`. Don't dispatch it again.
 
 - **Wave:** 3
 - **Kind:** design-then-build
@@ -2373,7 +2373,7 @@ When done, open a PR to main and stop.
 
 ### M-26 · Server-side matching RPC
 
-- **Status:** Building. Spec `docs/superpowers/specs/2026-10-10-matching-rpc-design.md` approved by the owner on 2026-10-10: Q1–Q7 as recommended (unvetted members hidden as drivers; per-date availability for the other person only; Ride Again as a tie-breaker; departure time, flex and shared weekdays returned; windows overlap within the sum of both flexes; reason labels built in SQL; internal 3+ occupancy key). Q8 changed: pin-edit probing stays an accepted pilot risk, but the detour is returned as a band (under 3 min / 3–5 min), never whole minutes. Branch `feat/m-26-matching-rpc`, migration 0015, merges after M-16. Don't dispatch it again.
+- **Status:** Done. Merged to main in PR #37 (`43532a1`) on 2026-10-10, migration `0015_matching.sql`. Don't dispatch it again. Spec `docs/superpowers/specs/2026-10-10-matching-rpc-design.md` approved by the owner on 2026-10-10: Q1–Q7 as recommended (unvetted members hidden as drivers; per-date availability for the other person only; Ride Again as a tie-breaker; departure time, flex and shared weekdays returned; windows overlap within the sum of both flexes; reason labels built in SQL; internal 3+ occupancy key). Q8 changed: pin-edit probing stays an accepted pilot risk, but the detour is returned as a band (under 3 min / 3–5 min), never whole minutes. Branch `feat/m-26-matching-rpc`, migration 0015, merges after M-16. Don't dispatch it again.
 - **Wave:** 4
 - **Kind:** design-then-build
 - **Size:** L
@@ -2458,6 +2458,7 @@ When done, open a PR to main and stop.
 
 ### M-28 · First Ride: Ride Again and Commute Crew screens
 
+- **Status:** Building (dispatched 2026-10-20, branch `feat/m-28-ride-again-crew`).
 - **Wave:** 4
 - **Kind:** build (from the approved First Ride spec)
 - **Size:** M
@@ -2521,6 +2522,7 @@ When done, open a PR to main and stop.
 
 ### M-31 · Error boundary and crash reporting
 
+- **Status:** Building (dispatched 2026-10-20, branch `feat/m-31-error-boundary`).
 - **Wave:** 4
 - **Kind:** build
 - **Size:** S
@@ -2585,7 +2587,7 @@ When done, open a PR to main and stop.
 
 ### M-27 · Invitations lifecycle and booking spec
 
-- **Status:** Building. Spec `docs/superpowers/specs/2026-10-10-booking-design.md` (covers M-27 and M-32) approved by the owner on 2026-10-10 with all twelve recommendations. Reads only through `my_invitations()`; no new First Ride after a completed ride without Ride Again (matching hides those pairs, changing M-26); requests at most 14 days ahead. Branch `feat/m-27-invitations`, migration 0017. Don't dispatch it again.
+- **Status:** Done. Merged to main in PR #44 (`66bdb32`) on 2026-10-20, migration `0017_invitations.sql`. Don't dispatch it again. Spec `docs/superpowers/specs/2026-10-10-booking-design.md` (covers M-27 and M-32) approved by the owner on 2026-10-10 with all twelve recommendations. Reads only through `my_invitations()`; no new First Ride after a completed ride without Ride Again (matching hides those pairs, changing M-26); requests at most 14 days ahead. Branch `feat/m-27-invitations`, migration 0017. Don't dispatch it again.
 
 - **Owner notes (2026-10-10):** reject refused requests with a stable error hint the M-19 data layer can map. M-16 makes any invitation, in any status, unlock a profile card, so gate invitation creation (for example, only to people `find_matches` returns, rechecked with M-26's `match_candidates`). Refuse driver invitations from unvetted members (M-26 Q1).
 
@@ -2735,6 +2737,7 @@ When done, open a PR to main and stop.
 
 ### M-30 · Profile and settings screen
 
+- **Status:** Building (dispatched 2026-10-20, branch `feat/m-30-profile-screen`).
 - **Wave:** 5
 - **Kind:** build
 - **Size:** M
@@ -2801,6 +2804,8 @@ When done, open a PR to main and stop.
 ### Wave 6
 
 ### M-32 · Booking RPCs: confirm, cancel, can't drive, pickup reveal, safety cancellations
+
+- **Status:** Building (dispatched 2026-10-20, branch `feat/m-32-booking`).
 
 - **Owner note (2026-10-10):** M-27's approved spec `docs/superpowers/specs/2026-10-10-booking-design.md` already designs this task (confirm, cancel, can't drive as a day off, pickup reveal, safety cancellations, push events); build from it.
 
@@ -4638,6 +4643,8 @@ The drafter proposed these, not the owner. They stay proposals until the owner c
 Schedule it only if pilot feedback shows bad detour estimates. Bay water crossings are the known weak spot. Replace the body of M-33's `estimate_detour_minutes` (and `estimate_trip_minutes`) with routed minutes from a self-hosted Valhalla, per `docs/research/2026-10-08-m01-map-provider.md`, keeping the same signatures, the whole-minutes-only output and the no-client-execute grants, so matching (M-26) and the lifecycle (M-37) don't change. It needs a new owner decision on hosting and any cache, a new migration above the highest on main, and its own design-then-build card.
 
 ## Revision notes
+
+**Update of 2026-10-20.** M-16 (#35, 0014), M-19 (#36) and M-26 (#37, 0015) were already on main; their cards now say so. M-23 and M-27 were built on 2026-10-10 but never opened as PRs. Both were brought up to date with main and merged: #43 (M-23, `c81d724`) and #44 (M-27, 0017, `66bdb32`). Building: M-28 and M-31 (Wave 4), M-30 (Wave 5) and M-32 (Wave 6). Next to start: M-29 once M-31 merges; and M-38 once M-29 and M-31 have merged. Owner: the O-02 row reads "current through 0013", so 0014, 0015 and, after #44, 0017 still need the hosted push.
 
 **Update of 2026-10-10 (evening).** M-25 (#38), M-22 (#41), M-20 (#39) and M-24 (#40) merged; main is green at `6d3197b`. The owner approved the M-23 and M-27 specs as recommended, and both are building. Owner notes from those approvals are on D-02, the zone table (Trips helpers), and the M-32, M-35, M-36 and M-42 cards.
 
