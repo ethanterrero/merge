@@ -15,7 +15,16 @@
 -- order), the pair lock, both day locks (uuid order), then the invitation row for
 -- update. cancel_ride takes both day locks before the ride row; cant_drive takes the
 -- driver's day lock before any ride or invitation row. Day locks always come before
--- invitation row locks, so a confirm and a "can't drive" can't deadlock.
+-- invitation row locks, so a confirm and a "can't drive" never wait on each other's
+-- rows while holding a day lock the other needs.
+-- The rows a confirm or a "can't drive" closes are other people's, which no day lock
+-- covers (two confirms for different drivers can each close a row of the other's
+-- set). So both lock every row they will close in one statement, in id order, before
+-- closing any; overlapping sets are then always taken in the same order. A confirm's
+-- own invitation row, locked earlier, is never in another confirm's set unless the two
+-- share a person, and then they already queue on that person's day lock. The block and
+-- suspension closes (0017's blocks_close_invitations and withdraw_member) keep their
+-- unsorted single-call pattern.
 
 -- Rides: seats, cargo and why a ride was cancelled ----------------------------------------
 -- Existing rows and the older test inserts that name only 0003's columns get the
@@ -142,6 +151,8 @@ declare
   seats_left integer;
   v_spot extensions.geography;
   new_id uuid;
+  elsewhere_ids uuid[];
+  full_ids uuid[];
 begin
   -- 1. Caller and arguments.
   if me is null then
@@ -275,35 +286,34 @@ begin
 
   -- 9. System closes for that date (section 2): what the booking makes impossible.
   -- The passenger's other invitations in either role, and the driver's as a passenger.
-  perform public.close_invitations(
-    array(select i.id from public.invitations i
-          where i.ride_date = d
-            and i.id <> inv.id
-            and (pax in (i.sender_id, i.recipient_id)
-                 or (i.direction = 'request' and i.sender_id = me)
-                 or (i.direction = 'invite' and i.recipient_id = me))),
-    'booked_elsewhere');
+  elsewhere_ids := array(
+    select i.id from public.invitations i
+    where i.ride_date = d
+      and i.id <> inv.id
+      and (pax in (i.sender_id, i.recipient_id)
+           or (i.direction = 'request' and i.sender_id = me)
+           or (i.direction = 'invite' and i.recipient_id = me)));
 
   -- The driver's leftover driver-side invitations: all of them once the seats are
   -- gone, else the scooter ones once the scooter slot is taken.
-  if seats_left - inv.seats <= 0 then
-    perform public.close_invitations(
-      array(select i.id from public.invitations i
-            where i.ride_date = d
-              and i.id <> inv.id
-              and ((i.direction = 'request' and i.recipient_id = me)
-                   or (i.direction = 'invite' and i.sender_id = me))),
-      'full');
-  elsif inv.brings_scooter then
-    perform public.close_invitations(
-      array(select i.id from public.invitations i
-            where i.ride_date = d
-              and i.id <> inv.id
-              and i.brings_scooter
-              and ((i.direction = 'request' and i.recipient_id = me)
-                   or (i.direction = 'invite' and i.sender_id = me))),
-      'full');
-  end if;
+  full_ids := array(
+    select i.id from public.invitations i
+    where i.ride_date = d
+      and i.id <> inv.id
+      and (seats_left - inv.seats <= 0 or (inv.brings_scooter and i.brings_scooter))
+      and ((i.direction = 'request' and i.recipient_id = me)
+           or (i.direction = 'invite' and i.sender_id = me)));
+
+  -- Other people's rows, so lock them all at once in id order: two confirms for
+  -- different drivers can close each other's rows, and closing them one call at a time
+  -- would lock them in an order that depends on the call.
+  perform 1 from public.invitations i
+  where i.id = any (elsewhere_ids || full_ids)
+  order by i.id
+  for update;
+
+  perform public.close_invitations(elsewhere_ids, 'booked_elsewhere');
+  perform public.close_invitations(full_ids, 'full');
 
   -- 10.
   return new_id;
@@ -480,6 +490,7 @@ declare
   me uuid := auth.uid();
   today date := (now() at time zone 'America/Los_Angeles')::date;
   d date := cant_drive.ride_date;
+  close_ids uuid[];
 begin
   if me is null then
     raise exception 'Sign in first' using errcode = '42501', hint = 'not_signed_in';
@@ -507,12 +518,19 @@ begin
     and r.ride_date = d
     and r.status = 'confirmed';
 
-  perform public.close_invitations(
-    array(select i.id from public.invitations i
-          where i.ride_date = d
-            and ((i.direction = 'request' and i.recipient_id = me)
-                 or (i.direction = 'invite' and i.sender_id = me))),
-    'cant_drive');
+  close_ids := array(
+    select i.id from public.invitations i
+    where i.ride_date = d
+      and ((i.direction = 'request' and i.recipient_id = me)
+           or (i.direction = 'invite' and i.sender_id = me)));
+
+  -- In id order, as confirm_ride locks the rows it closes.
+  perform 1 from public.invitations i
+  where i.id = any (close_ids)
+  order by i.id
+  for update;
+
+  perform public.close_invitations(close_ids, 'cant_drive');
 end
 $$;
 
