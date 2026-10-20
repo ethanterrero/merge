@@ -27,17 +27,20 @@ import { PostRideScreen } from './src/screens/PostRideScreen';
 import { PostRideThanksScreen } from './src/screens/PostRideThanksScreen';
 import { ReportScreen } from './src/screens/ReportScreen';
 import { BlockedPeopleScreen } from './src/screens/BlockedPeopleScreen';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 
 export default function App() {
   return (
     <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-      <AuthProvider>
-        <CommuteProvider>
-          <FirstRideProvider>
-            <AuthGate />
-          </FirstRideProvider>
-        </CommuteProvider>
-      </AuthProvider>
+      <ErrorBoundary>
+        <AuthProvider>
+          <CommuteProvider>
+            <FirstRideProvider>
+              <AuthGate />
+            </FirstRideProvider>
+          </CommuteProvider>
+        </AuthProvider>
+      </ErrorBoundary>
     </SafeAreaProvider>
   );
 }
