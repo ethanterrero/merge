@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import type { RideKind } from './lib/rideKind';
 
 /**
  * A deliberately tiny stack navigator so the UI prototype runs without extra
@@ -14,7 +15,7 @@ export type Route =
   | { name: 'preferences' }
   | { name: 'discover' }
   | { name: 'match'; matchId: string }
-  | { name: 'request'; matchId: string }
+  | { name: 'request'; matchId: string; kind?: RideKind }
   | { name: 'booked'; matchId: string }
   | { name: 'driverRequests'; tab?: 'new' | 'upcoming' }
   | { name: 'driverRequest'; requestId: string }
@@ -26,6 +27,9 @@ export type Route =
   | { name: 'report'; personId?: string; personName?: string; rideId?: string; rideLabel?: string }
   | { name: 'blockedPeople' }
   | { name: 'trips'; tab?: 'requests' | 'upcoming' | 'past' }
+  | { name: 'rideAgain'; matchId: string }
+  | { name: 'crewSetup'; matchId: string }
+  | { name: 'crew'; matchId: string }
 ;
 
 export type RouteName = Route['name'];

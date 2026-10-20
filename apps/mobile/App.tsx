@@ -27,6 +27,9 @@ import { PostRideThanksScreen } from './src/screens/PostRideThanksScreen';
 import { ReportScreen } from './src/screens/ReportScreen';
 import { BlockedPeopleScreen } from './src/screens/BlockedPeopleScreen';
 import { TripsScreen } from './src/screens/TripsScreen';
+import { RideAgainScreen } from './src/screens/RideAgainScreen';
+import { CrewSetupScreen } from './src/screens/CrewSetupScreen';
+import { CrewScreen } from './src/screens/CrewScreen';
 
 export default function App() {
   return (
@@ -110,7 +113,7 @@ function renderRoute(route: Route): React.ReactElement {
     case 'match':
       return <MatchDetailScreen matchId={route.matchId} />;
     case 'request':
-      return <RequestRideScreen matchId={route.matchId} />;
+      return <RequestRideScreen matchId={route.matchId} kind={route.kind} />;
     case 'booked':
       return <BookedScreen matchId={route.matchId} />;
     case 'driverRequests':
@@ -134,5 +137,11 @@ function renderRoute(route: Route): React.ReactElement {
       return <BlockedPeopleScreen />;
     case 'trips':
       return <TripsScreen key={route.tab ?? 'auto'} initialTab={route.tab} />;
+    case 'rideAgain':
+      return <RideAgainScreen matchId={route.matchId} />;
+    case 'crewSetup':
+      return <CrewSetupScreen matchId={route.matchId} />;
+    case 'crew':
+      return <CrewScreen matchId={route.matchId} />;
   }
 }
