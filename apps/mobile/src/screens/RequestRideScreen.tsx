@@ -4,14 +4,14 @@ import { colors, space, type } from '../theme';
 import { useNav } from '../navigation';
 import { PROTOTYPE_RIDE_DATE, findMatch } from '../data/mock';
 import { formatRideDate } from '../lib/dates';
-import { rideKindBadge } from '../lib/rideKind';
+import { rideKindBadge, type RideKind } from '../lib/rideKind';
 import { useCommute } from '../state/commute';
 import { useFirstRide } from '../state/firstRide';
 import { Screen, TopBar } from '../components/Screen';
 import { Button } from '../components/Button';
 import { Badge, Card, Row, SettingRow } from '../components/primitives';
 
-export function RequestRideScreen({ matchId }: { matchId: string }) {
+export function RequestRideScreen({ matchId, kind = 'first_ride' }: { matchId: string; kind?: RideKind }) {
   const nav = useNav();
   const { commute, update } = useCommute();
   const { bookRide } = useFirstRide();
@@ -19,7 +19,7 @@ export function RequestRideScreen({ matchId }: { matchId: string }) {
   const first = m.name.split(' ')[0];
   // Every new match starts with one ride on one date (First Ride spec).
   const rideDate = PROTOTYPE_RIDE_DATE;
-  const badge = rideKindBadge('first_ride');
+  const badge = rideKindBadge(kind);
 
   const send = () => {
     // Prototype: treat the request as accepted so the booked state can be reviewed.
@@ -30,7 +30,7 @@ export function RequestRideScreen({ matchId }: { matchId: string }) {
   };
 
   return (
-    <Screen header={<TopBar title={`Request a First Ride with ${first}`} />} footer={<Button label="Send request" onPress={send} />}>
+    <Screen header={<TopBar title={kind === 'first_ride' ? `Request a First Ride with ${first}` : `Request another ride with ${first}`} />} footer={<Button label="Send request" onPress={send} />}>
       <Card>
         <View style={styles.miniMap} accessibilityLabel="Proposed pickup spot within your pickup area">
           <View style={[styles.water]} />

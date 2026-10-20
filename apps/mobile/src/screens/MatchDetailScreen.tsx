@@ -5,16 +5,19 @@ import { colors, radius, space, type } from '../theme';
 import { useNav } from '../navigation';
 import { findMatch } from '../data/mock';
 import { useCommute } from '../state/commute';
+import { useFirstRide } from '../state/firstRide';
+import { isConnected } from '../lib/firstRide';
 import { IconButton, Screen, TopBar } from '../components/Screen';
 import { Button } from '../components/Button';
 import { Icon } from '../components/Icon';
-import { Avatar, Card, InfoNote, Stat, VerifiedRow } from '../components/primitives';
+import { Avatar, Badge, Card, InfoNote, Stat, VerifiedRow } from '../components/primitives';
 import { BlockReportMenu, UnblockSheet, useCanBlockOrReport } from '../components/BlockReportMenu';
 import { useBlockedIds } from '../lib/data/blocks';
 
 export function MatchDetailScreen({ matchId }: { matchId: string }) {
   const nav = useNav();
   const { commute } = useCommute();
+  const { connection } = useFirstRide();
   const m = findMatch(matchId);
   const first = m.name.split(' ')[0];
   const isDriver = m.role === 'driver';
@@ -62,6 +65,14 @@ export function MatchDetailScreen({ matchId }: { matchId: string }) {
         </>
       }
     >
+      {isConnected(connection(m.id)) ? (
+        <Card raised style={{ padding: space.lg, gap: space.sm }}>
+          <Badge label="Ride Again" tone="success" />
+          <Text style={type.heading}>You and {first} are open to riding again.</Text>
+          <Button label="Open Ride Again" variant="tinted" size="md" onPress={() => nav.push({ name: 'rideAgain', matchId: m.id })} />
+        </Card>
+      ) : null}
+
       <Card raised style={{ padding: space.lg, gap: space.md }}>
         <View style={styles.statRow}>
           <Stat value={m.stats.rides} label={isDriver ? 'Rides given' : 'Rides taken'} />
